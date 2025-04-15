@@ -1,0 +1,4002 @@
+{
+  "vehicles": [
+    {
+      "id": "lamborghini-huracan-sterrato-2024",
+      "name": "Lamborghini Huracán Sterrato 2024",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2024_lamborghini_huracan_sterrato.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 260,
+        "acceleration": 3.4,
+        "handling": 9,
+        "braking": 9.2
+      },
+      "scale": 100,
+      "position": [
+        0,
+        -1,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#d12e2e",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 100,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#d12e2e",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:55:35.421Z"
+    },
+    {
+      "id": "lamborghini-terzo-asphalt",
+      "name": "Asphalt 9 Lamborghini Terzo Millennio",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/asphalt_9_-_lamborghini_terzo_millennio_v2.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 360,
+        "acceleration": 2.3,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:54:03.898Z"
+    },
+    {
+      "id": "lamborghini-terzo-cyberpunk",
+      "name": "Cyberpunk Lamborghini Terzo",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/cyberpunk_lamborghini_terzo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 360,
+        "acceleration": 2.3,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -0.5,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:53:45.892Z"
+    },
+    {
+      "id": "lamborghini-aventador-lp700",
+      "name": "Lamborghini Aventador LP 700-4",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free__lamborghini_aventador_lp_700-4.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.9,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.5,
+        "position": [
+          0,
+          -1,
+          -1
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:53:28.388Z"
+    },
+    {
+      "id": "lamborghini-terzo-millennio-wind",
+      "name": "Lamborghini Terzo Millennio Wind Tunnel",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free__lamborghini_terzo_millennio_wind_tunnel.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 360,
+        "acceleration": 2.3,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.5,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": -1.5707963267948966,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:52:50.591Z"
+    },
+    {
+      "id": "lamborghini-v12-vision-gt",
+      "name": "Lamborghini V12 Vision Gran Turismo",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_-_lamborghini_v12_vision_gran_turismo_bysdc.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 360,
+        "acceleration": 2.4,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1.2,
+        "position": [
+          0,
+          -1,
+          1.5
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:52:22.796Z"
+    },
+    {
+      "id": "lamborghini-aventador-free",
+      "name": "Lamborghini Aventador Free",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_aventador.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.9,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 1.5707963267948966,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:51:41.870Z"
+    },
+    {
+      "id": "lamborghini-countach-se",
+      "name": "Lamborghini Countach SE",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_countach_se.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.8,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -2,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:51:21.724Z"
+    },
+    {
+      "id": "lamborghini-ferzor",
+      "name": "Lamborghini Ferzor",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_-_ferzor.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.7,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0.2
+        ],
+        "rotation": -1.5707963267948966,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:50:50.244Z"
+    },
+    {
+      "id": "lamborghini-aventador-sv",
+      "name": "Lamborghini Aventador LP750-4 SV",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_aventador_lp750-4_sv.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 0.01,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.01,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 3.141592653589793,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:50:24.471Z"
+    },
+    {
+      "id": "lamborghini-aventador-interior",
+      "name": "Lamborghini Aventador with Interior",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_aventador_with_interior.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:50:06.156Z"
+    },
+    {
+      "id": "lamborghini-aventador-tm",
+      "name": "Lamborghini Aventador TM",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_aventadortm.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.5,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:49:51.771Z"
+    },
+    {
+      "id": "lamborghini-centenario-lp770-blue",
+      "name": "Lamborghini Centenario LP770 Baby Blue",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_centenario_lp-770_baby_blue_sdc.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:49:24.095Z"
+    },
+    {
+      "id": "lamborghini-centenario-lp770-interior",
+      "name": "Lamborghini Centenario LP770 Interior",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_centenario_lp-770_interior_sdc.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        1.2,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:49:02.211Z"
+    },
+    {
+      "id": "lamborghini-countach-concept",
+      "name": "Lamborghini Countach Concept",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_countach_concept.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.8,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.8,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -0.25,
+          0
+        ],
+        "rotation": -1.5707963267948966,
+        "colors": {
+          "body": "#2b4278",
+          "wheel": "#ac6868"
+        }
+      },
+      "updatedAt": "2025-01-04T18:48:46.558Z"
+    },
+    {
+      "id": "lamborghini-huracan-gt3",
+      "name": "Lamborghini Huracán GT3",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_huracan_gt3.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 335,
+        "acceleration": 2.6,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": -1.5707963267948966,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:47:44.415Z"
+    },
+    {
+      "id": "lamborghini-revuelto-tm",
+      "name": "Lamborghini Revuelto TM",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_revuelto_tm.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.5,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        1.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.5,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:47:18.755Z"
+    },
+    {
+      "id": "lamborghini-aventador-base",
+      "name": "Lamborghini Aventador",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini-aventador.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.9,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:46:48.922Z"
+    },
+    {
+      "id": "lamborghini-sian",
+      "name": "Lamborghini Sián",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini-sian.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:46:23.800Z"
+    },
+    {
+      "id": "lamborghini-urus-modified",
+      "name": "Lamborghini Urus Modified",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/modified_lamborghini_urus.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 305,
+        "acceleration": 3.6,
+        "handling": 8.8,
+        "braking": 9
+      },
+      "scale": 0.1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.1,
+        "position": [
+          -1,
+          -1,
+          2
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:45:49.453Z"
+    },
+    {
+      "id": "lamborghini-aventador-dlackdeath",
+      "name": "Lamborghini Aventador DlackDeath",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_aventador_by_faizan_dlackdeath.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        2
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 3.141592653589793,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:45:08.803Z"
+    },
+    {
+      "id": "lamborghini-aventador-j-2012",
+      "name": "Lamborghini Aventador J Concept 2012",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2012_lamborghini_aventador_j_concept.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.9,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 200,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 100,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:45:01.830Z"
+    },
+    {
+      "id": "lamborghini-countach-lpi-2021",
+      "name": "Lamborghini Countach LPI 800-4 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2021_lamborghini_countach_lpi_800-4.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.8,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        1.2,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.5,
+        "position": [
+          -1,
+          -0.37,
+          0
+        ],
+        "rotation": 3.141592653589793,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:44:03.711Z"
+    },
+    {
+      "id": "lamborghini-huracan-trofeo-evo2-2022",
+      "name": "Lamborghini Huracán GT3 EVO2 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2022__lamborghini_huracan_trofeo_evo2_thx_700.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 340,
+        "acceleration": 2.6,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:40:51.600Z"
+    },
+    {
+      "id": "lamborghini-centenario-roadster",
+      "name": "Lamborghini Centenario Roadster",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_centenario_roadster_sdc.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:40:36.618Z"
+    },
+    {
+      "id": "lamborghini-gallardo-2010",
+      "name": "Lamborghini Gallardo 2010",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_gallardo_2010.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 325,
+        "acceleration": 3.4,
+        "handling": 9.2,
+        "braking": 9.1
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.7,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:40:17.015Z"
+    },
+    {
+      "id": "lamborghini-terzo-millennio",
+      "name": "Lamborghini Terzo Millennio",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free__lamborghini_terzo_millennio.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 360,
+        "acceleration": 2.3,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1.3,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:40:14.870Z"
+    },
+    {
+      "id": "lamborghini-sesto-elemento",
+      "name": "Lamborghini Sesto Elemento",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_sesto_elemento.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.5,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1.2,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 2,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 1.5707963267948966,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:39:22.935Z"
+    },
+    {
+      "id": "lamborghini-revuelto",
+      "name": "Lamborghini Revuelto",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_revuelto.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.5,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:37:36.907Z"
+    },
+    {
+      "id": "lamborghini-veneno",
+      "name": "Lamborghini Veneno",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/lamborghini_venevo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.8,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 0.5,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 0.3,
+        "position": [
+          0.5,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:37:12.083Z"
+    },
+    {
+      "id": "lamborghini-sian-roadster-2021",
+      "name": "Lamborghini Sián Roadster 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2021_lamborghini_sian_roadster.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.9,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        -1,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#4caf50",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#4caf50",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:36:55.170Z"
+    },
+    {
+      "id": "lamborghini-sc20-2020",
+      "name": "Lamborghini SC20 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2020_lamborghini_sc20.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 345,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 200,
+      "position": [
+        0,
+        0.8,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2f426f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 100,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2f426f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:35:43.905Z"
+    },
+    {
+      "id": "lamborghini-countach-lpi-2022",
+      "name": "Lamborghini Countach LPI 800-4 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/2022_lamborghini_countach_lpi_800-4.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.8,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 100,
+      "position": [
+        0,
+        -1,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 100,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-04T18:34:51.387Z"
+    },
+    {
+      "id": "aston-martin-valhalla",
+      "name": "Aston Martin Valhalla",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Aston/aston_martin_valhalla.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 330,
+        "acceleration": 2.5,
+        "handling": 9.5,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#35424a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#35424a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T10:00:00.000Z"
+    },
+    {
+      "id": "aston-martin-valhalla-2023",
+      "name": "Aston Martin Valhalla 2023",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Aston/aston_martin_valhalla_2023.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 335,
+        "acceleration": 2.4,
+        "handling": 9.6,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2d6c3e",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2d6c3e",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T10:00:01.000Z"
+    },
+    {
+      "id": "aston-martin-valkyrie",
+      "name": "Aston Martin Valkyrie Free",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Aston/aston_martin_valkyrie_free.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.3,
+        "handling": 9.7,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1a1a1a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1a1a1a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T10:00:02.000Z"
+    },
+    {
+      "id": "bugatti-la-voiture-noire-2019",
+      "name": "Bugatti La Voiture Noire 2019",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2019_bugatti_la_voiture_noire.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:01:00.000Z"
+    },
+    {
+      "id": "bugatti-centodieci-2020",
+      "name": "Bugatti Centodieci 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2020_bugatti_centodieci.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.4,
+        "handling": 9.5,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:01:01.000Z"
+    },
+    {
+      "id": "bugatti-chiron-pur-sport-2021",
+      "name": "Bugatti Chiron Pur Sport 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2021_bugatti_chiron_pur_sport.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 410,
+        "acceleration": 2.3,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0033a0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0033a0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:01:02.000Z"
+    },
+    {
+      "id": "bugatti-chiron-super-sport-2022",
+      "name": "Bugatti Chiron Super Sport 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2022_bugatti_chiron_super_sport.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 490,
+        "acceleration": 2.3,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:01:03.000Z"
+    },
+    {
+      "id": "bugatti-tourbillon-2026",
+      "name": "Bugatti Tourbillon 2026",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2026_bugatti_tourbillon.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.2,
+        "handling": 9.6,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2a2a2a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2a2a2a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:01:04.000Z"
+    },
+    {
+      "id": "czinger-21c-2021",
+      "name": "Czinger 21C 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 432,
+        "acceleration": 1.9,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff3a00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff3a00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:02:00.000Z"
+    },
+    {
+      "id": "czinger-21c-v-max-2023",
+      "name": "Czinger 21C V Max 2023",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2023_czinger_21c_v_max.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 455,
+        "acceleration": 1.8,
+        "handling": 9.7,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#363636",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#363636",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:02:01.000Z"
+    },
+    {
+      "id": "ferrari-laferrari-2014",
+      "name": "Ferrari LaFerrari 2014",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/2014_ferrari_laferrari.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.7,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:03:00.000Z"
+    },
+    {
+      "id": "ferrari-fxx-k-evo-2017",
+      "name": "Ferrari FXX-K Evo 2017",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/2017__ferrari_fxx-k_evo_special_thanks_for_600.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 355,
+        "acceleration": 2.5,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:03:01.000Z"
+    },
+    {
+      "id": "ferrari-sf90-stradale",
+      "name": "Ferrari SF90 Stradale",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/ferrari_sf90_stradale.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 340,
+        "acceleration": 2.5,
+        "handling": 9.3,
+        "braking": 9.2
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:03:02.000Z"
+    },
+    {
+      "id": "ferrari-f80-concept",
+      "name": "Ferrari F80 Concept",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/ferrari_f80_concept.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 380,
+        "acceleration": 2.2,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:03:03.000Z"
+    },
+    {
+      "id": "koenigsegg-jesko-2019",
+      "name": "Koenigsegg Jesko 2019",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/2019__koenigsegg_jesko.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 490,
+        "acceleration": 2.2,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff5e1a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff5e1a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:04:00.000Z"
+    },
+    {
+      "id": "koenigsegg-gemera",
+      "name": "Koenigsegg Gemera",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/free_koenigsegg_gemera.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 400,
+        "acceleration": 1.9,
+        "handling": 9.3,
+        "braking": 9.2
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#72c456",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#72c456",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:04:01.000Z"
+    },
+    {
+      "id": "koenigsegg-agera",
+      "name": "Koenigsegg Agera",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_agera.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 440,
+        "acceleration": 2.8,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:04:02.000Z"
+    },
+    {
+      "id": "koenigsegg-agera-r",
+      "name": "Koenigsegg Agera R",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_agera_r.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 450,
+        "acceleration": 2.7,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#d32f2f",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#d32f2f",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:04:03.000Z"
+    },
+    {
+      "id": "koenigsegg-jesko-absolut",
+      "name": "Koenigsegg Jesko Absolut",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_jesko_absolut.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 530,
+        "acceleration": 2.1,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:04:04.000Z"
+    },
+    {
+      "id": "mclaren-f1-1992",
+      "name": "McLaren F1 1992",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/1992_mclaren_f1.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 386,
+        "acceleration": 3.2,
+        "handling": 9.2,
+        "braking": 9.0
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffa500",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffa500",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:05:00.000Z"
+    },
+    {
+      "id": "mclaren-p1",
+      "name": "McLaren P1",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/mclaren-p1.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.6,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff8c00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff8c00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:05:01.000Z"
+    },
+    {
+      "id": "mclaren-senna",
+      "name": "McLaren Senna",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/mclaren_senna.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 335,
+        "acceleration": 2.8,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#00a3e0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#00a3e0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:05:02.000Z"
+    },
+    {
+      "id": "mclaren-senna-free",
+      "name": "McLaren Senna Free",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/mclaren_senna_free.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 335,
+        "acceleration": 2.8,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#00a3e0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#00a3e0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:05:03.000Z"
+    },
+    {
+      "id": "mclaren-vision-gt",
+      "name": "McLaren Ultimate Vision Gran Turismo",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/mclaren_ultimate_vision_gran_turismo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 370,
+        "acceleration": 2.3,
+        "handling": 9.9,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#00a3e0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#00a3e0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:05:04.000Z"
+    },
+    {
+      "id": "gma-t50",
+      "name": "GMA T.50",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/gma_t50.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.5,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#d3d3d3",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#d3d3d3",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:06:00.000Z"
+    },
+    {
+      "id": "maserati-mc12",
+      "name": "Maserati MC12",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/maserati_mc12.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 330,
+        "acceleration": 3.2,
+        "handling": 9.3,
+        "braking": 9.2
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:06:01.000Z"
+    },
+    {
+      "id": "pagani-huayra",
+      "name": "Pagani Huayra",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/pagani_huayra_free.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 370,
+        "acceleration": 2.8,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1e2023",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1e2023",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:06:02.000Z"
+    },
+    {
+      "id": "porsche-918",
+      "name": "Porsche 918",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/porsche_918_free.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 345,
+        "acceleration": 2.5,
+        "handling": 9.4,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#a3a3a3",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#a3a3a3",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-05T12:06:03.000Z"
+    },
+    {
+      "id": "bugatti-veyron-jean-2013",
+      "name": "Bugatti Veyron Legend Jean Bugatti 2013",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2013_bugatti_veyron_legend_jean_bugatti.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.6,
+        "handling": 9.2,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:00.000Z"
+    },
+    {
+      "id": "bugatti-veyron-ettore-2014",
+      "name": "Bugatti Veyron Legend Ettore Bugatti 2014",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2014_bugatti_veyron_legend_ettore_bugatti.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.6,
+        "handling": 9.2,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#c0c0c0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#c0c0c0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:01.000Z"
+    },
+    {
+      "id": "bugatti-vision-gt-2015",
+      "name": "Bugatti Vision Gran Turismo 2015",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2015__bugatti_vision_gran_turismo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 430,
+        "acceleration": 2.2,
+        "handling": 9.5,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0066cc",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0066cc",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:02.000Z"
+    },
+    {
+      "id": "bugatti-atlantic-concept-2015",
+      "name": "Bugatti Atlantic Concept Car 2015",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2015_bugatti_atlantic_-_concept_car.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.3,
+        "handling": 9.4,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1e3a8a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1e3a8a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:03.000Z"
+    },
+    {
+      "id": "bugatti-divo-2019",
+      "name": "Bugatti Divo 2019",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2019_bugatti_divo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 380,
+        "acceleration": 2.4,
+        "handling": 9.7,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#506eb4",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#506eb4",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:04.000Z"
+    },
+    {
+      "id": "bugatti-bolide-concept-2020",
+      "name": "Bugatti Bolide Concept 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2020_bugatti_bolide_concept.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.0,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0057b7",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0057b7",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:05.000Z"
+    },
+    {
+      "id": "bugatti-centodieci-eb110-2022",
+      "name": "Bugatti Centodieci EB110 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2022__bugatti_centodieci_eb110.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.4,
+        "handling": 9.5,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:06.000Z"
+    },
+    {
+      "id": "bugatti-chiron-lebe-2022",
+      "name": "Bugatti Chiron LEBE Edition 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2022__bugatti_chiron_lebe_edition.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.3,
+        "handling": 9.4,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1c1c1c",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1c1c1c",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:07.000Z"
+    },
+    {
+      "id": "bugatti-chiron-profilee-2022",
+      "name": "Bugatti Chiron Profilée 2022",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/2022_bugatti_chiron_profilee.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.3,
+        "handling": 9.4,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#96cdfc",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#96cdfc",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:08.000Z"
+    },
+    {
+      "id": "bugatti-la-voiture-noire-custom",
+      "name": "Bugatti La Voiture Noire Custom",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_-_la_voiture_noire.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:09.000Z"
+    },
+    {
+      "id": "bugatti-bolide",
+      "name": "Bugatti Bolide",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_bolide.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.0,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0057b7",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0057b7",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:10.000Z"
+    },
+    {
+      "id": "bugatti-bolide-2024",
+      "name": "Bugatti Bolide 2024",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_bolide_2024.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 510,
+        "acceleration": 1.9,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0057b7",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0057b7",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:11.000Z"
+    },
+    {
+      "id": "bugatti-bolide-ii",
+      "name": "Bugatti Bolide II",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_bolide_ii.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.0,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0057b7",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0057b7",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:12.000Z"
+    },
+    {
+      "id": "bugatti-centodieci-standard",
+      "name": "Bugatti Centodieci",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_centodieci.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 415,
+        "acceleration": 2.4,
+        "handling": 9.5,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:13.000Z"
+    },
+    {
+      "id": "bugatti-chiron-standard",
+      "name": "Bugatti Chiron",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_chiron.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1a237e",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1a237e",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:14.000Z"
+    },
+    {
+      "id": "bugatti-chiron-ans-110",
+      "name": "Bugatti Chiron ANS 110",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_chiron_ans_110__special_thanks_for_500.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000099",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000099",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:15.000Z"
+    },
+    {
+      "id": "bugatti-chiron-last-unit",
+      "name": "Bugatti Chiron Last Unit",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_chiron_last_unit.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#4a4a4a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#4a4a4a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:16.000Z"
+    },
+    {
+      "id": "bugatti-chiron-super-sport-300",
+      "name": "Bugatti Chiron Super Sport 300+",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_chiron_super_sport_300.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 490,
+        "acceleration": 2.3,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:17.000Z"
+    },
+    {
+      "id": "bugatti-divo-standard",
+      "name": "Bugatti Divo",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_divo.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 380,
+        "acceleration": 2.4,
+        "handling": 9.7,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#506eb4",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#506eb4",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:18.000Z"
+    },
+    {
+      "id": "bugatti-eb110-ss-roadcar",
+      "name": "Bugatti EB110 SS Roadcar",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_eb110_ss_roadcar.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 351,
+        "acceleration": 3.2,
+        "handling": 9.0,
+        "braking": 9.1
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0000ff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0000ff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:19.000Z"
+    },
+    {
+      "id": "bugatti-eb110-super-sport-1992",
+      "name": "Bugatti EB110 Super Sport 1992",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_eb110_super_sport_1992_by_alex.ka..glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 351,
+        "acceleration": 3.2,
+        "handling": 9.0,
+        "braking": 9.1
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffcc00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffcc00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:20.000Z"
+    },
+    {
+      "id": "bugatti-la-voiture",
+      "name": "Bugatti La Voiture",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_la_voiture.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:21.000Z"
+    },
+    {
+      "id": "bugatti-t57-r",
+      "name": "Bugatti T57 R",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_t57_r.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 200,
+        "acceleration": 7.5,
+        "handling": 8.0,
+        "braking": 7.0
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0032a0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0032a0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:22.000Z"
+    },
+    {
+      "id": "bugatti-tourbillon-2024",
+      "name": "Bugatti Tourbillon 2024",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_tourbillon_2024.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.2,
+        "handling": 9.6,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#2a2a2a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#2a2a2a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:23.000Z"
+    },
+    {
+      "id": "bugatti-veyron-super-sport",
+      "name": "Bugatti Veyron Super Sport Speed Enforcement",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_veyron_super_sport_speed_enforcement.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 430,
+        "acceleration": 2.5,
+        "handling": 9.2,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#000000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#000000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:24.000Z"
+    },
+    {
+      "id": "bugatti-w16-mistral",
+      "name": "Bugatti W16 Mistral",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/bugatti_w16_mistral.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#cc0000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#cc0000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:25.000Z"
+    },
+    {
+      "id": "bugatti-bolide-concept-custom-2020",
+      "name": "Custom Bugatti Bolide Concept 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/custom_bugatti_bolide_concept_2020.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.0,
+        "handling": 9.9,
+        "braking": 9.9
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0057b7",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0057b7",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:26.000Z"
+    },
+    {
+      "id": "bugatti-chiron-free",
+      "name": "Bugatti Chiron Free",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/free_bugatti_chiron.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 420,
+        "acceleration": 2.4,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1a237e",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1a237e",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:27.000Z"
+    },
+    {
+      "id": "bugatti-chiron-pur-sport-toon",
+      "name": "Bugatti Chiron Pur Sport Toon",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Bugatti/toon__bugatti_chiron_pur_sport.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 410,
+        "acceleration": 2.3,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#0033a0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#0033a0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:28.000Z"
+    },
+    {
+      "id": "czinger-21c-v1",
+      "name": "Czinger 21C V1",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c1.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 432,
+        "acceleration": 1.9,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff3a00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff3a00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:29.000Z"
+    },
+    {
+      "id": "czinger-21c-v-max-2023-vecarz",
+      "name": "Czinger 21C V Max 2023 Vecarz",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/czinger_21c_v_max_2023__www.vecarz.com.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 455,
+        "acceleration": 1.8,
+        "handling": 9.7,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#363636",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#363636",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:30.000Z"
+    },
+    {
+      "id": "ferrari-laferrari-aperta-2017",
+      "name": "Ferrari LaFerrari Aperta 2017",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/2017_ferrari_laferrari_aperta.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.7,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:31.000Z"
+    },
+    {
+      "id": "ferrari-monza-sp2-2019",
+      "name": "Ferrari Monza SP2 2019",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/2019_ferrari_monza_sp2.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 330,
+        "acceleration": 2.9,
+        "handling": 9.4,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:32.000Z"
+    },
+    {
+      "id": "ferrari-812-gts-2020",
+      "name": "Ferrari 812 GTS 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/2020_ferrari_812_gts.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 340,
+        "acceleration": 2.9,
+        "handling": 9.2,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:33.000Z"
+    },
+    {
+      "id": "ferrari-488-pista-widebody",
+      "name": "Ferrari 488 Pista Widebody",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/ferrari_488_pista_widebody.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 335,
+        "acceleration": 2.8,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:34.000Z"
+    },
+    {
+      "id": "ferrari-laferrari-vecarz",
+      "name": "Ferrari LaFerrari Vecarz",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Ferrari/ferrari_laferrari__www.vecarz.com.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.7,
+        "handling": 9.4,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff2800",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff2800",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:35.000Z"
+    },
+    {
+      "id": "koenigsegg-regera-2015",
+      "name": "Koenigsegg Regera 2015",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/2015_koenigsegg_regera.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 450,
+        "acceleration": 2.5,
+        "handling": 9.3,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff0000",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff0000",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:36.000Z"
+    },
+    {
+      "id": "koenigsegg-jesko-2020",
+      "name": "Koenigsegg Jesko 2020",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/2020_koenigsegg_jesko.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 490,
+        "acceleration": 2.2,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff5e1a",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff5e1a",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:37.000Z"
+    },
+    {
+      "id": "koenigsegg-cc850-2023",
+      "name": "Koenigsegg CC850 2023",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/2023_koenigsegg_cc850.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 450,
+        "acceleration": 2.4,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ffffff",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ffffff",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:38.000Z"
+    },
+    {
+      "id": "koenigsegg-ccx",
+      "name": "Koenigsegg CCX",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_ccx_-_100_followers_special.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 395,
+        "acceleration": 3.2,
+        "handling": 9.2,
+        "braking": 9.3
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#f5f5f5",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#f5f5f5",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:39.000Z"
+    },
+    {
+      "id": "super-koenigsegg",
+      "name": "Super Koenigsegg",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/super_koenigsegg.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 500,
+        "acceleration": 2.0,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff8c00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff8c00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:40.000Z"
+    },
+    {
+      "id": "mclaren-720s-lbworks-2017",
+      "name": "McLaren 720S LBWorks 2017",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/2017_mclaren_720s_lbworks.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 340,
+        "acceleration": 2.9,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff8c00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff8c00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:41.000Z"
+    },
+    {
+      "id": "mclaren-elva-2021",
+      "name": "McLaren Elva 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/2021_mclaren_elva.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 325,
+        "acceleration": 2.8,
+        "handling": 9.7,
+        "braking": 9.8
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#00a3e0",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#00a3e0",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:42.000Z"
+    },
+    {
+      "id": "mclaren-p1-free",
+      "name": "McLaren P1 Free",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/ac_-_mclaren_p1_free.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.6,
+        "handling": 9.5,
+        "braking": 9.4
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff8c00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff8c00",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:43.000Z"
+    },
+    {
+      "id": "mclaren-f1-1993-ruby",
+      "name": "McLaren F1 1993 Ruby",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/McLaren/mclaren_f1_1993_ruby.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 386,
+        "acceleration": 3.2,
+        "handling": 9.2,
+        "braking": 9.0
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#b22222",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#b22222",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:44.000Z"
+    },
+    {
+      "id": "gma-t-50",
+      "name": "GMA T.50 Alternative",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/gma_t.50.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 350,
+        "acceleration": 2.5,
+        "handling": 9.7,
+        "braking": 9.6
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#d3d3d3",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#d3d3d3",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:45.000Z"
+    },
+    {
+      "id": "pagani-huayra-r",
+      "name": "Pagani Huayra R",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/pagani_huayra_r.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 380,
+        "acceleration": 2.6,
+        "handling": 9.6,
+        "braking": 9.5
+      },
+      "scale": 1,
+      "position": [
+        0,
+        0.5,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#1e2023",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#1e2023",
+          "wheel": "#1a1a1a"
+        }
+      },
+      "updatedAt": "2025-01-06T12:00:46.000Z"
+    }
+  ],
+  "exportDate": "2025-01-05T12:10:00.000Z",
+  "version": "1.0"
+}

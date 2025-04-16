@@ -1,0 +1,96 @@
+/* 全局样式 */
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+
+:root {
+  --primary-color: #2c3e50;
+  --accent-color: #42b983;
+  --text-color: #ffffff;
+  --bg-color: #121212;
+  --header-height: 60px;
+  --footer-height: 40px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: 'Roboto', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* 滚动条样式 */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 通知样式 */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  padding: 10px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+  white-space: nowrap;
+}
+
+.notification-success {
+  background: rgba(46, 204, 113, 0.9);
+  color: white;
+}
+
+.notification-error {
+  background: rgba(231, 76, 60, 0.9);
+  color: white;
+}
+
+.notification-info {
+  background: rgba(52, 152, 219, 0.9);
+  color: white;
+}
+
+.notification-warning {
+  background: rgba(241, 196, 15, 0.9);
+  color: white;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translate(-50%, 20px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; transform: translate(-50%, 0); }
+  to { opacity: 0; transform: translate(-50%, -20px); }
+}
+
+/* 图标 */
+.icon-fullscreen:before {
+  content: "⛶";
+}
+
+.icon-settings:before {
+  content: "⚙";
+} 

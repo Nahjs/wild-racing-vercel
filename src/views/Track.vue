@@ -5,7 +5,7 @@
     <div v-if="showControls" class="controls-panel">
       <h3>物理引擎调试面板</h3>
       <div class="control-group">
-        <label>显示调试渲染</label>
+        <label>显示调试</label>
         <input type="checkbox" v-model="debugRender">
       </div>
       <div class="control-group">
@@ -14,22 +14,50 @@
         <span>{{ gravity }}</span>
       </div>
       <div class="control-group">
-        <label>加速力</label>
+        <label>加速力 ({{ enginePower }})</label>
         <input type="range" min="1000" max="15000" :value="enginePower" @input="emitEnginePowerUpdate">
-        <span>{{ enginePower }}</span>
       </div>
       <div class="control-group">
-        <label>刹车力</label>
+        <label>刹车力 ({{ brakeForce }})</label>
         <input type="range" min="1000" max="15000" :value="brakeForce" @input="emitBrakeForceUpdate">
-        <span>{{ brakeForce }}</span>
       </div>
       <div class="control-group">
-        <label>转向强度</label>
+        <label>转向强度 ({{ turnStrength }})</label>
         <input type="range" min="5000" max="15000" :value="turnStrength" @input="emitTurnStrengthUpdate">
-        <span>{{ turnStrength }}</span>
       </div>
-      <div class="speed-display">
-        <span>速度: {{ Math.floor(speed * 3.6) }} km/h</span>
+      <div class="control-group">
+        <label>车辆质量 ({{ vehicleMass }})</label>
+        <input type="range" min="50" max="1000" step="10" :value="vehicleMass" @input="emitVehicleMassUpdate">
+      </div>
+      <div class="control-group">
+        <label>线性阻尼 ({{ linearDamping }})</label>
+        <input type="range" min="0" max="0.5" step="0.01" :value="linearDamping" @input="emitLinearDampingUpdate">
+      </div>
+      <div class="control-group">
+        <label>角阻尼 ({{ angularDamping }})</label>
+        <input type="range" min="0" max="0.5" step="0.01" :value="angularDamping" @input="emitAngularDampingUpdate">
+      </div>
+      <div class="control-group">
+        <label>地面摩擦力 ({{ groundFriction }})</label>
+        <input type="range" min="0" max="1" step="0.05" :value="groundFriction" @input="emitGroundFrictionUpdate">
+      </div>
+      <hr>
+      <h3>视角控制</h3>
+      <div class="control-group">
+        <label>视角模式</label>
+        <select v-model="cameraMode">
+          <option value="thirdPersonFollow">后方跟随</option>
+          <option value="firstPerson">第一人称</option>
+          <option value="freeOrbit">自由视角</option>
+        </select>
+      </div>
+      <div v-if="showThirdPersonControls" class="control-group">
+        <label>相机距离 ({{ cameraDistance.toFixed(1) }})</label>
+        <input type="range" min="3" max="25" step="0.5" v-model.number="cameraDistance">
+      </div>
+      <div v-if="showThirdPersonControls" class="control-group">
+        <label>相机高度 ({{ cameraHeight.toFixed(1) }})</label>
+        <input type="range" min="1" max="15" step="0.5" v-model.number="cameraHeight">
       </div>
       <button class="reset-btn" @click="resetCar">重置车辆</button>
     </div>
@@ -57,7 +85,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, defineEmits } from 'vue';
+import { ref, onMounted, onUnmounted, watch, defineEmits, computed } from 'vue';
 import * as THREE from 'three';
 import PhysicsEngine from '../components/PhysicsEngine.vue';
 // 移除 CarController 导入
@@ -67,11 +95,12 @@ import { markRaw } from 'vue';
 // 添加加载器导入
 import { GLTFLoader } from '@/utils/loaders/GLTFLoader';
 import { DRACOLoader } from '@/utils/loaders/DRACOLoader';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 export default {
   name: 'Track',
   // 定义要 emit 的事件，包括新的 update:* 事件
-  emits: ['scene-ready', 'model-ready', 'update:enginePower', 'update:brakeForce', 'update:turnStrength'],
+  emits: ['scene-ready', 'model-ready', 'update:enginePower', 'update:brakeForce', 'update:turnStrength', 'update:vehicleMass', 'update:linearDamping', 'update:angularDamping', 'update:groundFriction'],
   components: {
     PhysicsEngine,
     // 移除 CarController 组件注册
@@ -108,7 +137,24 @@ export default {
     turnStrength: {
         type: Number,
         required: true
-    }
+    },
+    vehicleMass: {
+        type: Number,
+        required: true
+    },
+    linearDamping: {
+        type: Number,
+        required: true
+    },
+    angularDamping: {
+        type: Number,
+        required: true
+    },
+    groundFriction: {
+        type: Number,
+        required: true
+    },
+    wheelQuaternions: { type: Array, default: () => [] }, // --- 新增 prop ---
   },
   setup(props, { emit }) {
     // Three.js相关引用
@@ -124,7 +170,7 @@ export default {
     // 移除 carController ref
     // const carController = ref(null);
     const carModel = ref(null);
-    const chassis = ref(null);
+    const chassis = ref(0);
     const speed = ref(0);
     
     // 将 Three.js 核心对象标记为非响应式
@@ -134,6 +180,13 @@ export default {
     // const loading = ref(true); // 移除本地 loading 状态
     const debugRender = ref(false);
     const gravity = ref(9.82);
+    
+    let orbitControls;
+    const cameraMode = ref('thirdPersonFollow');
+    const cameraDistance = ref(8);
+    const cameraHeight = ref(4);
+    
+    const wheelMeshRefs = ref({ fl: null, fr: null, rl: null, rr: null }); // Store wheel meshes
     
     // 初始化Three.js场景
     const initScene = () => {
@@ -174,7 +227,7 @@ export default {
       directionalLight.value = rawDirectionalLight; // 如果需要 ref 访问
       
       // 添加地面 - 简单平面
-      const groundGeometry = new THREE.PlaneGeometry(100, 100);
+      const groundGeometry = new THREE.PlaneGeometry(1000, 1000); // 增大地面尺寸
       const groundMaterial = new THREE.MeshStandardMaterial({ 
         color: 0x1a5e1a, 
         roughness: 0.8 
@@ -193,6 +246,12 @@ export default {
 
       // Scene is ready, emit event
       emit('scene-ready', rawScene);
+
+      // 设置 OrbitControls
+      orbitControls = markRaw(new OrbitControls(rawCamera, rawRenderer.domElement));
+      orbitControls.enableDamping = true;
+      orbitControls.dampingFactor = 0.1;
+      orbitControls.enabled = false;
     };
     
     // 添加加载真实模型的函数
@@ -244,6 +303,28 @@ export default {
         // loadedModel.position.set(...position); // 由 CarController/Physics 控制
         // loadedModel.rotation.set(0, rotationY, 0); // 由 CarController/Physics 控制
 
+        // --- 查找车轮网格 (假设名称) ---
+        const wheelNames = {
+            fl: 'Wheel_FL', // Adjust these names based on your actual GLTF model
+            fr: 'Wheel_FR',
+            rl: 'Wheel_RL',
+            rr: 'Wheel_RR'
+        };
+        loadedModel.traverse((child) => {
+            if (child.isMesh) {
+                if (child.name === wheelNames.fl) wheelMeshRefs.value.fl = child;
+                else if (child.name === wheelNames.fr) wheelMeshRefs.value.fr = child;
+                else if (child.name === wheelNames.rl) wheelMeshRefs.value.rl = child;
+                else if (child.name === wheelNames.rr) wheelMeshRefs.value.rr = child;
+            }
+        });
+        console.log("Found wheel meshes:", {
+            fl: !!wheelMeshRefs.value.fl,
+            fr: !!wheelMeshRefs.value.fr,
+            rl: !!wheelMeshRefs.value.rl,
+            rr: !!wheelMeshRefs.value.rr,
+        }); 
+        
         carModel.value = markRaw(loadedModel);
         rawScene.add(carModel.value);
         console.log("Track.vue: Model loaded and added to scene.");
@@ -274,9 +355,14 @@ export default {
     const animate = () => {
       requestAnimationFrame(animate);
       
+      if (orbitControls?.enabled) orbitControls.update();
+      
       if (rawRenderer && rawScene && rawCamera) {
         // 更新相机位置，跟随车辆
         updateCameraPosition();
+        
+        // --- 更新车轮旋转 ---
+        updateWheelRotations();
         
         // 渲染场景
         rawRenderer.render(rawScene, rawCamera);
@@ -285,29 +371,40 @@ export default {
     
     // 更新相机位置，跟随车辆
     const updateCameraPosition = () => {
-      if (carModel.value && rawCamera) {
-        // 获取车辆当前位置并克隆
-        const carPosition = carModel.value.position.clone();
-        
-        // 计算相机的目标位置（在车辆后方和上方）
-        const cameraOffset = new THREE.Vector3(0, 3, 10); // 定义偏移量
-        // 应用车辆当前的旋转来调整相机偏移量，使其保持在车后
-        // cameraOffset.applyQuaternion(carModel.value.quaternion);
-        // 暂时注释掉 applyQuaternion，看是否是它引起的问题
+      if (!carModel.value || !rawCamera) return;
 
-        const cameraTargetPosition = new THREE.Vector3().copy(carPosition).add(cameraOffset);
-        
-        // 平滑过渡相机位置
-        rawCamera.position.lerp(cameraTargetPosition, 0.05);
-        
-        // 相机始终看向车辆位置 (使用克隆的位置)
-        rawCamera.lookAt(carPosition); // lookAt 内部会处理，通常不需要克隆
+      const carPosition = carModel.value.position;
+      const carQuaternion = carModel.value.quaternion;
+
+      orbitControls.enabled = (cameraMode.value === 'freeOrbit');
+      
+      if (cameraMode.value === 'thirdPersonFollow') {
+        const cameraOffset = new THREE.Vector3(0, cameraHeight.value, -cameraDistance.value);
+        const worldOffset = cameraOffset.applyQuaternion(carQuaternion);
+        const cameraTargetPosition = new THREE.Vector3().copy(carPosition).add(worldOffset);
+        rawCamera.position.lerp(cameraTargetPosition, 0.1);
+        const lookAtTarget = carPosition.clone().add(new THREE.Vector3(0, 0.5, 0));
+        rawCamera.lookAt(lookAtTarget);
+        orbitControls.target.copy(carPosition);
+      } else if (cameraMode.value === 'firstPerson') {
+        // 调整第一人称视角的偏移量和目标点
+        const firstPersonOffset = new THREE.Vector3(0, 0.8, 0.3); // Lower and slightly forward
+        const worldPosition = carModel.value.localToWorld(firstPersonOffset.clone());
+        rawCamera.position.copy(worldPosition);
+
+        const lookDirectionOffset = new THREE.Vector3(0, 0.7, 5); // Look slightly lower and further ahead
+        const lookAtWorld = carModel.value.localToWorld(lookDirectionOffset.clone());
+        rawCamera.lookAt(lookAtWorld);
+        orbitControls.target.copy(carPosition);
+      } else if (cameraMode.value === 'freeOrbit') {
+        // OrbitControls handles the camera when enabled.
+        // Keep the target updated to orbit around the car
+         orbitControls.target.lerp(carPosition, 0.1); 
       }
     };
     
     // 物理引擎准备好时的回调
     const onPhysicsReady = (physicsData) => {
-      console.log("Track.vue: Physics ready. World received.");
       world.value = physicsData.world;
       // loading.value = false; // 不再在这里控制 loading
     };
@@ -323,6 +420,9 @@ export default {
         const lightPos = new THREE.Vector3().copy(data.position);
         lightPos.add(new THREE.Vector3(10, 20, 10));
         rawDirectionalLight.position.copy(lightPos);
+        // 更新光源目标点，使其始终指向车辆附近
+        rawDirectionalLight.target.position.copy(data.position);
+        rawDirectionalLight.target.updateMatrixWorld(); // 更新目标矩阵
       }
     };
     
@@ -349,6 +449,18 @@ export default {
     const emitTurnStrengthUpdate = (event) => {
         emit('update:turnStrength', Number(event.target.value));
     };
+    const emitVehicleMassUpdate = (event) => {
+        emit('update:vehicleMass', Number(event.target.value));
+    };
+    const emitLinearDampingUpdate = (event) => {
+        emit('update:linearDamping', Number(event.target.value));
+    };
+    const emitAngularDampingUpdate = (event) => {
+        emit('update:angularDamping', Number(event.target.value));
+    };
+    const emitGroundFrictionUpdate = (event) => {
+        emit('update:groundFriction', Number(event.target.value));
+    };
 
     // 重置车辆位置 (修改，不再依赖 carController)
     const resetCar = () => {
@@ -362,6 +474,35 @@ export default {
         physicsEngine.value.debug = newValue;
       }
     });
+    
+    // 计算属性，用于在模板中隐藏/显示相机距离/高度滑块
+    const showThirdPersonControls = computed(() => cameraMode.value === 'thirdPersonFollow');
+    
+    // --- 新增：更新车轮旋转的函数 ---
+    const updateWheelRotations = () => {
+        // Ensure we have the refs and the data (props.wheelQuaternions should be an array of 4)
+        if (!wheelMeshRefs.value.fl || !props.wheelQuaternions || props.wheelQuaternions.length < 4) {
+            // console.warn("Wheel meshes or quaternions not ready for update.");
+            return; 
+        }
+
+        // --- 添加日志 ---
+        // console.log("Updating wheel rotations. Quaternions:", props.wheelQuaternions);
+
+        // Apply rotations - mapping might need adjustment based on CarController wheel order
+        // Assuming order from CarController: FL, FR, RL, RR
+        // The physics sphere rotation might not directly map 1:1 visually.
+        // We might only want the rotation around the axle.
+        // Let's try direct copy first.
+        try {
+            if(wheelMeshRefs.value.fl) wheelMeshRefs.value.fl.quaternion.copy(props.wheelQuaternions[0]);
+            if(wheelMeshRefs.value.fr) wheelMeshRefs.value.fr.quaternion.copy(props.wheelQuaternions[1]);
+            if(wheelMeshRefs.value.rl) wheelMeshRefs.value.rl.quaternion.copy(props.wheelQuaternions[2]);
+            if(wheelMeshRefs.value.rr) wheelMeshRefs.value.rr.quaternion.copy(props.wheelQuaternions[3]);
+        } catch (error) {
+            console.error("Error copying wheel quaternion:", error, props.wheelQuaternions);
+        }
+    };
     
     // 组件挂载时初始化
     onMounted(() => {
@@ -382,7 +523,26 @@ export default {
       if (rawRenderer) {
         rawRenderer.dispose();
       }
+      if (orbitControls) {
+          orbitControls.dispose(); // 清理 OrbitControls
+      }
       // 可以在这里添加更多清理逻辑，例如移除场景中的对象，dispose 几何体和材质
+      if (rawScene) {
+          // 遍历并清理场景中的对象
+          rawScene.traverse(object => {
+              if (object.geometry) {
+                  object.geometry.dispose();
+              }
+              if (object.material) {
+                  // 如果材质是数组
+                  if (Array.isArray(object.material)) {
+                      object.material.forEach(material => material.dispose());
+                  } else {
+                      object.material.dispose();
+                  }
+              }
+          });
+      }
       rawScene = null; // 释放引用
       rawCamera = null;
       rawRenderer = null;
@@ -407,6 +567,10 @@ export default {
       enginePower: props.enginePower,
       brakeForce: props.brakeForce,
       turnStrength: props.turnStrength,
+      vehicleMass: props.vehicleMass,
+      linearDamping: props.linearDamping,
+      angularDamping: props.angularDamping,
+      groundFriction: props.groundFriction,
       onPhysicsReady,
       onPositionUpdate, // 暂时保留导出，可能 Race.vue 会用到
       onPhysicsUpdate, // 暂时保留导出
@@ -415,9 +579,18 @@ export default {
       emitEnginePowerUpdate,
       emitBrakeForceUpdate,
       emitTurnStrengthUpdate,
+      emitVehicleMassUpdate,
+      emitLinearDampingUpdate,
+      emitAngularDampingUpdate,
+      emitGroundFrictionUpdate,
       resetCar, // 暂时保留导出
       // 不再需要导出 currentVehicle
       // currentVehicle 
+      cameraMode,
+      cameraDistance,
+      cameraHeight,
+      showThirdPersonControls,
+      wheelMeshRefs, // (wheelMeshRefs is internal, no need to return unless template needs it)
     };
   }
 };
@@ -445,18 +618,52 @@ export default {
   color: white;
   padding: 15px;
   border-radius: 5px;
-  min-width: 200px;
+  min-width: 250px; /* Increased width slightly */
+  max-height: 90vh; /* Limit height */
+  overflow-y: auto; /* Add scroll if content overflows */
   z-index: 10;
 }
 
 .control-group {
-  margin-bottom: 10px;
+  margin-bottom: 12px; /* Increased spacing */
   display: flex;
-  flex-direction: column;
+  flex-direction: column; /* Keep as column */
+  align-items: flex-start; /* Align items left */
 }
 
 .control-group label {
   margin-bottom: 5px;
+  font-size: 14px; /* Slightly smaller font */
+}
+
+.control-group input[type="range"] {
+  width: 100%; /* Make range inputs full width */
+  cursor: pointer;
+}
+.control-group input[type="checkbox"] {
+  align-self: flex-start; /* Align checkbox left */
+  margin-top: 4px;
+}
+
+.control-group span {
+  font-size: 12px; /* Smaller font for value display */
+  margin-left: 5px; /* Add space before value */
+  align-self: flex-end; /* Align value to the right */
+}
+
+.control-group select {
+    width: 100%;
+    padding: 5px;
+    border-radius: 3px;
+    background: #333;
+    color: white;
+    border: 1px solid #555;
+}
+
+hr {
+    border: none;
+    border-top: 1px solid #555;
+    margin: 15px 0;
 }
 
 .speed-display {
@@ -472,6 +679,8 @@ export default {
   padding: 8px 15px;
   border-radius: 4px;
   cursor: pointer;
+  width: 100%; /* Make button full width */
+  margin-top: 10px;
 }
 
 .reset-btn:hover {
@@ -510,5 +719,26 @@ export default {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Style scrollbar for controls panel */
+.controls-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.controls-panel::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.controls-panel::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.controls-panel::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(255, 255, 255, 0.7);
 }
 </style> 

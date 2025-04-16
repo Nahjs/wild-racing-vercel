@@ -15,6 +15,7 @@ export class ControlState {
     this.brake = false;
     this.turnLeft = false;
     this.turnRight = false;
+    console.log("ControlState reset due to blur or touch end."); // Add log for clarity
   }
 }
 
@@ -22,60 +23,61 @@ export class ControlState {
 export class KeyboardController {
   constructor(controlState) {
     this.controls = controlState || new ControlState();
+    this.keyDownHandler = this.handleKeyDown.bind(this); // Bind 'this'
+    this.keyUpHandler = this.handleKeyUp.bind(this);     // Bind 'this'
+    this.blurHandler = this.handleBlur.bind(this);       // Bind 'this'
     this.setupListeners();
-    console.log("KeyboardController initialized. Monitoring document key events."); // 添加日志
+    console.log("KeyboardController initialized.");
+  }
+  
+  handleKeyDown(e) {
+    let changed = false;
+    switch(e.code) {
+      case 'KeyW': case 'ArrowUp':
+        if (!this.controls.accelerate) { this.controls.accelerate = true; changed = true; } break;
+      case 'KeyS': case 'ArrowDown':
+        if (!this.controls.brake) { this.controls.brake = true; changed = true; } break;
+      case 'KeyA': case 'ArrowLeft':
+        if (!this.controls.turnLeft) { this.controls.turnLeft = true; changed = true; } break;
+      case 'KeyD': case 'ArrowRight':
+        if (!this.controls.turnRight) { this.controls.turnRight = true; changed = true; } break;
+    }
+    // if (changed) console.log(`Keydown: ${e.code}`, { ...this.controls }); // Can uncomment if needed
+  }
+  
+  handleKeyUp(e) {
+    let changed = false;
+    switch(e.code) {
+      case 'KeyW': case 'ArrowUp':
+        if (this.controls.accelerate) { this.controls.accelerate = false; changed = true; } break;
+      case 'KeyS': case 'ArrowDown':
+        if (this.controls.brake) { this.controls.brake = false; changed = true; } break;
+      case 'KeyA': case 'ArrowLeft':
+        if (this.controls.turnLeft) { this.controls.turnLeft = false; changed = true; } break;
+      case 'KeyD': case 'ArrowRight':
+        if (this.controls.turnRight) { this.controls.turnRight = false; changed = true; } break;
+    }
+    // if (changed) console.log(`Keyup: ${e.code}`, { ...this.controls }); // Can uncomment if needed
+  }
+  
+  handleBlur() {
+    console.log("Window lost focus (blur event), resetting controls.");
+    this.controls.reset();
   }
   
   setupListeners() {
-    document.addEventListener('keydown', (e) => {
-      let changed = false;
-      switch(e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          if (!this.controls.accelerate) { this.controls.accelerate = true; changed = true; }
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          if (!this.controls.brake) { this.controls.brake = true; changed = true; }
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          if (!this.controls.turnLeft) { this.controls.turnLeft = true; changed = true; }
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          if (!this.controls.turnRight) { this.controls.turnRight = true; changed = true; }
-          break;
-      }
-      if (changed) { // 添加日志
-          console.log(`Keydown: ${e.code}`, { ...this.controls });
-      }
-    });
-    
-    document.addEventListener('keyup', (e) => {
-      let changed = false;
-      switch(e.code) {
-        case 'KeyW':
-        case 'ArrowUp':
-          if (this.controls.accelerate) { this.controls.accelerate = false; changed = true; }
-          break;
-        case 'KeyS':
-        case 'ArrowDown':
-          if (this.controls.brake) { this.controls.brake = false; changed = true; }
-          break;
-        case 'KeyA':
-        case 'ArrowLeft':
-          if (this.controls.turnLeft) { this.controls.turnLeft = false; changed = true; }
-          break;
-        case 'KeyD':
-        case 'ArrowRight':
-          if (this.controls.turnRight) { this.controls.turnRight = false; changed = true; }
-          break;
-      }
-       if (changed) { // 添加日志
-           console.log(`Keyup: ${e.code}`, { ...this.controls });
-       }
-    });
+    document.addEventListener('keydown', this.keyDownHandler);
+    document.addEventListener('keyup', this.keyUpHandler);
+    // --- 添加 blur 事件监听器 ---
+    window.addEventListener('blur', this.blurHandler); 
+  }
+  
+  // --- 添加清理方法 ---
+  removeListeners() {
+    document.removeEventListener('keydown', this.keyDownHandler);
+    document.removeEventListener('keyup', this.keyUpHandler);
+    window.removeEventListener('blur', this.blurHandler);
+    console.log("KeyboardController listeners removed.");
   }
   
   // 获取当前控制状态
@@ -91,47 +93,63 @@ export class TouchController {
     this.touchElement = touchElement || document.body;
     this.touchStartX = 0;
     this.touchStartY = 0;
+    this.touchStartHandler = this.handleTouchStart.bind(this);
+    this.touchMoveHandler = this.handleTouchMove.bind(this);
+    this.touchEndHandler = this.handleTouchEnd.bind(this);
+    this.blurHandler = this.handleBlur.bind(this); // Also reset on blur
     this.setupListeners();
   }
   
-  setupListeners() {
-    // 触摸开始事件
-    this.touchElement.addEventListener('touchstart', (e) => {
-      const touch = e.touches[0];
-      this.touchStartX = touch.clientX;
-      this.touchStartY = touch.clientY;
-    });
-    
-    // 触摸移动事件
-    this.touchElement.addEventListener('touchmove', (e) => {
-      const touch = e.touches[0];
-      const deltaX = touch.clientX - this.touchStartX;
-      const deltaY = touch.clientY - this.touchStartY;
-      
-      // 重置控制状态
-      this.controls.reset();
-      
-      // 水平移动控制转向
-      if (deltaX > 50) {
-        this.controls.turnRight = true;
-      } else if (deltaX < -50) {
-        this.controls.turnLeft = true;
-      }
-      
-      // 垂直移动控制加速和刹车
-      if (deltaY < -50) {
-        this.controls.accelerate = true;
-      } else if (deltaY > 50) {
-        this.controls.brake = true;
-      }
-    });
-    
-    // 触摸结束事件
-    this.touchElement.addEventListener('touchend', () => {
-      this.controls.reset();
-    });
+  handleTouchStart(e) {
+    const touch = e.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    // Don't reset here, reset only on move/end
   }
   
+  handleTouchMove(e) {
+    // Prevent default scroll/zoom behavior if needed
+    // e.preventDefault(); 
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+    
+    // Reset controls before applying new ones based on move
+    this.controls.reset(); 
+    
+    if (deltaX > 30) this.controls.turnRight = true; // Reduced threshold
+    else if (deltaX < -30) this.controls.turnLeft = true;
+    
+    if (deltaY < -30) this.controls.accelerate = true;
+    else if (deltaY > 30) this.controls.brake = true;
+  }
+
+  handleTouchEnd() {
+    this.controls.reset();
+  }
+  
+  handleBlur() {
+    console.log("Window lost focus (blur event), resetting touch controls.");
+    this.controls.reset();
+  }
+
+  setupListeners() {
+    this.touchElement.addEventListener('touchstart', this.touchStartHandler, { passive: false }); // passive: false if preventDefault is needed
+    this.touchElement.addEventListener('touchmove', this.touchMoveHandler, { passive: false }); 
+    this.touchElement.addEventListener('touchend', this.touchEndHandler);
+    this.touchElement.addEventListener('touchcancel', this.touchEndHandler); // Also reset on cancel
+    window.addEventListener('blur', this.blurHandler); // Add blur listener
+  }
+  
+  removeListeners() {
+    this.touchElement.removeEventListener('touchstart', this.touchStartHandler);
+    this.touchElement.removeEventListener('touchmove', this.touchMoveHandler);
+    this.touchElement.removeEventListener('touchend', this.touchEndHandler);
+    this.touchElement.removeEventListener('touchcancel', this.touchEndHandler);
+    window.removeEventListener('blur', this.blurHandler);
+    console.log("TouchController listeners removed.");
+  }
+
   // 获取当前控制状态
   getControlState() {
     return this.controls;

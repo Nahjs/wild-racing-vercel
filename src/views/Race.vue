@@ -21,9 +21,18 @@
       :engine-power="enginePower"
       :brake-force="brakeForce"
       :turn-strength="turnStrength"
+      :vehicle-mass="vehicleMass"
+      :linear-damping="linearDamping"
+      :angular-damping="angularDamping"
+      :ground-friction="groundFriction"
+      :wheel-quaternions="wheelQuaternions"
       @update:engine-power="handleEnginePowerUpdate"
       @update:brake-force="handleBrakeForceUpdate"
       @update:turn-strength="handleTurnStrengthUpdate"
+      @update:vehicle-mass="handleMassUpdate"
+      @update:linear-damping="handleLinearDampingUpdate"
+      @update:angular-damping="handleAngularDampingUpdate"
+      @update:ground-friction="handleGroundFrictionUpdate"
     />
     
     <CarController
@@ -37,6 +46,9 @@
       :engine-power="enginePower"
       :brake-force="brakeForce"
       :turn-strength="turnStrength"
+      :vehicle-mass="vehicleMass"
+      :linear-damping="linearDamping"
+      :angular-damping="angularDamping"
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
     />
@@ -47,11 +59,11 @@
         <small>km/h</small>
       </div>
       
-      <div class="lap-info">
+      <!-- <div class="lap-info">
         <div>圈数: {{ currentLap }}/{{ totalLaps }}</div>
         <div>最佳时间: {{ formatTime(bestLapTime) }}</div>
         <div>当前时间: {{ formatTime(currentLapTime) }}</div>
-      </div>
+      </div> -->
       
       <div v-if="raceStatus === 'countdown'" class="countdown">
         {{ countdown }}
@@ -68,7 +80,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import PhysicsEngine from '../components/PhysicsEngine.vue';
 import CarController from '../components/CarController.vue';
 import Track from './Track.vue';
@@ -121,7 +133,16 @@ export default {
     // 新增：管理控制参数状态
     const enginePower = ref(6000); 
     const brakeForce = ref(6000);  
-    const turnStrength = ref(5000);   // 转向强度可以从稍高点开始尝试
+    const turnStrength = ref(8000);   // 转向强度可以从稍高点开始尝试
+    
+    // --- 新增物理参数 ref ---
+    const vehicleMass = ref(100); // 初始质量
+    const linearDamping = ref(0.01); // 初始线性阻尼
+    const angularDamping = ref(0.01); // 初始角阻尼
+    const groundFriction = ref(0.3); // 初始地面摩擦力
+    
+    // 新增：车轮数据
+    const wheelQuaternions = ref([]);
     
     // 初始化场景
     const initScene = () => {
@@ -140,11 +161,13 @@ export default {
     
     // 物理引擎更新
     const onPhysicsUpdate = () => {
-      // 调用 CarController 处理物理更新
+      if (world.value) {
+         // Update default contact material friction dynamically if needed
+         // world.value.defaultContactMaterial.friction = groundFriction.value; 
+         // Note: Continuously updating might have performance implications.
+         // Better to update only when the value changes.
+      }
       if (carController.value) { 
-        // CarController 内部的 isReady 状态似乎没必要在此检查，
-        // 因为 CarController 只有在准备好后才会被渲染并触发 car-ready
-        // handlePhysicsUpdate 内部应该有自己的准备状态检查（如果需要）
         carController.value.handlePhysicsUpdate(); 
       }
 
@@ -154,6 +177,15 @@ export default {
         checkCheckpoints();
       }
     };
+    
+    // Watch for friction changes to update the world's default
+    watch(groundFriction, (newFriction) => {
+        if (world.value) {
+            console.log(`Updating default ground friction to: ${newFriction}`);
+            world.value.defaultContactMaterial.friction = newFriction;
+            // Might need to adjust contact materials between specific bodies if not using default
+        }
+    });
     
     // 车辆准备就绪
     const onCarReady = () => {
@@ -166,13 +198,15 @@ export default {
     // 更新车辆位置
     const onPositionUpdate = (data) => {
       speed.value = data.velocity.length();
+      // --- 保存车轮数据 ---
+      if (data.wheelQuaternions) {
+          wheelQuaternions.value = data.wheelQuaternions;
+      }
     };
     
     // 开始倒计时
     const startCountdown = () => {
-      console.log("Race.vue: startCountdown called. Current raceStatus:", raceStatus.value);
       raceStatus.value = 'countdown';
-      console.log("Race.vue: raceStatus set to 'countdown'. New status:", raceStatus.value);
       countdown.value = 3;
       
       const countdownInterval = setInterval(() => {
@@ -301,8 +335,7 @@ export default {
                       ...(vehicleDataFromDB.customSettings || {}), // DB custom settings take precedence
                   }
               };
-              console.log("Race view loaded and merged vehicle data:", currentVehicle.value.name, currentVehicle.value);
-          } else {
+              } else {
               // DB fetch failed or returned null, use base data directly
               console.warn(`Vehicle data for ID ${vehicleIdToLoad} not found in DB, using list data.`);
               currentVehicle.value = baseVehicleData;
@@ -336,7 +369,6 @@ export default {
     
     // 当 Track 组件的场景准备好时调用
     const onSceneReady = (emittedScene) => {
-        console.log("Track scene is ready.");
         scene.value = emittedScene;
         // 现在可以安全地认为 scene 存在了
         // 移除获取 carModel 的逻辑
@@ -350,21 +382,17 @@ export default {
     
     // 添加 model-ready 事件处理函数
     const onModelReady = (model) => {
-        console.log("Race.vue: Received model-ready event.");
         carModel.value = model;
-        console.log("Car model set in Race.vue:", carModel.value ? 'Success' : 'Failed');
     };
     
     // 新增：事件处理函数，用于更新控制参数状态
-    const handleEnginePowerUpdate = (newValue) => {
-        enginePower.value = newValue;
-    };
-    const handleBrakeForceUpdate = (newValue) => {
-        brakeForce.value = newValue;
-    };
-    const handleTurnStrengthUpdate = (newValue) => {
-        turnStrength.value = newValue;
-    };
+    const handleMassUpdate = (newValue) => { vehicleMass.value = newValue; };
+    const handleLinearDampingUpdate = (newValue) => { linearDamping.value = newValue; };
+    const handleAngularDampingUpdate = (newValue) => { angularDamping.value = newValue; };
+    const handleGroundFrictionUpdate = (newValue) => { groundFriction.value = newValue; };
+    const handleEnginePowerUpdate = (newValue) => { enginePower.value = newValue; };
+    const handleBrakeForceUpdate = (newValue) => { brakeForce.value = newValue; };
+    const handleTurnStrengthUpdate = (newValue) => { turnStrength.value = newValue; };
     
     return {
       physicsEngine,
@@ -389,6 +417,11 @@ export default {
       enginePower,
       brakeForce,
       turnStrength,
+      vehicleMass,
+      linearDamping,
+      angularDamping,
+      groundFriction,
+      wheelQuaternions,
       onPhysicsReady,
       onPhysicsUpdate,
       onSceneReady,
@@ -397,6 +430,10 @@ export default {
       restartRace,
       formatTime,
       onModelReady,
+      handleMassUpdate,
+      handleLinearDampingUpdate,
+      handleAngularDampingUpdate,
+      handleGroundFrictionUpdate,
       handleEnginePowerUpdate,
       handleBrakeForceUpdate,
       handleTurnStrengthUpdate

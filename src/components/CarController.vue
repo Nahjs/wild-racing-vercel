@@ -50,6 +50,18 @@ export default {
     turnStrength: {
       type: Number,
       required: true
+    },
+    vehicleMass: {
+      type: Number,
+      required: true
+    },
+    linearDamping: {
+      type: Number,
+      required: true
+    },
+    angularDamping: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -60,6 +72,13 @@ export default {
     const touchController = ref(null);
     const isReady = ref(false);
     const vehicle = ref(null);
+    
+    // 用于检测翻转的变量
+    const localUp = new THREE.Vector3(0, 1, 0); // 车辆的局部向上向量
+    const worldUp = new THREE.Vector3();        // 转换到世界坐标后的向上向量
+    const resetThreshold = 0.1;                 // 判定为翻转的阈值 (Y分量小于此值)
+    let justReset = false;                      // 防止连续重置的标志
+    let resetCooldownTimer = null;              // 重置冷却计时器
     
     // 创建车辆物理体
     const createCarPhysics = () => {
@@ -72,6 +91,9 @@ export default {
       // 创建车辆主体
       const { chassisBody } = createVehicle(props.world, {
         position,
+        mass: props.vehicleMass,
+        linearDamping: props.linearDamping,
+        angularDamping: props.angularDamping,
         ...props.carOptions
       });
       
@@ -108,15 +130,18 @@ export default {
     // 更新车辆位置和方向
     const updateCarModel = () => {
       if (props.carModel && chassis.value) {
-        // 将物理模型的位置和旋转同步到3D模型
         props.carModel.position.copy(chassis.value.position);
         props.carModel.quaternion.copy(chassis.value.quaternion);
         
-        // 通知父组件位置更新
+        // --- 获取车轮四元数 ---
+        const wheelQuaternions = wheels.value.map(wheelBody => wheelBody.quaternion.clone());
+        
+        // --- 在事件中发送车轮数据 ---
         emit('position-update', {
-          position: chassis.value.position,
-          quaternion: chassis.value.quaternion,
-          velocity: chassis.value.velocity
+          position: chassis.value.position.clone(), // Clone vectors/quaternions
+          quaternion: chassis.value.quaternion.clone(),
+          velocity: chassis.value.velocity.clone(),
+          wheelQuaternions: wheelQuaternions 
         });
       }
     };
@@ -126,6 +151,31 @@ export default {
       if (isReady.value && chassis.value) {
         // 应用驾驶控制
         applyDriveControls(chassis.value, wheels.value, controlState.value);
+        
+        // 检测是否翻转 (如果启用了自动重置)
+        if (!justReset) { // 暂时无条件检查
+            // 获取当前车辆的四元数 (从 CANNON.Quaternion 转换为 THREE.Quaternion)
+            const vehicleQuaternion = new THREE.Quaternion(
+                chassis.value.quaternion.x,
+                chassis.value.quaternion.y,
+                chassis.value.quaternion.z,
+                chassis.value.quaternion.w
+            );
+            
+            // 计算车辆在世界坐标系中的向上向量
+            worldUp.copy(localUp).applyQuaternion(vehicleQuaternion);
+            
+            // 检查 Y 分量是否小于阈值
+            if (worldUp.y < resetThreshold) {
+                resetCar(); // 调用重置函数
+                justReset = true; // 设置标志，防止立即再次重置
+                // 设置一个短暂的冷却时间后清除标志
+                if(resetCooldownTimer) clearTimeout(resetCooldownTimer);
+                resetCooldownTimer = setTimeout(() => {
+                    justReset = false;
+                }, 3000); // 冷却
+            }
+        }
         
         // 更新3D模型位置
         updateCarModel();
@@ -153,7 +203,7 @@ export default {
         } else {
           chassis.value.position.set(
             props.initialPosition.x, 
-            props.initialPosition.y, 
+            props.initialPosition.y + 0.5, // 稍微抬高一点，防止卡入地面
             props.initialPosition.z
           );
         }
@@ -177,6 +227,27 @@ export default {
         });
       }
     }, { immediate: true }); // immediate: true 确保初始值也被设置
+    
+    // 监听物理参数 Props 的变化并更新 Body
+    watch(() => props.vehicleMass, (newMass) => {
+      if (chassis.value) {
+        console.log(`CarController: Updating mass to ${newMass}`);
+        chassis.value.mass = newMass;
+        chassis.value.updateMassProperties(); // Important after changing mass!
+      }
+    });
+    watch(() => props.linearDamping, (newDamping) => {
+      if (chassis.value) {
+        console.log(`CarController: Updating linearDamping to ${newDamping}`);
+        chassis.value.linearDamping = newDamping;
+      }
+    });
+    watch(() => props.angularDamping, (newDamping) => {
+      if (chassis.value) {
+        console.log(`CarController: Updating angularDamping to ${newDamping}`);
+        chassis.value.angularDamping = newDamping;
+      }
+    });
     
     // 组件挂载时创建车辆
     onMounted(async () => {
@@ -224,6 +295,19 @@ export default {
         wheels.value.forEach(wheel => {
           props.world.removeBody(wheel);
         });
+      }
+      
+      // --- 清理事件监听器 ---
+      if (keyboardController.value) {
+          keyboardController.value.removeListeners();
+      }
+      if (touchController.value) { // Also cleanup touch if/when enabled
+          touchController.value.removeListeners();
+      }
+      
+      // 清理冷却计时器
+      if (resetCooldownTimer) {
+          clearTimeout(resetCooldownTimer);
       }
     });
     

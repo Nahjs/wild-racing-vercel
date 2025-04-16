@@ -15,17 +15,17 @@
       </div>
       <div class="control-group">
         <label>加速力</label>
-        <input type="range" min="100" max="1000" v-model.number="enginePower" @input="updateControls">
+        <input type="range" min="1000" max="15000" :value="enginePower" @input="emitEnginePowerUpdate">
         <span>{{ enginePower }}</span>
       </div>
       <div class="control-group">
         <label>刹车力</label>
-        <input type="range" min="100" max="800" v-model.number="brakeForce" @input="updateControls">
+        <input type="range" min="1000" max="15000" :value="brakeForce" @input="emitBrakeForceUpdate">
         <span>{{ brakeForce }}</span>
       </div>
       <div class="control-group">
         <label>转向强度</label>
-        <input type="range" min="1" max="20" v-model.number="turnStrength" @input="updateControls">
+        <input type="range" min="5000" max="15000" :value="turnStrength" @input="emitTurnStrengthUpdate">
         <span>{{ turnStrength }}</span>
       </div>
       <div class="speed-display">
@@ -57,12 +57,11 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, defineEmits } from 'vue';
 import * as THREE from 'three';
 import PhysicsEngine from '../components/PhysicsEngine.vue';
 // 移除 CarController 导入
 // import CarController from '../components/CarController.vue';
-import { configureControls } from '../utils/controls';
 import { vehiclesList } from '@/config/vehicles';
 import { markRaw } from 'vue';
 // 添加加载器导入
@@ -71,7 +70,8 @@ import { DRACOLoader } from '@/utils/loaders/DRACOLoader';
 
 export default {
   name: 'Track',
-  emits: ['scene-ready', 'model-ready'],
+  // 定义要 emit 的事件，包括新的 update:* 事件
+  emits: ['scene-ready', 'model-ready', 'update:enginePower', 'update:brakeForce', 'update:turnStrength'],
   components: {
     PhysicsEngine,
     // 移除 CarController 组件注册
@@ -94,6 +94,19 @@ export default {
     // 添加 isLoading prop
     isLoading: {
         type: Boolean,
+        required: true
+    },
+    // 新增 props 从 Race.vue 接收控制参数
+    enginePower: {
+        type: Number,
+        required: true
+    },
+    brakeForce: {
+        type: Number,
+        required: true
+    },
+    turnStrength: {
+        type: Number,
         required: true
     }
   },
@@ -121,9 +134,6 @@ export default {
     // const loading = ref(true); // 移除本地 loading 状态
     const debugRender = ref(false);
     const gravity = ref(9.82);
-    const enginePower = ref(500);
-    const brakeForce = ref(300);
-    const turnStrength = ref(6);
     
     // 初始化Three.js场景
     const initScene = () => {
@@ -173,6 +183,10 @@ export default {
       ground.rotation.x = -Math.PI / 2;
       ground.receiveShadow = true;
       rawScene.add(ground);
+      
+      // 添加网格辅助线
+      const gridHelper = markRaw(new THREE.GridHelper(10000, 10000)); // 网格
+      rawScene.add(gridHelper);
       
       // 添加事件监听
       window.addEventListener('resize', handleResize);
@@ -325,29 +339,21 @@ export default {
       }
     };
     
-    // 更新控制参数 (修改，不再依赖 carController)
-    const updateControls = () => {
-      // 这个方法可能不再需要，或者需要调整，
-      // 因为控制状态现在由 Race.vue 的 CarController 管理
-      // if (carController.value && carController.value.controlState) {
-      //   configureControls(carController.value.controlState, {
-      //     power: enginePower.value,
-      //     brakeForce: brakeForce.value,
-      //     turnStrength: turnStrength.value
-      //   });
-      // }
-      console.warn("Track.vue: updateControls called, may need adjustment after removing CarController.");
+    // 修改 updateControls 函数为 emit 事件
+    const emitEnginePowerUpdate = (event) => {
+        emit('update:enginePower', Number(event.target.value));
     };
-    
+    const emitBrakeForceUpdate = (event) => {
+        emit('update:brakeForce', Number(event.target.value));
+    };
+    const emitTurnStrengthUpdate = (event) => {
+        emit('update:turnStrength', Number(event.target.value));
+    };
+
     // 重置车辆位置 (修改，不再依赖 carController)
     const resetCar = () => {
-      // 这个方法需要重新实现，因为它依赖于 carController.resetCar()
-      // 可能需要 emit 一个事件给 Race.vue 来处理重置
-      // 或者直接操作 carModel 的位置（如果物理引擎允许）
-      console.warn("Track.vue: resetCar called, needs reimplementation after removing CarController.");
-      // if (carController.value) {
-      //   carController.value.resetCar();
-      // }
+      console.warn("Track.vue: resetCar called. Consider emitting event to Race.vue to handle reset.");
+      // emit('reset-car'); // 例如
     };
     
     // 监听调试渲染选项变化
@@ -392,19 +398,23 @@ export default {
       speed,
       debugRender,
       gravity,
-      enginePower,
-      brakeForce,
-      turnStrength,
       physicsEngine,
-      // 移除 carController 导出
-      // carController,
+      // 移除本地控制状态的导出
+      // enginePower,
+      // brakeForce,
+      // turnStrength,
+      // 导出 props 以在模板中使用
+      enginePower: props.enginePower,
+      brakeForce: props.brakeForce,
+      turnStrength: props.turnStrength,
       onPhysicsReady,
-      // 移除 onCarReady 导出
-      // onCarReady,
       onPositionUpdate, // 暂时保留导出，可能 Race.vue 会用到
       onPhysicsUpdate, // 暂时保留导出
       updateGravity,
-      updateControls, // 暂时保留导出
+      // 导出新的 emit 函数
+      emitEnginePowerUpdate,
+      emitBrakeForceUpdate,
+      emitTurnStrengthUpdate,
       resetCar, // 暂时保留导出
       // 不再需要导出 currentVehicle
       // currentVehicle 

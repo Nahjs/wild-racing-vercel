@@ -5,11 +5,11 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import { createVehicle, createWheel, applyDriveControls } from '../utils/physics';
-import { ControlState, KeyboardController, TouchController } from '../utils/controls';
+import { ControlState, KeyboardController, TouchController, configureControls } from '../utils/controls';
 import { vehicleService } from '../services/vehicleService';
 
 export default {
@@ -38,6 +38,18 @@ export default {
     selectedVehicle: {
       type: Object,
       required: true
+    },
+    enginePower: {
+      type: Number,
+      required: true
+    },
+    brakeForce: {
+      type: Number,
+      required: true
+    },
+    turnStrength: {
+      type: Number,
+      required: true
     }
   },
   setup(props, { emit }) {
@@ -48,13 +60,6 @@ export default {
     const touchController = ref(null);
     const isReady = ref(false);
     const vehicle = ref(null);
-    const controls = ref({
-      forward: false,
-      backward: false,
-      left: false,
-      right: false,
-      brake: false
-    });
     
     // 创建车辆物理体
     const createCarPhysics = () => {
@@ -72,6 +77,9 @@ export default {
       
       chassis.value = chassisBody;
       
+      // --- 添加日志：检查物理体属性 ---
+      console.log(`CarController: chassisBody created. Mass: ${chassisBody.mass}, LinearDamping: ${chassisBody.linearDamping}, AngularDamping: ${chassisBody.angularDamping}`);
+      
       // 创建四个车轮
       const wheelRadius = 0.5;
       const wheelPositions = [
@@ -88,7 +96,9 @@ export default {
       
       // 初始化控制器
       keyboardController.value = new KeyboardController(controlState.value);
-      touchController.value = new TouchController(controlState.value);
+      // --- 暂时注释掉 TouchController 的初始化 ---
+      // touchController.value = new TouchController(controlState.value);
+      console.log("TouchController temporarily disabled for debugging."); // 添加日志
       
       isReady.value = true;
       
@@ -156,6 +166,18 @@ export default {
       }
     };
     
+    // 监听控制参数 Props 的变化并更新 controlState
+    watch(() => [props.enginePower, props.brakeForce, props.turnStrength], ([power, brake, turn]) => {
+      if (controlState.value) {
+        console.log(`CarController: Updating control params - Power: ${power}, Brake: ${brake}, Turn: ${turn}`);
+        configureControls(controlState.value, {
+          power: power,
+          brakeForce: brake,
+          turnStrength: turn
+        });
+      }
+    }, { immediate: true }); // immediate: true 确保初始值也被设置
+    
     // 组件挂载时创建车辆
     onMounted(async () => {
       console.log("CarController: onMounted - Start");
@@ -170,6 +192,14 @@ export default {
           createCarPhysics();
           console.log("CarController: createCarPhysics finished.");
           
+          // 初始化时应用一次从 props 传入的控制参数
+          configureControls(controlState.value, {
+            power: props.enginePower,
+            brakeForce: props.brakeForce,
+            turnStrength: props.turnStrength
+          });
+          console.log("CarController: Initial control params applied.");
+          
           console.log("CarController: Emitting car-ready event...");
           emit('car-ready');
           console.log("CarController: car-ready event emitted.");
@@ -183,9 +213,6 @@ export default {
         console.warn("CarController: World, Scene, or SelectedVehicle missing on mount.", 
           { world: !!props.world, scene: !!props.scene, vehicle: !!props.selectedVehicle });
       }
-      
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
     });
     
     // 组件卸载时清理
@@ -198,55 +225,10 @@ export default {
           props.world.removeBody(wheel);
         });
       }
-      
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
     });
     
-    const handleKeyDown = (event) => {
-      switch(event.key) {
-        case 'w':
-          controls.value.forward = true;
-          break;
-        case 's':
-          controls.value.backward = true;
-          break;
-        case 'a':
-          controls.value.left = true;
-          break;
-        case 'd':
-          controls.value.right = true;
-          break;
-        case ' ':
-          controls.value.brake = true;
-          break;
-      }
-    };
-
-    const handleKeyUp = (event) => {
-      switch(event.key) {
-        case 'w':
-          controls.value.forward = false;
-          break;
-        case 's':
-          controls.value.backward = false;
-          break;
-        case 'a':
-          controls.value.left = false;
-          break;
-        case 'd':
-          controls.value.right = false;
-          break;
-        case ' ':
-          controls.value.brake = false;
-          break;
-      }
-    };
-
     const update = (deltaTime) => {
-      if (vehicle.value) {
-        applyDriveControls(vehicle.value, controls.value, deltaTime);
-      }
+      console.warn("CarController update function called, but 'vehicle' ref might be unused.");
     };
     
     // 暴露给父组件的方法和属性

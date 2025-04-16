@@ -4,7 +4,7 @@
       v-if="scene"
       ref="physicsEngine"
       :scene="scene"
-      :debug="debugMode"
+      :debug="false"
       @physics-ready="onPhysicsReady"
       @physics-update="onPhysicsUpdate"
     />
@@ -18,16 +18,25 @@
       :selectedVehicle="currentVehicle"
       @model-ready="onModelReady"
       :is-loading="isLoading"
+      :engine-power="enginePower"
+      :brake-force="brakeForce"
+      :turn-strength="turnStrength"
+      @update:engine-power="handleEnginePowerUpdate"
+      @update:brake-force="handleBrakeForceUpdate"
+      @update:turn-strength="handleTurnStrengthUpdate"
     />
     
     <CarController
-      v-if="!isLoadingVehicle && currentVehicle && world && scene"
+      v-if="!isLoadingVehicle && currentVehicle && world && scene && carModel"
       ref="carController"
       :world="world"
       :scene="scene"
       :carModel="carModel"
       :initialPosition="{ x: 0, y: 2, z: 0 }"
       :selectedVehicle="currentVehicle"
+      :engine-power="enginePower"
+      :brake-force="brakeForce"
+      :turn-strength="turnStrength"
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
     />
@@ -108,6 +117,11 @@ export default {
     const currentVehicle = ref(null);
     const isLoadingVehicle = ref(true); // 添加加载状态
     const isLoading = ref(true); // 添加整体加载状态
+    
+    // 新增：管理控制参数状态
+    const enginePower = ref(6000); 
+    const brakeForce = ref(6000);  
+    const turnStrength = ref(5000);   // 转向强度可以从稍高点开始尝试
     
     // 初始化场景
     const initScene = () => {
@@ -341,6 +355,17 @@ export default {
         console.log("Car model set in Race.vue:", carModel.value ? 'Success' : 'Failed');
     };
     
+    // 新增：事件处理函数，用于更新控制参数状态
+    const handleEnginePowerUpdate = (newValue) => {
+        enginePower.value = newValue;
+    };
+    const handleBrakeForceUpdate = (newValue) => {
+        brakeForce.value = newValue;
+    };
+    const handleTurnStrengthUpdate = (newValue) => {
+        turnStrength.value = newValue;
+    };
+    
     return {
       physicsEngine,
       track,
@@ -361,6 +386,9 @@ export default {
       currentVehicle, // 暴露 currentVehicle
       isLoadingVehicle, // 暴露加载状态
       isLoading, // 暴露整体加载状态
+      enginePower,
+      brakeForce,
+      turnStrength,
       onPhysicsReady,
       onPhysicsUpdate,
       onSceneReady,
@@ -368,7 +396,10 @@ export default {
       onPositionUpdate,
       restartRace,
       formatTime,
-      onModelReady // 暴露事件处理函数（虽然模板中直接使用）
+      onModelReady,
+      handleEnginePowerUpdate,
+      handleBrakeForceUpdate,
+      handleTurnStrengthUpdate
     };
   }
 };

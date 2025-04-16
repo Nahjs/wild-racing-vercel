@@ -23,51 +23,58 @@ export class KeyboardController {
   constructor(controlState) {
     this.controls = controlState || new ControlState();
     this.setupListeners();
+    console.log("KeyboardController initialized. Monitoring document key events."); // 添加日志
   }
   
   setupListeners() {
-    // 键盘按下事件
     document.addEventListener('keydown', (e) => {
+      let changed = false;
       switch(e.code) {
         case 'KeyW':
         case 'ArrowUp':
-          this.controls.accelerate = true;
+          if (!this.controls.accelerate) { this.controls.accelerate = true; changed = true; }
           break;
         case 'KeyS':
         case 'ArrowDown':
-          this.controls.brake = true;
+          if (!this.controls.brake) { this.controls.brake = true; changed = true; }
           break;
         case 'KeyA':
         case 'ArrowLeft':
-          this.controls.turnLeft = true;
+          if (!this.controls.turnLeft) { this.controls.turnLeft = true; changed = true; }
           break;
         case 'KeyD':
         case 'ArrowRight':
-          this.controls.turnRight = true;
+          if (!this.controls.turnRight) { this.controls.turnRight = true; changed = true; }
           break;
+      }
+      if (changed) { // 添加日志
+          console.log(`Keydown: ${e.code}`, { ...this.controls });
       }
     });
     
-    // 键盘释放事件
     document.addEventListener('keyup', (e) => {
+      let changed = false;
       switch(e.code) {
         case 'KeyW':
         case 'ArrowUp':
-          this.controls.accelerate = false;
+          if (this.controls.accelerate) { this.controls.accelerate = false; changed = true; }
           break;
         case 'KeyS':
         case 'ArrowDown':
-          this.controls.brake = false;
+          if (this.controls.brake) { this.controls.brake = false; changed = true; }
           break;
         case 'KeyA':
         case 'ArrowLeft':
-          this.controls.turnLeft = false;
+          if (this.controls.turnLeft) { this.controls.turnLeft = false; changed = true; }
           break;
         case 'KeyD':
         case 'ArrowRight':
-          this.controls.turnRight = false;
+          if (this.controls.turnRight) { this.controls.turnRight = false; changed = true; }
           break;
       }
+       if (changed) { // 添加日志
+           console.log(`Keyup: ${e.code}`, { ...this.controls });
+       }
     });
   }
   

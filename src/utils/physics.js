@@ -28,7 +28,7 @@ export const createGround = (world) => {
 // 创建车辆主体
 export const createVehicle = (world, options = {}) => {
   const defaultOptions = {
-    mass: 400,
+    mass: 100,
     position: new CANNON.Vec3(0, 1, 0),
     dimensions: { length: 4.5, width: 2, height: 1.2 }
   };
@@ -46,8 +46,12 @@ export const createVehicle = (world, options = {}) => {
   const chassisBody = new CANNON.Body({
     mass: config.mass,
     position: config.position,
-    material: chassisMaterial
+    material: chassisMaterial,
+    linearDamping: 0.01,
+    angularDamping: 0.01
   });
+  console.log(`Vehicle Body Created - Mass: ${chassisBody.mass}, LinearDamping: ${chassisBody.linearDamping}, AngularDamping: ${chassisBody.angularDamping}`);
+  
   chassisBody.addShape(chassisShape);
   world.addBody(chassisBody);
   
@@ -78,7 +82,7 @@ export const createWheel = (world, chassisBody, position, radius, options = {}) 
   // 创建约束
   const constraint = new CANNON.HingeConstraint(chassisBody, wheelBody, {
     pivotA: position,
-    axisA: new CANNON.Vec3(0, 0, 1), // 轮轴方向
+    axisA: new CANNON.Vec3(1, 0, 0),
     pivotB: new CANNON.Vec3(0, 0, 0),
     axisB: new CANNON.Vec3(0, 1, 0)
   });
@@ -99,21 +103,32 @@ export const updatePhysics = (world, deltaTime) => {
 export const applyDriveControls = (chassisBody, wheelBodies, controls) => {
   const { accelerate, brake, turnLeft, turnRight } = controls;
   
+  let appliedForce = false;
+  let appliedTorque = false;
+
   // 应用加速力
   if (accelerate) {
-    const force = new CANNON.Vec3(0, 0, -controls.power);
-    chassisBody.applyLocalForce(force, new CANNON.Vec3(0, 0, 0));
+    const force = new CANNON.Vec3(0, 0, -controls.power); 
+    const forcePoint = new CANNON.Vec3(0, -0.3, 0); 
+    chassisBody.applyLocalForce(force, forcePoint); 
+    appliedForce = true;
   }
   
   // 应用刹车
   if (brake) {
-    const force = new CANNON.Vec3(0, 0, controls.brakeForce);
-    chassisBody.applyLocalForce(force, new CANNON.Vec3(0, 0, 0));
+    const brakeForceVec = new CANNON.Vec3(0, 0, controls.brakeForce); 
+    const brakePoint = new CANNON.Vec3(0, -0.3, 0);
+    chassisBody.applyLocalForce(brakeForceVec, brakePoint);
+    appliedForce = true;
   }
   
   // 应用转向
-  const turnForce = new CANNON.Vec3(0, controls.turnStrength * (turnRight - turnLeft), 0);
-  chassisBody.applyTorque(turnForce);
+  const turnValue = (turnRight ? 1 : 0) - (turnLeft ? 1 : 0); 
+  if (turnValue !== 0) {
+    const turnTorque = new CANNON.Vec3(0, controls.turnStrength * turnValue, 0); 
+    chassisBody.applyTorque(turnTorque);
+    appliedTorque = true;
+  }
 };
 
 // 创建调试用的物理可视化

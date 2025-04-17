@@ -1,5 +1,5 @@
 // 数据库配置
-const DB_NAME = '3dCarShowcase';
+const DB_NAME = 'drift-pulse-zero';
 const DB_VERSION = 1;
 
 // 存储对象配置

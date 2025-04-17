@@ -61,30 +61,228 @@
         }
       }
     },
-    {
-      "id": "aston-martin-valkyrie",
-      "name": "阿斯顿·马丁 Valkyrie",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Aston/aston_martin_valkyrie_free.glb",
+        {
+          "id": "maserati-mc12",
+          "name": "玛莎拉蒂 MC12",
+          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/maserati_mc12.glb",
+          "preview": "/images/cars/default.jpg",
+          "specs": {
+            "topSpeed": 330,
+            "acceleration": 3.2,
+            "handling": 9.3,
+            "braking": 9.2
+          },
+          "scale": 1,
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "rotation": -1.5707963267948966,
+          "colors": {
+            "body": "#ffffff",
+            "wheel": "#1a1a1a"
+          },
+          "customSettings": {
+            "scale": 1,
+            "position": [
+              0,
+              -1,
+              0
+            ],
+            "rotation": 0,
+            "colors": {
+              "body": "#ffffff",
+              "wheel": "#1a1a1a"
+            }
+          }
+        },
+        {
+          "id": "koenigsegg-agera-r",
+          "name": "科尼赛克 Agera R",
+          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_agera_r.glb",
+          "preview": "/images/cars/default.jpg",
+          "specs": {
+            "topSpeed": 450,
+            "acceleration": 2.7,
+            "handling": 9.5,
+            "braking": 9.4
+          },
+          "scale": 1,
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "rotation": -1.5707963267948966,
+          "colors": {
+            "body": "#d32f2f",
+            "wheel": "#1a1a1a"
+          },
+          "customSettings": {
+            "scale": 1,
+            "position": [
+              0,
+              -1,
+              0
+            ],
+            "rotation": 0,
+            "colors": {
+              "body": "#d32f2f",
+              "wheel": "#1a1a1a"
+            }
+          }
+        },
+        {
+          "id": "czinger-21c-2021",
+          "name": "辛格 21C 2021",
+          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c.glb",
+          "preview": "/images/cars/default.jpg",
+          "specs": {
+            "topSpeed": 432,
+            "acceleration": 1.9,
+            "handling": 9.8,
+            "braking": 9.7
+          },
+          "scale": 1,
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "rotation": -1.5707963267948966,
+          "colors": {
+            "body": "#ff3a00",
+            "wheel": "#1a1a1a"
+          },
+          "customSettings": {
+            "scale": 1,
+            "position": [
+              0,
+              -1,
+              0
+            ],
+            "rotation": 0,
+            "colors": {
+              "body": "#ff3a00",
+              "wheel": "#1a1a1a"
+            }
+          }
+        },
+        {
+          "id": "lamborghini-revuelto",
+          "name": "兰博基尼 Revuelto",
+          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_revuelto.glb",
+          "preview": "/images/cars/default.jpg",
+          "specs": {
+            "topSpeed": 350,
+            "acceleration": 2.5,
+            "handling": 9.6,
+            "braking": 9.5
+          },
+          "scale": 1,
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "rotation": -1.5707963267948966,
+          "colors": {
+            "body": "#2f426f",
+            "wheel": "#1a1a1a"
+          },
+          "wheelNodeNames": {
+            "fl": "Wheel_FL",
+            "fr": "Wheel_FR",
+            "rl": "Wheel_BL",
+            "rr": "Wheel_BR"
+          },
+          "customSettings": {
+            "scale": 1,
+            "position": [
+              0,
+              -1,
+              0
+            ],
+            "rotation": 0,
+            "colors": {
+              "body": "#2f426f",
+              "wheel": "#1a1a1a"
+            }
+          }
+        },
+        {
+          "id": "koenigsegg-ccx",
+          "name": "科尼赛克 CCX",
+          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_ccx_-_100_followers_special.glb",
+          "preview": "/images/cars/default.jpg",
+          "specs": {
+            "topSpeed": 395,
+            "acceleration": 3.2,
+            "handling": 9.2,
+            "braking": 9.3
+          },
+          "scale": 1,
+          "position": [
+            0,
+            -1,
+            0
+          ],
+          "rotation": -1.5707963267948966,
+          "colors": {
+            "body": "#f5f5f5",
+            "wheel": "#1a1a1a"
+          },
+          "wheelNodeNames": {
+            "fl": "tyre001_27",
+            "fr": "tyre002_37",
+            "rl": "tyre010_54",
+            "rr": "tyre011_XX"
+          },
+          "customSettings": {
+            "scale": 1,
+            "position": [
+              0,
+              -1,
+              0
+            ],
+            "rotation": 0,
+            "colors": {
+              "body": "#f5f5f5",
+              "wheel": "#1a1a1a"
+            }
+          }
+        },
+          {
+      "id": "lamborghini-sesto-elemento",
+      "name": "兰博基尼 Sesto Elemento",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_sesto_elemento.glb",
       "preview": "/images/cars/default.jpg",
       "specs": {
         "topSpeed": 350,
-        "acceleration": 2.3,
-        "handling": 9.7,
-        "braking": 9.5
+        "acceleration": 2.5,
+        "handling": 9.8,
+        "braking": 9.7
       },
-      "scale": 1,
+      "scale": 1.2,
       "position": [0, -1, 0],
       "rotation": -1.5707963267948966,
       "colors": {
-        "body": "#1a1a1a",
+        "body": "#2f426f",
         "wheel": "#1a1a1a"
       },
+      "wheelNodeNames": {
+        "fl": "Front_Tires_25",
+        "fr": "Front_Tires_25",
+        "rl": "Back_Tires_1",
+        "rr": "Back_Tires_1"
+      },
       "customSettings": {
-        "scale": 1,
+        "scale": 2,
         "position": [0, -1, 0],
-        "rotation": 0,
+        "rotation": 1.5707963267948966,
         "colors": {
-          "body": "#1a1a1a",
+          "body": "#2f426f",
           "wheel": "#1a1a1a"
         }
       }
@@ -369,34 +567,7 @@
         }
       }
     },
-    {
-      "id": "czinger-21c-2021",
-      "name": "辛格 21C 2021",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c.glb",
-      "preview": "/images/cars/default.jpg",
-      "specs": {
-        "topSpeed": 432,
-        "acceleration": 1.9,
-        "handling": 9.8,
-        "braking": 9.7
-      },
-      "scale": 1,
-      "position": [0, -1, 0],
-      "rotation": -1.5707963267948966,
-      "colors": {
-        "body": "#ff3a00",
-        "wheel": "#1a1a1a"
-      },
-      "customSettings": {
-        "scale": 1,
-        "position": [0, -1, 0],
-        "rotation": 0,
-        "colors": {
-          "body": "#ff3a00",
-          "wheel": "#1a1a1a"
-        }
-      }
-    },
+   
     {
       "id": "czinger-21c-v1",
       "name": "辛格 21C V1",
@@ -873,62 +1044,8 @@
         }
       }
     },
-    {
-      "id": "koenigsegg-agera-r",
-      "name": "科尼赛克 Agera R",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_agera_r.glb",
-      "preview": "/images/cars/default.jpg",
-      "specs": {
-        "topSpeed": 450,
-        "acceleration": 2.7,
-        "handling": 9.5,
-        "braking": 9.4
-      },
-      "scale": 1,
-      "position": [0, -1, 0],
-      "rotation": -1.5707963267948966,
-      "colors": {
-        "body": "#d32f2f",
-        "wheel": "#1a1a1a"
-      },
-      "customSettings": {
-        "scale": 1,
-        "position": [0, -1, 0],
-        "rotation": 0,
-        "colors": {
-          "body": "#d32f2f",
-          "wheel": "#1a1a1a"
-        }
-      }
-    },
-    {
-      "id": "koenigsegg-ccx",
-      "name": "科尼赛克 CCX",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Koenigsegg/koenigsegg_ccx_-_100_followers_special.glb",
-      "preview": "/images/cars/default.jpg",
-      "specs": {
-        "topSpeed": 395,
-        "acceleration": 3.2,
-        "handling": 9.2,
-        "braking": 9.3
-      },
-      "scale": 1,
-      "position": [0, -1, 0],
-      "rotation": -1.5707963267948966,
-      "colors": {
-        "body": "#f5f5f5",
-        "wheel": "#1a1a1a"
-      },
-      "customSettings": {
-        "scale": 1,
-        "position": [0, -1, 0],
-        "rotation": 0,
-        "colors": {
-          "body": "#f5f5f5",
-          "wheel": "#1a1a1a"
-        }
-      }
-    },
+   
+   
     {
       "id": "koenigsegg-jesko-absolut",
       "name": "科尼赛克 Jesko Absolut",
@@ -1511,62 +1628,6 @@
         "scale": 1,
         "position": [0, -2, 0],
         "rotation": 0,
-        "colors": {
-          "body": "#2f426f",
-          "wheel": "#1a1a1a"
-        }
-      }
-    },
-    {
-      "id": "lamborghini-revuelto",
-      "name": "兰博基尼 Revuelto",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_revuelto.glb",
-      "preview": "/images/cars/default.jpg",
-      "specs": {
-        "topSpeed": 350,
-        "acceleration": 2.5,
-        "handling": 9.6,
-        "braking": 9.5
-      },
-      "scale": 1,
-      "position": [0, -1, 0],
-      "rotation": -1.5707963267948966,
-      "colors": {
-        "body": "#2f426f",
-        "wheel": "#1a1a1a"
-      },
-      "customSettings": {
-        "scale": 1,
-        "position": [0, -1, 0],
-        "rotation": 0,
-        "colors": {
-          "body": "#2f426f",
-          "wheel": "#1a1a1a"
-        }
-      }
-    },
-    {
-      "id": "lamborghini-sesto-elemento",
-      "name": "兰博基尼 Sesto Elemento",
-      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/lamborghini/free_lamborghini_sesto_elemento.glb",
-      "preview": "/images/cars/default.jpg",
-      "specs": {
-        "topSpeed": 350,
-        "acceleration": 2.5,
-        "handling": 9.8,
-        "braking": 9.7
-      },
-      "scale": 1.2,
-      "position": [0, -1, 0],
-      "rotation": -1.5707963267948966,
-      "colors": {
-        "body": "#2f426f",
-        "wheel": "#1a1a1a"
-      },
-      "customSettings": {
-        "scale": 2,
-        "position": [0, -1, 0],
-        "rotation": 1.5707963267948966,
         "colors": {
           "body": "#2f426f",
           "wheel": "#1a1a1a"

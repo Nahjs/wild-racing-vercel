@@ -99,17 +99,10 @@ export default {
     
     const initializePhysics = () => {
       if (isReady.value) return;
-      console.log("CarController: initializePhysics called.");
       try {
-        console.log("CarController: Calling createCarPhysics...");
         createCarPhysics();
-        console.log("CarController: createCarPhysics finished.");
-        
         isReady.value = true;
-
-        console.log("CarController: About to emit car-ready event...");
         emit('car-ready');
-        console.log("CarController: car-ready event emitted successfully.");
         
       } catch (error) {
         console.error("CarController: Failed to initialize physics:", error);
@@ -172,7 +165,6 @@ export default {
       vehicle.value.addToWorld(props.world);
       
       keyboardController.value = new KeyboardController(controlState.value);
-      console.log("TouchController temporarily disabled for debugging.");
     };
     
     const updateCarModel = () => {
@@ -336,31 +328,26 @@ export default {
     
     watch(() => props.vehicleMass, (newMass) => {
       if (chassisBody.value) {
-        console.log(`CarController: Updating mass to ${newMass}`);
         chassisBody.value.mass = newMass;
         chassisBody.value.updateMassProperties();
       }
     });
     watch(() => props.linearDamping, (newDamping) => {
       if (chassisBody.value) {
-        console.log(`CarController: Updating linearDamping to ${newDamping}`);
         chassisBody.value.linearDamping = newDamping;
       }
     });
     watch(() => props.angularDamping, (newDamping) => {
       if (chassisBody.value) {
-        console.log(`CarController: Updating angularDamping to ${newDamping}`);
         chassisBody.value.angularDamping = newDamping;
       }
     });
 
     onMounted(() => {
-      console.log("CarController: onMounted hook entered.");
       if (!props.world || !props.scene || !props.selectedVehicle) {
            console.warn("CarController: World, Scene, or SelectedVehicle missing on mount. Initialization delayed.");
            return; 
       }
-      console.log("CarController: Core props (world, scene, vehicle) are present. Waiting for carModel...");
     });
     
     onUnmounted(() => {

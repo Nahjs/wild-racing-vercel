@@ -36,6 +36,8 @@
       :max-suspension-travel="maxSuspensionTravel"
       :wheel-quaternions="wheelQuaternions"
       :wheel-positions="wheelPositions"
+      :initial-correction-axis="initialCorrectionAxis"
+      :initial-correction-angle="initialCorrectionAngle"
       @update:engine-power="handleEnginePowerUpdate"
       @update:turn-strength="handleTurnStrengthUpdate"
       @update:vehicle-mass="handleMassUpdate"
@@ -52,6 +54,8 @@
       @update:max-suspension-force="handleMaxSuspensionForceUpdate"
       @update:roll-influence="handleRollInfluenceUpdate"
       @update:max-suspension-travel="handleMaxSuspensionTravelUpdate"
+      @update:initial-correction-axis="handleInitialCorrectionAxisUpdate"
+      @update:initial-correction-angle="handleInitialCorrectionAngleUpdate"
       @save-tuning="saveTuning"
       :is-saving-tuning="isLoading"
     />
@@ -82,6 +86,8 @@
       :custom-sliding-rotational-speed="customSlidingRotationalSpeed"
       :wheel-radius="wheelRadius"
       :connection-points="connectionPoints"
+      :initial-correction-axis="initialCorrectionAxis"
+      :initial-correction-angle="initialCorrectionAngle"
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
     />
@@ -192,6 +198,10 @@ export default {
     const customSlidingRotationalSpeed = ref(30);
     const wheelRadius = ref(0.34);
     
+    // 新增：车轮初始旋转修正 ref (默认值)
+    const initialCorrectionAxis = ref('x');
+    const initialCorrectionAngle = ref(90);
+    
     // 车轮连接点 (需要根据实际模型调整!)
     // 顺序: RL, RR, FL, FR (根据 CarController 默认值)
     const connectionPoints = ref([
@@ -209,7 +219,6 @@ export default {
     // 物理引擎准备就绪
     const onPhysicsReady = (data) => {
       world.value = data.world;
-      console.log("Race.vue: Physics Engine ready (world set).");
     };
     
     // 物理引擎更新
@@ -240,7 +249,6 @@ export default {
     
     // 车辆准备就绪
     const onCarReady = () => {
-      console.log("Race.vue: onCarReady handler called (car-ready event received)!");
       isLoading.value = false;
       isInitializingPhysics.value = false; // 重置调用锁
       startCountdown();
@@ -413,7 +421,6 @@ export default {
       
       // Apply custom settings to refs, falling back to defaults defined in setup() if not set
       if (currentVehicle.value?.customSettings) {
-          console.log("Applying custom settings:", currentVehicle.value.customSettings);
           const settings = currentVehicle.value.customSettings;
           enginePower.value = settings.enginePower ?? enginePower.value;
           turnStrength.value = settings.turnStrength ?? turnStrength.value;
@@ -432,6 +439,10 @@ export default {
           rollInfluence.value = settings.rollInfluence ?? rollInfluence.value;
           maxSuspensionTravel.value = settings.maxSuspensionTravel ?? maxSuspensionTravel.value;
           // Consider adding customSlidingRotationalSpeed, wheelRadius, connectionPoints if needed
+          
+          // 新增：加载车轮旋转修正设置
+          initialCorrectionAxis.value = settings.initialCorrectionAxis ?? initialCorrectionAxis.value;
+          initialCorrectionAngle.value = settings.initialCorrectionAngle ?? initialCorrectionAngle.value;
       }
 
       isLoadingVehicle.value = false; // 加载完成
@@ -453,13 +464,11 @@ export default {
     // 当 Track 组件的场景准备好时调用
     const onSceneReady = (emittedScene) => {
         scene.value = emittedScene;
-        console.log("Race.vue: Scene ready (scene set).");
     };
     
     // 添加 model-ready 事件处理函数
     const onModelReady = (model) => {
         carModel.value = model;
-        console.log("Race.vue: Car Model ready (carModel set).");
     };
     
     // 新增：事件处理函数，用于更新控制参数状态
@@ -524,13 +533,21 @@ export default {
         if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.maxSuspensionTravel = newValue;
     };
     
+    // 新增：处理车轮旋转修正更新
+    const handleInitialCorrectionAxisUpdate = (newValue) => {
+      initialCorrectionAxis.value = newValue;
+      if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.initialCorrectionAxis = newValue;
+    };
+    const handleInitialCorrectionAngleUpdate = (newValue) => {
+      initialCorrectionAngle.value = newValue;
+      if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.initialCorrectionAngle = newValue;
+    };
+    
     // --- 新增: 保存调校设置到数据库 ---
     const saveTuning = async () => {
         if (currentVehicle.value && currentVehicle.value.id && currentVehicle.value.customSettings) {
             try {
-            isLoading.value = true; // Use the general loading state
-            console.log('Saving tuning settings:', JSON.stringify(currentVehicle.value.customSettings)); // Log what's being saved
-            // Ensure customSettings object is clean and only contains relevant keys if needed
+            isLoading.value = true; // Use the general loading state  // Ensure customSettings object is clean and only contains relevant keys if needed
             await vehicleService.batchUpdateVehicle(currentVehicle.value.id, {
                 customSettings: currentVehicle.value.customSettings
             });
@@ -550,16 +567,9 @@ export default {
     
     // --- 新增: 使用 watchEffect 触发 CarController 初始化 ---
     watchEffect(() => {
-      console.log("Race.vue: watchEffect running. Checking conditions for CarController init...");
-      console.log(`  - carController instance present: ${!!carController.value}`);
-      console.log(`  - world present: ${!!world.value}`);
-      console.log(`  - scene present: ${!!scene.value}`);
-      console.log(`  - carModel present: ${!!carModel.value}`);
-      console.log(`  - isInitializingPhysics: ${isInitializingPhysics.value}`);
 
       // 检查所有依赖项和组件实例是否就绪，并且尚未开始初始化
       if (carController.value && world.value && scene.value && carModel.value && !isInitializingPhysics.value) {
-        console.log("Race.vue: All conditions met. Calling CarController.initializePhysics()...");
         isInitializingPhysics.value = true; // 设置调用锁
         try {
             carController.value.initializePhysics(); // 调用子组件暴露的方法
@@ -612,6 +622,8 @@ export default {
       connectionPoints,
       wheelQuaternions,
       wheelPositions,
+      initialCorrectionAxis,
+      initialCorrectionAngle,
       onPhysicsReady,
       onPhysicsUpdate,
       onSceneReady,
@@ -637,6 +649,8 @@ export default {
       handleMaxSuspensionForceUpdate,
       handleRollInfluenceUpdate,
       handleMaxSuspensionTravelUpdate,
+      handleInitialCorrectionAxisUpdate,
+      handleInitialCorrectionAngleUpdate,
       saveTuning, // Expose the save function
     };
   }

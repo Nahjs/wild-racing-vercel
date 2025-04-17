@@ -106,7 +106,7 @@
       <h3>车轮初始旋转调试</h3>
       <div class="control-group">
         <label>修正轴:</label>
-        <select v-model="initialCorrectionAxis">
+        <select :value="initialCorrectionAxis" @change="emitInitialCorrectionAxisUpdate">
           <option value="x">X</option>
           <option value="y">Y</option>
           <option value="z">Z</option>
@@ -114,7 +114,7 @@
       </div>
       <div class="control-group">
         <label>修正角度 ({{ initialCorrectionAngle }} 度):</label>
-        <input type="range" min="-180" max="180" step="1" v-model.number="initialCorrectionAngle">
+        <input type="range" min="-180" max="180" step="1" :value="initialCorrectionAngle" @input="emitInitialCorrectionAngleUpdate">
       </div>
 
       <hr>
@@ -172,6 +172,8 @@ export default {
       'update:maxSuspensionForce',
       'update:rollInfluence',
       'update:maxSuspensionTravel',
+      'update:initialCorrectionAxis',
+      'update:initialCorrectionAngle',
       'save-tuning'
   ],
   components: {
@@ -200,6 +202,8 @@ export default {
     maxSuspensionTravel: { type: Number, required: true },
     wheelQuaternions: { type: Array, default: () => [] },
     wheelPositions: { type: Array, default: () => [] }, 
+    initialCorrectionAxis: { type: String, required: true },
+    initialCorrectionAngle: { type: Number, required: true },
     isSavingTuning: { type: Boolean, default: false }
   },
   setup(props, { emit }) {
@@ -219,11 +223,6 @@ export default {
     const cameraDistance = ref(8);
     const cameraHeight = ref(4);
     const wheelMeshRefs = ref({ fl: null, fr: null, rl: null, rr: null });
-    
-    // --- 新增：车轮初始旋转调试 Ref ---
-    const initialCorrectionAxis = ref('x'); // 默认修正轴
-    const initialCorrectionAngle = ref(90); // 默认修正角度 (根据你的观察)
-    // --------------------------------
     
     const initScene = () => {
       rawScene = markRaw(new THREE.Scene());
@@ -313,30 +312,79 @@ export default {
 
             // --- 获取车轮父节点名称 --- 
             // 优先从配置读取，否则使用默认值
-            const wheelParentNames = props.selectedVehicle.wheelNodeNames || { 
+            let wheelParentNames = props.selectedVehicle.wheelNodeNames || { 
                 rl: 'WheelBL', // 默认后左
                 rr: 'WheelBR', // 默认后右
                 fl: 'WheelFL', // 默认前左
                 fr: 'WheelFR'  // 默认前右
-            }; 
-            console.log("Track.vue: Using wheel parent names:", wheelParentNames);
+            };
+            console.log("Track.vue: Initial wheel parent names from config/defaults:", wheelParentNames);
 
             wheelMeshRefs.value = { fl: null, fr: null, rl: null, rr: null };
-            
-            // console.log("Track.vue: Searching for wheel parent objects:", wheelParentNames); // 日志可以简化
+            const foundWheels = { fl: false, fr: false, rl: false, rr: false };
+            const potentialWheelNodes = []; // 用于存储自动识别的潜在车轮节点
+            const nodeNames = []; // Store all node names for later fuzzy matching if needed
+
             loadedModel.traverse((child) => {
-                // 查找车轮父节点
-                if (child.name === wheelParentNames.fl) wheelMeshRefs.value.fl = child;
-                else if (child.name === wheelParentNames.fr) wheelMeshRefs.value.fr = child;
-                else if (child.name === wheelParentNames.rl) wheelMeshRefs.value.rl = child;
-                else if (child.name === wheelParentNames.rr) wheelMeshRefs.value.rr = child;
+                nodeNames.push(child.name);
+                let assigned = false;
+                // 1. 优先使用配置中的名称 (精确匹配)
+                if (wheelParentNames.fl && child.name === wheelParentNames.fl) { wheelMeshRefs.value.fl = child; foundWheels.fl = true; assigned = true; }
+                else if (wheelParentNames.fr && child.name === wheelParentNames.fr) { wheelMeshRefs.value.fr = child; foundWheels.fr = true; assigned = true; }
+                else if (wheelParentNames.rl && child.name === wheelParentNames.rl) { wheelMeshRefs.value.rl = child; foundWheels.rl = true; assigned = true; }
+                else if (wheelParentNames.rr && child.name === wheelParentNames.rr) { wheelMeshRefs.value.rr = child; foundWheels.rr = true; assigned = true; }
+                
+                // 记录潜在节点 (用于日志和未来的改进)
+                if (!assigned) {
+                    const nameLower = child.name.toLowerCase();
+                    const keywords = ['wheel', '轮', 'tire', 'tyre'];
+                    const patterns = [/wheel.?fl/, /wheel.?fr/, /wheel.?rl/, /wheel.?rr/, /wheel.?bl/, /wheel.?br/, /front.?l/, /front.?r/, /back.?l/, /back.?r/, /rear.?l/, /rear.?r/]; 
+                    
+                    if (keywords.some(kw => nameLower.includes(kw)) || patterns.some(p => nameLower.match(p))) {
+                        potentialWheelNodes.push(child.name); 
+                    }
+                }
             });
-            console.log("Found wheel parent objects:", { 
-                fl: !!wheelMeshRefs.value.fl,
-                fr: !!wheelMeshRefs.value.fr,
-                rl: !!wheelMeshRefs.value.rl,
-                rr: !!wheelMeshRefs.value.rr,
-             });
+
+            // 2. 如果配置不完整，尝试基于常见模式自动识别
+            if (!foundWheels.fl || !foundWheels.fr || !foundWheels.rl || !foundWheels.rr) {
+                console.warn("Track.vue: Configuration incomplete/missing. Attempting automatic wheel detection...");
+                const autoDetectedWheels = { fl: null, fr: null, rl: null, rr: null };
+                const flPatterns = [/wheel.?fl/i, /front.?l/i];
+                const frPatterns = [/wheel.?fr/i, /front.?r/i];
+                const rlPatterns = [/wheel.?[br]l/i, /back.?l/i, /rear.?l/i]; // Include BL and RL
+                const rrPatterns = [/wheel.?[br]r/i, /back.?r/i, /rear.?r/i]; // Include BR and RR
+
+                loadedModel.traverse((child) => {
+                    const nameLower = child.name.toLowerCase();
+                    if (!autoDetectedWheels.fl && flPatterns.some(p => nameLower.match(p))) autoDetectedWheels.fl = child;
+                    if (!autoDetectedWheels.fr && frPatterns.some(p => nameLower.match(p))) autoDetectedWheels.fr = child;
+                    if (!autoDetectedWheels.rl && rlPatterns.some(p => nameLower.match(p))) autoDetectedWheels.rl = child;
+                    if (!autoDetectedWheels.rr && rrPatterns.some(p => nameLower.match(p))) autoDetectedWheels.rr = child;
+                });
+
+                // 合并自动检测结果到 wheelMeshRefs (仅当配置中未找到时)
+                if (!foundWheels.fl && autoDetectedWheels.fl) { wheelMeshRefs.value.fl = autoDetectedWheels.fl; foundWheels.fl = true; console.log(`Track.vue: Auto-detected FL wheel: ${autoDetectedWheels.fl.name}`); }
+                if (!foundWheels.fr && autoDetectedWheels.fr) { wheelMeshRefs.value.fr = autoDetectedWheels.fr; foundWheels.fr = true; console.log(`Track.vue: Auto-detected FR wheel: ${autoDetectedWheels.fr.name}`); }
+                if (!foundWheels.rl && autoDetectedWheels.rl) { wheelMeshRefs.value.rl = autoDetectedWheels.rl; foundWheels.rl = true; console.log(`Track.vue: Auto-detected RL/BL wheel: ${autoDetectedWheels.rl.name}`); }
+                if (!foundWheels.rr && autoDetectedWheels.rr) { wheelMeshRefs.value.rr = autoDetectedWheels.rr; foundWheels.rr = true; console.log(`Track.vue: Auto-detected RR/BR wheel: ${autoDetectedWheels.rr.name}`); }
+            }
+
+            // 最终检查和日志记录
+            const allWheelsFound = Object.values(foundWheels).every(found => found);
+            if (allWheelsFound) {
+                 console.log("Track.vue: Successfully found/assigned all wheel nodes:", wheelMeshRefs.value);
+            } else {
+                console.error("Track.vue: Failed to find all required wheel nodes after config and auto-detection.", foundWheels);
+                // 记录所有节点名称以供调试
+                console.warn("Track.vue: All node names in the model:", nodeNames);
+                // 如果有潜在节点但未被自动识别，则记录下来
+                if (potentialWheelNodes.length > 0) {
+                    console.warn("Track.vue: Potential wheel nodes found by keyword/pattern (not automatically assigned):", [...new Set(potentialWheelNodes)]);
+                }
+                 // 即使不完整，也记录下已找到的部分
+                 console.log("Track.vue: Partially found wheel nodes:", wheelMeshRefs.value);
+            }
             
             // --- 添加坐标轴帮助器 --- 
             Object.values(wheelMeshRefs.value).forEach(wheelRef => {
@@ -436,6 +484,8 @@ export default {
     const emitMaxSuspensionForceUpdate = (event) => { emit('update:maxSuspensionForce', Number(event.target.value)); };
     const emitRollInfluenceUpdate = (event) => { emit('update:rollInfluence', Number(event.target.value)); };
     const emitMaxSuspensionTravelUpdate = (event) => { emit('update:maxSuspensionTravel', Number(event.target.value)); };
+    const emitInitialCorrectionAxisUpdate = (event) => { emit('update:initialCorrectionAxis', event.target.value); };
+    const emitInitialCorrectionAngleUpdate = (event) => { emit('update:initialCorrectionAngle', Number(event.target.value)); };
 
     const resetCar = () => {
       console.warn("Track.vue: resetCar called. Consider emitting event to Race.vue to handle reset.");
@@ -457,12 +507,12 @@ export default {
 
     // --- 根据调试控件动态生成初始修正四元数 ---
     let axis;
-    switch (initialCorrectionAxis.value) {
+    switch (props.initialCorrectionAxis) {
         case 'y': axis = new THREE.Vector3(0, 1, 0); break;
         case 'z': axis = new THREE.Vector3(0, 0, 1); break;
         default:  axis = new THREE.Vector3(1, 0, 0); // 默认为 X 轴
     }
-    const angleRad = THREE.MathUtils.degToRad(initialCorrectionAngle.value);
+    const angleRad = THREE.MathUtils.degToRad(props.initialCorrectionAngle);
     const initialCorrectionQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, angleRad);
     // --------------------------------------------
 
@@ -554,22 +604,6 @@ export default {
       debugRender,
       gravity,
       physicsEngine,
-      enginePower: props.enginePower,
-      turnStrength: props.turnStrength,
-      vehicleMass: props.vehicleMass,
-      linearDamping: props.linearDamping,
-      angularDamping: props.angularDamping,
-      groundFriction: props.groundFriction,
-      brakePower: props.brakePower,
-      slowDownForce: props.slowDownForce,
-      suspensionStiffness: props.suspensionStiffness,
-      suspensionRestLength: props.suspensionRestLength,
-      frictionSlip: props.frictionSlip,
-      dampingRelaxation: props.dampingRelaxation,
-      dampingCompression: props.dampingCompression,
-      maxSuspensionForce: props.maxSuspensionForce,
-      rollInfluence: props.rollInfluence,
-      maxSuspensionTravel: props.maxSuspensionTravel,
       onPhysicsReady,
       updateGravity,
       emitEnginePowerUpdate,
@@ -593,8 +627,8 @@ export default {
       cameraDistance,
       cameraHeight,
       showThirdPersonControls,
-      initialCorrectionAxis,     // 暴露给模板
-      initialCorrectionAngle,  // 暴露给模板
+      emitInitialCorrectionAxisUpdate,
+      emitInitialCorrectionAngleUpdate,
     };
   }
 };

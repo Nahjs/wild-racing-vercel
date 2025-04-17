@@ -103,6 +103,21 @@
       </div>
      
       <hr>
+      <h3>车轮初始旋转调试</h3>
+      <div class="control-group">
+        <label>修正轴:</label>
+        <select v-model="initialCorrectionAxis">
+          <option value="x">X</option>
+          <option value="y">Y</option>
+          <option value="z">Z</option>
+        </select>
+      </div>
+      <div class="control-group">
+        <label>修正角度 ({{ initialCorrectionAngle }} 度):</label>
+        <input type="range" min="-180" max="180" step="1" v-model.number="initialCorrectionAngle">
+      </div>
+
+      <hr>
     
      
       <h3>视角控制</h3>
@@ -205,9 +220,14 @@ export default {
     const cameraHeight = ref(4);
     const wheelMeshRefs = ref({ fl: null, fr: null, rl: null, rr: null });
     
+    // --- 新增：车轮初始旋转调试 Ref ---
+    const initialCorrectionAxis = ref('x'); // 默认修正轴
+    const initialCorrectionAngle = ref(90); // 默认修正角度 (根据你的观察)
+    // --------------------------------
+    
     const initScene = () => {
       rawScene = markRaw(new THREE.Scene());
-      rawScene.background = new THREE.Color(0x111111); 
+      rawScene.background = new THREE.Color(0x111111);
       rawCamera = markRaw(new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000));
       rawCamera.position.set(0, 5, 10);
       camera.value = rawCamera;
@@ -215,14 +235,29 @@ export default {
       rawRenderer.setSize(window.innerWidth, window.innerHeight);
       rawRenderer.setPixelRatio(window.devicePixelRatio);
       rawRenderer.shadowMap.enabled = true;
+      rawRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
       renderer.value = rawRenderer;
-      const ambientLight = markRaw(new THREE.AmbientLight(0xffffff, 0.6));
+
+      const hemisphereLight = markRaw(new THREE.HemisphereLight(0xffffff, 0x444444, 0.9));
+      rawScene.add(hemisphereLight);
+
+      const ambientLight = markRaw(new THREE.AmbientLight(0xffffff, 0.4));
       rawScene.add(ambientLight);
-      rawDirectionalLight = markRaw(new THREE.DirectionalLight(0xffffff, 0.8));
-      rawDirectionalLight.position.set(10, 20, 10);
+
+      rawDirectionalLight = markRaw(new THREE.DirectionalLight(0xffffff, 1.2));
+      rawDirectionalLight.position.set(15, 30, 20);
       rawDirectionalLight.castShadow = true;
+      rawDirectionalLight.shadow.mapSize.width = 2048;
+      rawDirectionalLight.shadow.mapSize.height = 2048;
+      rawDirectionalLight.shadow.camera.near = 0.5;
+      rawDirectionalLight.shadow.camera.far = 500;
+      rawDirectionalLight.shadow.camera.left = -80;
+      rawDirectionalLight.shadow.camera.right = 80;
+      rawDirectionalLight.shadow.camera.top = 80;
+      rawDirectionalLight.shadow.camera.bottom = -80;
       rawScene.add(rawDirectionalLight);
       directionalLight.value = rawDirectionalLight;
+
       const groundGeometry = new THREE.PlaneGeometry(1000, 1000);
       const groundMaterial = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
       const ground = markRaw(new THREE.Mesh(groundGeometry, groundMaterial));
@@ -243,7 +278,6 @@ export default {
     const loadSelectedCarModel = async () => {
         if (!props.selectedVehicle || !props.selectedVehicle.model) {
             console.error("Track.vue: No selected vehicle or model path provided.");
-            // 可以考虑创建一个默认的立方体作为备用
             const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
             const fallbackMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
             carModel.value = markRaw(new THREE.Mesh(fallbackGeometry, fallbackMaterial));
@@ -252,10 +286,8 @@ export default {
         }
 
         try {
-            // 清理旧模型 (如果需要切换模型的话，这里可能需要)
             if (carModel.value) {
                 rawScene.remove(carModel.value);
-                // TODO: 更彻底的清理，参考 Garage.vue cleanupModel
                 carModel.value = null;
             }
             
@@ -269,51 +301,36 @@ export default {
                 if (child.isMesh) { 
                     child.castShadow = true; 
                     child.receiveShadow = true; 
-                    // --- 调试：打印所有 Mesh 名称 ---
-                    // console.log(`Track.vue: Found mesh name: ${child.name}`);
                 }
             });
 
-            // 注意：Race.vue 现在传递的是从数据库加载的配置
-            // 我们需要使用 customSettings (如果存在) 或基础值
-            const baseData = props.selectedVehicle; // 基础数据和可能的 customSettings
+            const baseData = props.selectedVehicle;
             const customSettings = baseData.customSettings || {};
 
-            // 优先使用 customSettings，然后是基础数据，最后是默认值
             const scale = customSettings.scale ?? baseData.scale ?? 1.0;
-            // 初始位置应由 CarController 设置，这里可以不设置或设为 (0,0,0)
-            // const position = customSettings.position ?? baseData.position ?? [0, 0, 0]; 
-            // 初始旋转理论上也应由物理引擎决定，这里暂不设置
-            // const rotationY = customSettings.rotation ?? 0;
 
             loadedModel.scale.set(scale, scale, scale);
-            // loadedModel.position.set(...position); // 由 CarController/Physics 控制
-            // loadedModel.rotation.set(0, rotationY, 0); // 由 CarController/Physics 控制
 
-            // --- 更新查找逻辑: 目标是车轮的父级对象/组 ---
-            const wheelParentNames = { 
-                // 根据 Blender 截图更新名称
-                rl: 'WheelBL', // 后左
-                rr: 'WheelBR', // 后右
-                fl: 'WheelFL', // 前左
-                fr: 'WheelFR'  // 前右
+            // --- 获取车轮父节点名称 --- 
+            // 优先从配置读取，否则使用默认值
+            const wheelParentNames = props.selectedVehicle.wheelNodeNames || { 
+                rl: 'WheelBL', // 默认后左
+                rr: 'WheelBR', // 默认后右
+                fl: 'WheelFL', // 默认前左
+                fr: 'WheelFR'  // 默认前右
             }; 
-            wheelMeshRefs.value = { fl: null, fr: null, rl: null, rr: null }; // 重置 refs
+            console.log("Track.vue: Using wheel parent names:", wheelParentNames);
+
+            wheelMeshRefs.value = { fl: null, fr: null, rl: null, rr: null };
             
-            console.log("Track.vue: Searching for wheel parent objects:", wheelParentNames);
+            // console.log("Track.vue: Searching for wheel parent objects:", wheelParentNames); // 日志可以简化
             loadedModel.traverse((child) => {
-                // 仍然打印所有 Mesh 名称以供调试
-                // if (child.isMesh) { 
-                //     console.log(`Track.vue: Found mesh name: ${child.name}`);
-                // }
-                
-                // 查找父级对象 (不一定是 Mesh)
+                // 查找车轮父节点
                 if (child.name === wheelParentNames.fl) wheelMeshRefs.value.fl = child;
                 else if (child.name === wheelParentNames.fr) wheelMeshRefs.value.fr = child;
                 else if (child.name === wheelParentNames.rl) wheelMeshRefs.value.rl = child;
                 else if (child.name === wheelParentNames.rr) wheelMeshRefs.value.rr = child;
             });
-            // --- 更新日志以反映查找的是父对象 ---
             console.log("Found wheel parent objects:", { 
                 fl: !!wheelMeshRefs.value.fl,
                 fr: !!wheelMeshRefs.value.fr,
@@ -321,16 +338,29 @@ export default {
                 rr: !!wheelMeshRefs.value.rr,
              });
             
+            // --- 添加坐标轴帮助器 --- 
+            Object.values(wheelMeshRefs.value).forEach(wheelRef => {
+              if (wheelRef) {
+                // 移除旧的帮助器 (如果存在)
+                const existingHelper = wheelRef.getObjectByName('axesHelper');
+                if (existingHelper) {
+                  wheelRef.remove(existingHelper);
+                }
+                const axesHelper = new THREE.AxesHelper(0.5); // 调整大小
+                axesHelper.name = 'axesHelper'; // 命名以便查找
+                wheelRef.add(axesHelper);
+              }
+            });
+            // ----------------------
+            
             carModel.value = markRaw(loadedModel);
             rawScene.add(carModel.value);
             console.log("Track.vue: Model loaded and added to scene.");
 
-            // 模型加载完成后触发 model-ready 事件
             emit('model-ready', carModel.value);
 
         } catch (error) {
             console.error('Track.vue: Failed to load selected model:', error);
-            // 加载失败也创建一个备用模型
             const fallbackGeometry = new THREE.BoxGeometry(1, 1, 1);
             const fallbackMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
             carModel.value = markRaw(new THREE.Mesh(fallbackGeometry, fallbackMaterial));
@@ -409,7 +439,6 @@ export default {
 
     const resetCar = () => {
       console.warn("Track.vue: resetCar called. Consider emitting event to Race.vue to handle reset.");
-      // emit('reset-car'); // 例如
     };
     
     watch(debugRender, (newValue) => {
@@ -418,26 +447,70 @@ export default {
     
     const showThirdPersonControls = computed(() => cameraMode.value === 'thirdPersonFollow');
     
-    const updateWheelRotations = () => {
-        if (!props.wheelQuaternions || props.wheelQuaternions.length < 4) return;
-        try {
-            // Rear wheels (usually no steering correction needed)
-            if(wheelMeshRefs.value.rl) wheelMeshRefs.value.rl.quaternion.copy(props.wheelQuaternions[0]);
-            if(wheelMeshRefs.value.rr) wheelMeshRefs.value.rr.quaternion.copy(props.wheelQuaternions[1]);
+   const updateWheelRotations = () => { 
+    if (!props.wheelQuaternions || props.wheelQuaternions.length < 4 || !carModel.value) return;
 
-            // Front wheels - Apply correction
-            if(wheelMeshRefs.value.fl) wheelMeshRefs.value.fl.quaternion.copy(props.wheelQuaternions[2]);
-            if(wheelMeshRefs.value.fr) wheelMeshRefs.value.fr.quaternion.copy(props.wheelQuaternions[3]);
-        } catch (error) {
-            console.error("Error copying wheel quaternion:", error, props.wheelQuaternions);
+    const chassisQuaternion = carModel.value.quaternion;
+    const invChassisQuaternion = chassisQuaternion.clone().invert();
+    const localWheelQuaternion = new THREE.Quaternion();
+    const finalWheelQuaternion = new THREE.Quaternion(); // 用于存储最终组合旋转
+
+    // --- 根据调试控件动态生成初始修正四元数 ---
+    let axis;
+    switch (initialCorrectionAxis.value) {
+        case 'y': axis = new THREE.Vector3(0, 1, 0); break;
+        case 'z': axis = new THREE.Vector3(0, 0, 1); break;
+        default:  axis = new THREE.Vector3(1, 0, 0); // 默认为 X 轴
+    }
+    const angleRad = THREE.MathUtils.degToRad(initialCorrectionAngle.value);
+    const initialCorrectionQuaternion = new THREE.Quaternion().setFromAxisAngle(axis, angleRad);
+    // --------------------------------------------
+
+    try {
+        const wheelRefsMap = {
+            0: wheelMeshRefs.value.rl,
+            1: wheelMeshRefs.value.rr,
+            2: wheelMeshRefs.value.fl,
+            3: wheelMeshRefs.value.fr 
+        };
+
+        for (let i = 0; i < props.wheelQuaternions.length; i++) {
+            const wheelRef = wheelRefsMap[i];
+            const physicsQuaternion = props.wheelQuaternions[i]; 
+
+            if (wheelRef && physicsQuaternion instanceof THREE.Quaternion) {
+                // 1. 计算局部物理旋转
+                localWheelQuaternion.copy(invChassisQuaternion).multiply(physicsQuaternion);
+                
+                // 2. 组合旋转: final = localPhysics * initialCorrection
+                finalWheelQuaternion.copy(initialCorrectionQuaternion).multiply(localWheelQuaternion);
+                
+                // 应用最终计算出的旋转到车轮模型
+                wheelRef.quaternion.copy(finalWheelQuaternion);
+
+                // // 调试: 确保坐标轴帮助器跟随旋转 (如果之前未添加)
+                // const helper = wheelRef.getObjectByName('axesHelper');
+                // if (!helper) {
+                //   const axesHelper = new THREE.AxesHelper(0.5); 
+                //   axesHelper.name = 'axesHelper'; 
+                //   wheelRef.add(axesHelper);
+                // }
+
+            } else if (physicsQuaternion && !(physicsQuaternion instanceof THREE.Quaternion)) {
+                console.warn(`Track.vue: wheelQuaternions[${i}] is not a THREE.Quaternion instance.`);
+            }
         }
-    };
+    } catch (error) {
+        console.error("Track.vue: Error applying wheel quaternion:", error, props.wheelQuaternions);
+    }
+};
+
     
     onMounted(() => {
       console.log("Track.vue: onMounted - Start");
       initScene();
       console.log("Track.vue: initScene finished. Loading model...");
-      loadSelectedCarModel(); // 移除 await，让模型在后台加载
+      loadSelectedCarModel();
       console.log("Track.vue: Model loading initiated. Starting animation loop...");
       animate();
       console.log("Track.vue: onMounted - End");
@@ -446,22 +519,18 @@ export default {
     onUnmounted(() => {
       window.removeEventListener('resize', handleResize);
       
-      // 清理Three.js资源
       if (rawRenderer) {
         rawRenderer.dispose();
       }
       if (orbitControls) {
-          orbitControls.dispose(); // 清理 OrbitControls
+          orbitControls.dispose();
       }
-      // 可以在这里添加更多清理逻辑，例如移除场景中的对象，dispose 几何体和材质
       if (rawScene) {
-          // 遍历并清理场景中的对象
           rawScene.traverse(object => {
               if (object.geometry) {
                   object.geometry.dispose();
               }
               if (object.material) {
-                  // 如果材质是数组
                   if (Array.isArray(object.material)) {
                       object.material.forEach(material => material.dispose());
                   } else {
@@ -470,7 +539,7 @@ export default {
               }
           });
       }
-      rawScene = null; // 释放引用
+      rawScene = null;
       rawCamera = null;
       rawRenderer = null;
       rawDirectionalLight = null;
@@ -524,6 +593,8 @@ export default {
       cameraDistance,
       cameraHeight,
       showThirdPersonControls,
+      initialCorrectionAxis,     // 暴露给模板
+      initialCorrectionAngle,  // 暴露给模板
     };
   }
 };
@@ -551,37 +622,37 @@ export default {
   color: white;
   padding: 15px;
   border-radius: 5px;
-  min-width: 250px; /* Increased width slightly */
-  max-height: 90vh; /* Limit height */
-  overflow-y: auto; /* Add scroll if content overflows */
+  min-width: 250px;
+  max-height: 90vh;
+  overflow-y: auto;
   z-index: 10;
 }
 
 .control-group {
-  margin-bottom: 12px; /* Increased spacing */
+  margin-bottom: 12px;
   display: flex;
-  flex-direction: column; /* Keep as column */
-  align-items: flex-start; /* Align items left */
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .control-group label {
   margin-bottom: 5px;
-  font-size: 14px; /* Slightly smaller font */
+  font-size: 14px;
 }
 
 .control-group input[type="range"] {
-  width: 100%; /* Make range inputs full width */
+  width: 100%;
   cursor: pointer;
 }
 .control-group input[type="checkbox"] {
-  align-self: flex-start; /* Align checkbox left */
+  align-self: flex-start;
   margin-top: 4px;
 }
 
 .control-group span {
-  font-size: 12px; /* Smaller font for value display */
-  margin-left: 5px; /* Add space before value */
-  align-self: flex-end; /* Align value to the right */
+  font-size: 12px;
+  margin-left: 5px;
+  align-self: flex-end;
 }
 
 .control-group select {
@@ -612,7 +683,7 @@ hr {
   padding: 8px 15px;
   border-radius: 4px;
   cursor: pointer;
-  width: 100%; /* Make button full width */
+  width: 100%;
   margin-top: 10px;
 }
 
@@ -654,7 +725,6 @@ hr {
   100% { transform: rotate(360deg); }
 }
 
-/* Style scrollbar for controls panel */
 .controls-panel::-webkit-scrollbar {
   width: 8px;
 }
@@ -676,7 +746,7 @@ hr {
 }
 
 .save-btn {
-  background-color: #4CAF50; /* Green */
+  background-color: #4CAF50;
   color: white;
   border: none;
   padding: 8px 15px;

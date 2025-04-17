@@ -185,8 +185,25 @@ export default {
         for (let i = 0; i < vehicle.value.wheelInfos.length; i++) {
           vehicle.value.updateWheelTransform(i);
           const transform = vehicle.value.wheelInfos[i].worldTransform;
-          wheelQuaternions.push(transform.quaternion.clone());
-          wheelPositions.push(transform.position.clone());
+          
+          // --- 转换类型 --- 
+          // 从 CANNON.Quaternion 转换为 THREE.Quaternion
+          const threeQuaternion = new THREE.Quaternion(
+              transform.quaternion.x,
+              transform.quaternion.y,
+              transform.quaternion.z,
+              transform.quaternion.w
+          );
+          // 从 CANNON.Vec3 转换为 THREE.Vector3
+          const threePosition = new THREE.Vector3(
+              transform.position.x,
+              transform.position.y,
+              transform.position.z
+          );
+
+          // 推入转换后的 Three.js 对象
+          wheelQuaternions.push(threeQuaternion);
+          wheelPositions.push(threePosition);
         }
         
         // Calculate speed here

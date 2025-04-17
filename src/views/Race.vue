@@ -19,24 +19,45 @@
       @model-ready="onModelReady"
       :is-loading="isLoading"
       :engine-power="enginePower"
-      :brake-force="brakeForce"
       :turn-strength="turnStrength"
       :vehicle-mass="vehicleMass"
       :linear-damping="linearDamping"
       :angular-damping="angularDamping"
       :ground-friction="groundFriction"
+      :brake-power="brakePower"
+      :slow-down-force="slowDownForce"
+      :suspension-stiffness="suspensionStiffness"
+      :suspension-rest-length="suspensionRestLength"
+      :friction-slip="frictionSlip"
+      :damping-relaxation="dampingRelaxation"
+      :damping-compression="dampingCompression"
+      :max-suspension-force="maxSuspensionForce"
+      :roll-influence="rollInfluence"
+      :max-suspension-travel="maxSuspensionTravel"
       :wheel-quaternions="wheelQuaternions"
+      :wheel-positions="wheelPositions"
       @update:engine-power="handleEnginePowerUpdate"
-      @update:brake-force="handleBrakeForceUpdate"
       @update:turn-strength="handleTurnStrengthUpdate"
       @update:vehicle-mass="handleMassUpdate"
       @update:linear-damping="handleLinearDampingUpdate"
       @update:angular-damping="handleAngularDampingUpdate"
       @update:ground-friction="handleGroundFrictionUpdate"
+      @update:brake-power="handleBrakePowerUpdate"
+      @update:slow-down-force="handleSlowDownForceUpdate"
+      @update:suspension-stiffness="handleSuspensionStiffnessUpdate"
+      @update:suspension-rest-length="handleSuspensionRestLengthUpdate"
+      @update:friction-slip="handleFrictionSlipUpdate"
+      @update:damping-relaxation="handleDampingRelaxationUpdate"
+      @update:damping-compression="handleDampingCompressionUpdate"
+      @update:max-suspension-force="handleMaxSuspensionForceUpdate"
+      @update:roll-influence="handleRollInfluenceUpdate"
+      @update:max-suspension-travel="handleMaxSuspensionTravelUpdate"
+      @save-tuning="saveTuning"
+      :is-saving-tuning="isLoading"
     />
     
     <CarController
-      v-if="!isLoadingVehicle && currentVehicle && world && scene && carModel"
+      v-if="!isLoadingVehicle && currentVehicle && world && scene"
       ref="carController"
       :world="world"
       :scene="scene"
@@ -44,11 +65,23 @@
       :initialPosition="{ x: 0, y: 2, z: 0 }"
       :selectedVehicle="currentVehicle"
       :engine-power="enginePower"
-      :brake-force="brakeForce"
       :turn-strength="turnStrength"
       :vehicle-mass="vehicleMass"
       :linear-damping="linearDamping"
       :angular-damping="angularDamping"
+      :brake-power="brakePower"
+      :slow-down-force="slowDownForce"
+      :suspension-stiffness="suspensionStiffness"
+      :suspension-rest-length="suspensionRestLength"
+      :friction-slip="frictionSlip"
+      :damping-relaxation="dampingRelaxation"
+      :damping-compression="dampingCompression"
+      :max-suspension-force="maxSuspensionForce"
+      :roll-influence="rollInfluence"
+      :max-suspension-travel="maxSuspensionTravel"
+      :custom-sliding-rotational-speed="customSlidingRotationalSpeed"
+      :wheel-radius="wheelRadius"
+      :connection-points="connectionPoints"
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
     />
@@ -80,12 +113,13 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, watchEffect } from 'vue';
 import PhysicsEngine from '../components/PhysicsEngine.vue';
 import CarController from '../components/CarController.vue';
 import Track from './Track.vue';
 import { vehiclesList } from '@/config/vehicles';
 import { vehicleService } from '@/services/vehicleService';
+import * as CANNON from 'cannon-es'; // 导入 CANNON 用于 Vec3
 
 export default {
   name: 'Race',
@@ -129,34 +163,53 @@ export default {
     const currentVehicle = ref(null);
     const isLoadingVehicle = ref(true); // 添加加载状态
     const isLoading = ref(true); // 添加整体加载状态
+    const isInitializingPhysics = ref(false); // 防止重复调用
     
     // 新增：管理控制参数状态
-    const enginePower = ref(6000); 
+    const enginePower = ref(2750); 
     const brakeForce = ref(6000);  
-    const turnStrength = ref(8000);   // 转向强度可以从稍高点开始尝试
+    const turnStrength = ref(0.5);   // 转向强度可以从稍高点开始尝试
     
     // --- 新增物理参数 ref ---
-    const vehicleMass = ref(100); // 初始质量
-    const linearDamping = ref(0.01); // 初始线性阻尼
-    const angularDamping = ref(0.01); // 初始角阻尼
+    const vehicleMass = ref(653); // 初始质量
+    const linearDamping = ref(0.1); // 初始线性阻尼
+    const angularDamping = ref(0.5); // 初始角阻尼
     const groundFriction = ref(0.3); // 初始地面摩擦力
     
-    // 新增：车轮数据
-    const wheelQuaternions = ref([]);
+    // 新增参数 (RaycastVehicle)
+    const brakePower = ref(36); // 主动刹车力
+    const slowDownForce = ref(19.6); // 被动刹车/阻力
     
-    // 初始化场景
-    const initScene = () => {
-      // 获取Track组件的场景
-      if (track.value) {
-        scene.value = track.value.scene;
-        // 不再在这里获取 carModel
-        // carModel.value = track.value.carModel; 
-      }
-    };
+    // wheelInfos 参数 (使用示例默认值)
+    const suspensionStiffness = ref(55);
+    const suspensionRestLength = ref(0.5);
+    const frictionSlip = ref(30);
+    const dampingRelaxation = ref(2.3);
+    const dampingCompression = ref(4.3);
+    const maxSuspensionForce = ref(10000);
+    const rollInfluence = ref(0.01);
+    const maxSuspensionTravel = ref(1);
+    const customSlidingRotationalSpeed = ref(30);
+    const wheelRadius = ref(0.34);
+    
+    // 车轮连接点 (需要根据实际模型调整!)
+    // 顺序: RL, RR, FL, FR (根据 CarController 默认值)
+    const connectionPoints = ref([
+        new CANNON.Vec3(-0.78, 0.1, -1.25), // 左后 RL - 调整 Y 值？示例是 0.1
+        new CANNON.Vec3(0.78, 0.1, -1.25),  // 右后 RR - 调整 Y 值？
+        new CANNON.Vec3(-0.75, 0.1, 1.32),  // 左前 FL - 调整 Y 值？
+        new CANNON.Vec3(0.75, 0.1, 1.32)   // 右前 FR - 调整 Y 值？
+        // 注意: Y 值 0.1 可能比之前的 -0.6 高很多，需确认
+    ]);
+    
+    // 车轮数据 (用于传递给 Track 更新视觉)
+    const wheelQuaternions = ref([]);
+    const wheelPositions = ref([]); // (可选) 如果 Track 需要位置信息
     
     // 物理引擎准备就绪
     const onPhysicsReady = (data) => {
       world.value = data.world;
+      console.log("Race.vue: Physics Engine ready (world set).");
     };
     
     // 物理引擎更新
@@ -181,26 +234,30 @@ export default {
     // Watch for friction changes to update the world's default
     watch(groundFriction, (newFriction) => {
         if (world.value) {
-            console.log(`Updating default ground friction to: ${newFriction}`);
             world.value.defaultContactMaterial.friction = newFriction;
-            // Might need to adjust contact materials between specific bodies if not using default
         }
     });
     
     // 车辆准备就绪
     const onCarReady = () => {
-      console.log("Race.vue: onCarReady called (received car-ready event).");
-      // 开始倒计时
-      isLoading.value = false; // 所有组件准备就绪，结束加载状态
+      console.log("Race.vue: onCarReady handler called (car-ready event received)!");
+      isLoading.value = false;
+      isInitializingPhysics.value = false; // 重置调用锁
       startCountdown();
     };
     
     // 更新车辆位置
     const onPositionUpdate = (data) => {
-      speed.value = data.velocity.length();
-      // --- 保存车轮数据 ---
+      // Get speed from event data instead of accessing chassisBody
+      if (data.speed !== undefined) {
+          speed.value = data.speed;
+      }
+      // 保存车轮数据以传递给 Track
       if (data.wheelQuaternions) {
           wheelQuaternions.value = data.wheelQuaternions;
+      }
+      if (data.wheelPositions) { // (可选)
+          wheelPositions.value = data.wheelPositions;
       }
     };
     
@@ -338,14 +395,45 @@ export default {
               } else {
               // DB fetch failed or returned null, use base data directly
               console.warn(`Vehicle data for ID ${vehicleIdToLoad} not found in DB, using list data.`);
-              currentVehicle.value = baseVehicleData;
+              // Ensure customSettings exists even if loading from list
+              currentVehicle.value = {
+                  ...baseVehicleData,
+                  customSettings: baseVehicleData.customSettings || {}
+              };
           }
       } catch (error) {
           console.error("Error loading vehicle data from DB:", error);
           // Error fetching, use base data directly
-          currentVehicle.value = baseVehicleData;
+           // Ensure customSettings exists even on error
+           currentVehicle.value = {
+               ...baseVehicleData,
+               customSettings: baseVehicleData.customSettings || {}
+           };
       }
       
+      // Apply custom settings to refs, falling back to defaults defined in setup() if not set
+      if (currentVehicle.value?.customSettings) {
+          console.log("Applying custom settings:", currentVehicle.value.customSettings);
+          const settings = currentVehicle.value.customSettings;
+          enginePower.value = settings.enginePower ?? enginePower.value;
+          turnStrength.value = settings.turnStrength ?? turnStrength.value;
+          vehicleMass.value = settings.vehicleMass ?? vehicleMass.value;
+          linearDamping.value = settings.linearDamping ?? linearDamping.value;
+          angularDamping.value = settings.angularDamping ?? angularDamping.value;
+          groundFriction.value = settings.groundFriction ?? groundFriction.value;
+          brakePower.value = settings.brakePower ?? brakePower.value;
+          slowDownForce.value = settings.slowDownForce ?? slowDownForce.value;
+          suspensionStiffness.value = settings.suspensionStiffness ?? suspensionStiffness.value;
+          suspensionRestLength.value = settings.suspensionRestLength ?? suspensionRestLength.value;
+          frictionSlip.value = settings.frictionSlip ?? frictionSlip.value;
+          dampingRelaxation.value = settings.dampingRelaxation ?? dampingRelaxation.value;
+          dampingCompression.value = settings.dampingCompression ?? dampingCompression.value;
+          maxSuspensionForce.value = settings.maxSuspensionForce ?? maxSuspensionForce.value;
+          rollInfluence.value = settings.rollInfluence ?? rollInfluence.value;
+          maxSuspensionTravel.value = settings.maxSuspensionTravel ?? maxSuspensionTravel.value;
+          // Consider adding customSlidingRotationalSpeed, wheelRadius, connectionPoints if needed
+      }
+
       isLoadingVehicle.value = false; // 加载完成
 
       // 初始化检查点（在实际应用中这些会从赛道模型中获取）
@@ -355,11 +443,6 @@ export default {
         { x: -10, y: 0, z: 0 },
         { x: 0, y: 0, z: -10 }
       ];
-      
-      // 在下一个渲染周期执行初始化，确保子组件已挂载
-      setTimeout(() => {
-        initScene();
-      }, 100);
     });
     
     // 组件卸载
@@ -370,29 +453,123 @@ export default {
     // 当 Track 组件的场景准备好时调用
     const onSceneReady = (emittedScene) => {
         scene.value = emittedScene;
-        // 现在可以安全地认为 scene 存在了
-        // 移除获取 carModel 的逻辑
-        // if (track.value) {
-        //   carModel.value = track.value.carModel; 
-        //   console.log("Car model obtained from Track component:", carModel.value ? 'Success' : 'Failed');
-        // } else {
-        //   console.error("Track component ref is not available in onSceneReady.");
-        // }
+        console.log("Race.vue: Scene ready (scene set).");
     };
     
     // 添加 model-ready 事件处理函数
     const onModelReady = (model) => {
         carModel.value = model;
+        console.log("Race.vue: Car Model ready (carModel set).");
     };
     
     // 新增：事件处理函数，用于更新控制参数状态
     const handleMassUpdate = (newValue) => { vehicleMass.value = newValue; };
     const handleLinearDampingUpdate = (newValue) => { linearDamping.value = newValue; };
     const handleAngularDampingUpdate = (newValue) => { angularDamping.value = newValue; };
-    const handleGroundFrictionUpdate = (newValue) => { groundFriction.value = newValue; };
-    const handleEnginePowerUpdate = (newValue) => { enginePower.value = newValue; };
-    const handleBrakeForceUpdate = (newValue) => { brakeForce.value = newValue; };
-    const handleTurnStrengthUpdate = (newValue) => { turnStrength.value = newValue; };
+    const handleGroundFrictionUpdate = (newValue) => { 
+        groundFriction.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.groundFriction = newValue;
+    };
+    const handleEnginePowerUpdate = (newValue) => { 
+        enginePower.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.enginePower = newValue;
+    };
+    const handleBrakeForceUpdate = (newValue) => { 
+        brakeForce.value = newValue; 
+        // Note: brakeForce is not directly used by RaycastVehicle, brakePower is. Should we save this?
+        // if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.brakeForce = newValue; 
+    };
+    const handleTurnStrengthUpdate = (newValue) => { 
+        turnStrength.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.turnStrength = newValue;
+    };
+    const handleBrakePowerUpdate = (newValue) => { 
+        brakePower.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.brakePower = newValue;
+    };
+    const handleSlowDownForceUpdate = (newValue) => { 
+        slowDownForce.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.slowDownForce = newValue;
+    };
+    const handleSuspensionStiffnessUpdate = (newValue) => { 
+        suspensionStiffness.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.suspensionStiffness = newValue;
+    };
+    const handleSuspensionRestLengthUpdate = (newValue) => { 
+        suspensionRestLength.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.suspensionRestLength = newValue;
+    };
+    const handleFrictionSlipUpdate = (newValue) => { 
+        frictionSlip.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.frictionSlip = newValue;
+    };
+    const handleDampingRelaxationUpdate = (newValue) => { 
+        dampingRelaxation.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.dampingRelaxation = newValue;
+    };
+    const handleDampingCompressionUpdate = (newValue) => { 
+        dampingCompression.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.dampingCompression = newValue;
+    };
+    const handleMaxSuspensionForceUpdate = (newValue) => { 
+        maxSuspensionForce.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.maxSuspensionForce = newValue;
+    };
+    const handleRollInfluenceUpdate = (newValue) => { 
+        rollInfluence.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.rollInfluence = newValue;
+    };
+    const handleMaxSuspensionTravelUpdate = (newValue) => { 
+        maxSuspensionTravel.value = newValue; 
+        if (currentVehicle.value?.customSettings) currentVehicle.value.customSettings.maxSuspensionTravel = newValue;
+    };
+    
+    // --- 新增: 保存调校设置到数据库 ---
+    const saveTuning = async () => {
+        if (currentVehicle.value && currentVehicle.value.id && currentVehicle.value.customSettings) {
+            try {
+            isLoading.value = true; // Use the general loading state
+            console.log('Saving tuning settings:', JSON.stringify(currentVehicle.value.customSettings)); // Log what's being saved
+            // Ensure customSettings object is clean and only contains relevant keys if needed
+            await vehicleService.batchUpdateVehicle(currentVehicle.value.id, {
+                customSettings: currentVehicle.value.customSettings
+            });
+            console.log('Tuning saved successfully.');
+            // TODO: Add user feedback (e.g., toast notification)
+            } catch (error) {
+            console.error("Failed to save tuning:", error);
+            // TODO: Add user feedback
+            } finally {
+            isLoading.value = false;
+            }
+        } else {
+            console.warn("Cannot save tuning: No current vehicle, ID, or custom settings found.");
+            // TODO: Add user feedback
+        }
+    };
+    
+    // --- 新增: 使用 watchEffect 触发 CarController 初始化 ---
+    watchEffect(() => {
+      console.log("Race.vue: watchEffect running. Checking conditions for CarController init...");
+      console.log(`  - carController instance present: ${!!carController.value}`);
+      console.log(`  - world present: ${!!world.value}`);
+      console.log(`  - scene present: ${!!scene.value}`);
+      console.log(`  - carModel present: ${!!carModel.value}`);
+      console.log(`  - isInitializingPhysics: ${isInitializingPhysics.value}`);
+
+      // 检查所有依赖项和组件实例是否就绪，并且尚未开始初始化
+      if (carController.value && world.value && scene.value && carModel.value && !isInitializingPhysics.value) {
+        console.log("Race.vue: All conditions met. Calling CarController.initializePhysics()...");
+        isInitializingPhysics.value = true; // 设置调用锁
+        try {
+            carController.value.initializePhysics(); // 调用子组件暴露的方法
+        } catch(error) {
+            console.error("Race.vue: Error calling initializePhysics on CarController:", error);
+            isInitializingPhysics.value = false; // 出错时解锁
+            // 可能需要显示错误信息给用户
+        }
+      }
+    });
     
     return {
       physicsEngine,
@@ -415,13 +592,26 @@ export default {
       isLoadingVehicle, // 暴露加载状态
       isLoading, // 暴露整体加载状态
       enginePower,
-      brakeForce,
       turnStrength,
       vehicleMass,
       linearDamping,
       angularDamping,
       groundFriction,
+      brakePower,
+      slowDownForce,
+      suspensionStiffness,
+      suspensionRestLength,
+      frictionSlip,
+      dampingRelaxation,
+      dampingCompression,
+      maxSuspensionForce,
+      rollInfluence,
+      maxSuspensionTravel,
+      customSlidingRotationalSpeed,
+      wheelRadius,
+      connectionPoints,
       wheelQuaternions,
+      wheelPositions,
       onPhysicsReady,
       onPhysicsUpdate,
       onSceneReady,
@@ -436,7 +626,18 @@ export default {
       handleGroundFrictionUpdate,
       handleEnginePowerUpdate,
       handleBrakeForceUpdate,
-      handleTurnStrengthUpdate
+      handleTurnStrengthUpdate,
+      handleBrakePowerUpdate,
+      handleSlowDownForceUpdate,
+      handleSuspensionStiffnessUpdate,
+      handleSuspensionRestLengthUpdate,
+      handleFrictionSlipUpdate,
+      handleDampingRelaxationUpdate,
+      handleDampingCompressionUpdate,
+      handleMaxSuspensionForceUpdate,
+      handleRollInfluenceUpdate,
+      handleMaxSuspensionTravelUpdate,
+      saveTuning, // Expose the save function
     };
   }
 };

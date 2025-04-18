@@ -13,7 +13,7 @@ import {
   createGround, 
   updatePhysics, 
   CannonDebugRenderer 
-} from '../utils/physics';
+} from '@/core/physics/PhysicsWorld';
 
 export default {
   name: 'PhysicsEngine',

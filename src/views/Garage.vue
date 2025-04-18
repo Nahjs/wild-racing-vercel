@@ -1,5 +1,6 @@
 <template>
-  <div ref="canvas" class="scene">
+  <div ref="containerRef" class="scene">
+    <canvas ref="canvasElementRef" class="webgl-canvas"></canvas>
     <div class="navigation-buttons">
       <router-link to="/" class="nav-btn home-btn">
         <i class="icon-home"></i> 返回首页
@@ -17,24 +18,25 @@
       &gt;
     </button>
 
-    <DebugPanel
+    <DebugPanel v-if="isDebugMode && currentVehicle"
       :vehicles="vehicles"
       :current-vehicle-id="currentVehicle.id"
       @update:currentVehicleId="handleVehicleUpdate"
       :current-vehicle="currentVehicle"
       :car-coat-color="carCoatColor"
       :wheel-color="wheelColor"
+      :auto-rotate="controls?.autoRotate ?? false"
       @update:scale="updateModelScale"
       @update:position="updateModelPosition"
       @update:rotation="updateModelRotation"
-      @update:cameraPosition="updateCameraPosition"
-      @update:cameraFov="updateCameraFov"
       @update:autoRotate="toggleAutoRotate"
       @update:showGrid="toggleGridHelper"
       @update:showAxes="toggleAxesHelper"
       @update:gridSettings="updateGridHelper"
       @update:axesSize="updateAxesHelper"
       @configsImported="handleConfigsImported"
+      @update:carColor="updateCarColor"
+      @update:wheelColor="updateWheelColor"
     />
     
     <!-- 操作结果提示 -->
@@ -47,999 +49,512 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
-import {
-  Scene,
-  PerspectiveCamera,
-  WebGLRenderer,
-  SpotLight,
-  AmbientLight,
-  Group,
-  WebGLCubeRenderTarget,
-  CubeCamera,
-  Mesh,
-  Vector3,
-  Color,
-  SphereGeometry,
-  MeshPhongMaterial,
-  PlaneGeometry,
-  Clock,
-  HalfFloatType,
-  ACESFilmicToneMapping,
-  sRGBEncoding,
-  PCFSoftShadowMap,
-  DoubleSide,
-  GridHelper,
-  AxesHelper,
-} from "three";
+import { ref, onMounted, onUnmounted, watch, shallowRef, nextTick, markRaw, toRaw } from 'vue';
+import * as THREE from 'three';
 import { GLTFLoader } from "@/utils/loaders/GLTFLoader";
 import { DRACOLoader } from "@/utils/loaders/DRACOLoader";
-import { OrbitControls } from "@/utils/controls/OrbitControls";
-import DebugPanel from '@/components/DebugPanel.vue';
-
-import {
-  getMaterials,
-  changModel,
-  generateVirtualLight,
-  createContactShadow,
-  setMovingSpot,
-  floatMesh,
-  createCustomMaterial,
-} from "@/utils/utils";
+import DebugPanel from '@/debug/GarageDebug.vue';
 import { vehiclesList, getVehicles } from '@/config/vehicles';
 import { vehicleService } from '@/services/vehicleService';
 import { settingsService } from '@/services/settingsService';
 import { debounce, isOnline } from '@/utils/helpers';
-
-//屏幕长比
-const RADIO = window.innerWidth / window.innerHeight;
-// 当前显示设备的物理像素分辨率与CSS像素分辨率之比
-const DPR = window.devicePixelRatio;
-
-// canvas 容器
-const canvas = ref();
-
-// 场景对象
-let scene;
-
-// 虚拟场景对象
-let virtualScene = new Scene();
-// 虚拟背景
-let virtualBackgroundMesh;
-
-// 透视摄像机
-let camera = new PerspectiveCamera(30, RADIO);
-
-// 聚光灯对象
-let spotLight = new SpotLight();
-
-// 环境光
-let ambientLight = new AmbientLight(0x404040);
-
-// 渲染器
-let renderer = new WebGLRenderer({
-  powerPreference: "high-performance",
-  antialias: true,
-  alpha: true,
-});
-
-// 3D 模型对象
-let model;
-const modelZ = 0;
-
-// 模型的接触阴影对象
-let shadowGroup = new Group();
-
-// 车身颜色
-let carCoatColor = ref("#2f426f");
-
-// 轮毂颜色
-let wheelColor = ref("#1a1a1a");
-
-// 相机控制对象
-let controls;
-
-// 相机运动锁
-let cameraMoveClock = false;
-
-// 车辆列表
-const vehicles = ref(vehiclesList);
-// 当前选中的车辆
-const currentVehicle = ref(vehiclesList[0]);
-
-// 通知提示
-const notification = ref({
-  show: false,
-  message: '',
-  type: 'info'
-});
-
-// 显示通知
-const showNotification = (message, type = 'info', duration = 3000) => {
-  notification.value = {
-    show: true,
-    type,
-    message
-  };
-  
-  setTimeout(() => {
-    notification.value.show = false;
-  }, duration);
-};
-
-// 设置相机
-const setCamera = () => {
-  camera.position.set(0, 0.8, 8);
-  camera.castShadow = true;
-  scene.add(camera);
-};
-
-// 设置聚光灯
-const setSpotLight = () => {
-  spotLight.position.set(0, 15, 0);
-  spotLight.intensity = 3;
-  spotLight.penumbra = 1;
-  spotLight.angle = 0.5;
-  spotLight.shadow.bias = -0.0001;
-  spotLight.shadow.mapSize.width = 2048;
-  spotLight.shadow.mapSize.height = 2048;
-  spotLight.castShadow = true;
-  spotLight.target.position.set(0, 0, 6);
-  scene.add(spotLight.target);
-  scene.add(spotLight);
-};
-
-// 设置环境光
-const setAmbientLight = () => {
-  ambientLight.intensity = 0.6;
-  scene.add(ambientLight);
-};
-
-// 设置渲染器
-const setRender = () => {
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = PCFSoftShadowMap;
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(DPR, 2));
-
-  renderer.outputEncoding = sRGBEncoding;
-  renderer.toneMapping = ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
-
-  renderer.shadowMap.autoUpdate = true;
-};
-
-// 清理模型资源
-const cleanupModel = () => {
-  if (model && model.scene) {
-    model.scene.traverse((child) => {
-      if (child.geometry) {
-        child.geometry.dispose();
-      }
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(material => {
-            if (material.map) material.map.dispose();
-            if (material.lightMap) material.lightMap.dispose();
-            if (material.bumpMap) material.bumpMap.dispose();
-            if (material.normalMap) material.normalMap.dispose();
-            if (material.specularMap) material.specularMap.dispose();
-            if (material.envMap) material.envMap.dispose();
-            material.dispose();
-          });
-        } else {
-          if (child.material.map) child.material.map.dispose();
-          if (child.material.lightMap) child.material.lightMap.dispose();
-          if (child.material.bumpMap) child.material.bumpMap.dispose();
-          if (child.material.normalMap) child.material.normalMap.dispose();
-          if (child.material.specularMap) child.material.specularMap.dispose();
-          if (child.material.envMap) child.material.envMap.dispose();
-          child.material.dispose();
-        }
-      }
-    });
-    
-    scene.remove(model.scene);
-    model.scene = null;
-    model = null;
-  }
-};
-
-// 加载3D模型
-const load3DModel = async () => {
-  try {
-    const dracoLoader = new DRACOLoader().setDecoderPath("/libs/draco/");
-    const gltfLoader = new GLTFLoader().setDRACOLoader(dracoLoader);
-
-    model = await gltfLoader.loadAsync(currentVehicle.value.model);
-
-    if (model.scene) {
-      const { materials, nodes } = getMaterials(model.scene);
-
-      model.scene.traverse((child) => {
-        if (child.isMesh) {
-          child.castShadow = true;
-          child.receiveShadow = true;
-          if (child.geometry) {
-            child.geometry.dispose();
-          }
-          if (child.material) {
-            if (Array.isArray(child.material)) {
-              child.material.forEach(m => m.dispose());
-            } else {
-              child.material.dispose();
-            }
-          }
-        }
-      });
-
-      Object.assign(model, { materials, nodes });
-      
-      model.scene.scale.set(debugScale.value, debugScale.value, debugScale.value);
-      model.scene.position.set(...debugPosition.value);
-      model.scene.rotation.set(0, debugRotationY.value, 0);
-      
-      scene.add(model.scene);
-      camera.lookAt(model.scene.position);
-    }
-  } catch (error) {
-    console.error('模型加载失败:', error);
-    showNotification('模型加载失败', 'error');
-  }
-};
-
-// 自定义模型
-const customModel = () => {
-  if (!model || !model.materials) return;
-
-  Object.entries(model.materials).forEach(([name, material]) => {
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes('rubber') || lowerName.includes('tire')) {
-      changModel(model, name, {
-        color: "#222",
-        roughness: 0.6,
-        roughnessMap: null,
-        normalScale: [4, 4],
-      });
-    }
-    else if (lowerName.includes('window') || lowerName.includes('glass')) {
-      changModel(model, name, {
-        color: "black",
-        roughness: 0,
-        clearcoat: 0.1,
-      });
-    }
-    else if (lowerName.includes('body') || lowerName.includes('paint') || lowerName.includes('coat')) {
-      changModel(model, name, {
-        color: carCoatColor.value,
-        envMapIntensity: 4,
-      });
-    }
-    else if ((lowerName.includes('wheel') || lowerName.includes('rim')) && 
-             !lowerName.includes('tire') && !lowerName.includes('rubber')) {
-      changModel(model, name, {
-        color: wheelColor.value,
-        roughness: 0.1,
-        metalness: 0.9,
-        envMapIntensity: 3,
-      });
-    }
-    else {
-      changModel(model, name, {
-        roughness: 0.5,
-        metalness: 0.8,
-        envMapIntensity: 2,
-      });
-    }
-  });
-};
-
-// 设置接触阴影
-const setContactShadow = () => {
-  shadowGroup.position.set(0, -1.01, modelZ);
-  shadowGroup.rotation.set(0, Math.PI / 2, 0);
-  scene.add(shadowGroup);
-  createContactShadow(scene, renderer, shadowGroup);
-};
-
-// 添加控制操作
-const addControls = () => {
-  if (controls) {
-    controls.dispose();
-  }
-  
-  controls = new OrbitControls(camera, renderer.domElement);
-  
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.rotateSpeed = 0.5;
-  controls.enableZoom = true;
-  controls.zoomSpeed = 0.5;
-  controls.enablePan = true;
-  controls.panSpeed = 0.5;
-  controls.minDistance = 3;
-  controls.maxDistance = 20;
-  controls.minPolarAngle = Math.PI / 4;
-  controls.maxPolarAngle = Math.PI / 2;
-
-  controls.addEventListener("start", () => (cameraMoveClock = true));
-  controls.addEventListener("end", () => {
-    cameraMoveClock = false;
-  });
-};
-
-// 清理虚拟场景
-const cleanupVirtualScene = () => {
-  if (virtualScene) {
-    virtualScene.traverse((child) => {
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-    });
-    while(virtualScene.children.length > 0) {
-      virtualScene.remove(virtualScene.children[0]);
-    }
-  }
-  if (virtualBackgroundMesh) {
-    if (virtualBackgroundMesh.material) virtualBackgroundMesh.material.dispose();
-    if (virtualBackgroundMesh.geometry) virtualBackgroundMesh.geometry.dispose();
-    virtualBackgroundMesh = null;
-  }
-};
-
-// 清理场景
-const cleanupScene = () => {
-  cancelAnimationFrame(renderFrameId);
-  
-  if (controls) {
-    controls.dispose();
-    controls = null;
-  }
-  
-  cleanupModel();
-  cleanupVirtualScene();
-  
-  if (shadowGroup) {
-    shadowGroup.traverse((child) => {
-      if (child.geometry) child.geometry.dispose();
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => {
-            if (m.map) m.map.dispose();
-            if (m.lightMap) m.lightMap.dispose();
-            if (m.bumpMap) m.bumpMap.dispose();
-            if (m.normalMap) m.normalMap.dispose();
-            if (m.specularMap) m.specularMap.dispose();
-            if (m.envMap) m.envMap.dispose();
-            m.dispose();
-          });
-        } else {
-          if (child.material.map) child.material.map.dispose();
-          if (child.material.lightMap) child.material.lightMap.dispose();
-          if (child.material.bumpMap) child.material.bumpMap.dispose();
-          if (child.material.normalMap) child.material.normalMap.dispose();
-          if (child.material.specularMap) child.material.specularMap.dispose();
-          if (child.material.envMap) child.material.envMap.dispose();
-          child.material.dispose();
-        }
-      }
-    });
-    while(shadowGroup.children.length > 0) {
-      shadowGroup.remove(shadowGroup.children[0]);
-    }
-    scene.remove(shadowGroup);
-    shadowGroup = new Group();
-  }
-
-  while(scene.children.length > 0) {
-    const obj = scene.children[0];
-    scene.remove(obj);
-    if (obj.geometry) obj.geometry.dispose();
-    if (obj.material) {
-      if (Array.isArray(obj.material)) {
-        obj.material.forEach(m => {
-          if (m.map) m.map.dispose();
-          if (m.lightMap) m.lightMap.dispose();
-          if (m.bumpMap) m.bumpMap.dispose();
-          if (m.normalMap) m.normalMap.dispose();
-          if (m.specularMap) m.specularMap.dispose();
-          if (m.envMap) m.envMap.dispose();
-          m.dispose();
-        });
-      } else {
-        if (obj.material.map) obj.material.map.dispose();
-        if (obj.material.lightMap) obj.material.lightMap.dispose();
-        if (obj.material.bumpMap) obj.material.bumpMap.dispose();
-        if (obj.material.normalMap) obj.material.normalMap.dispose();
-        if (obj.material.specularMap) obj.material.specularMap.dispose();
-        if (obj.material.envMap) obj.material.envMap.dispose();
-        obj.material.dispose();
-      }
-    }
-  }
-
-  if (renderer) {
-    renderer.dispose();
-    renderer.forceContextLoss();
-    renderer.domElement.remove();
-    renderer = null;
-  }
-
-  if (camera) {
-    camera = new PerspectiveCamera(30, RADIO);
-  }
-
-  scene = new Scene();
-  virtualScene = new Scene();
-  
-  renderer = new WebGLRenderer({
-    powerPreference: "high-performance",
-    antialias: true,
-    alpha: true,
-  });
-  setRender();
-  
-  if (canvas.value) {
-    canvas.value.appendChild(renderer.domElement);
-  }
-};
-
-let renderFrameId;
-
-// 自动渲染
-const autoRender = () => {
-  if (controls) controls.update();
-  if (renderer && scene && camera) {
-    renderer.render(scene, camera);
-  }
-  renderFrameId = requestAnimationFrame(autoRender);
-};
-
-// 设置环境
-const setEnvironment = (
-  scene,
-  resolution = 256,
-  frames = 1,
-  near = 1,
-  far = 1000,
-  background = false
-) => {
-  if (scene.environment) {
-    scene.environment.dispose();
-    scene.environment = null;
-  }
-  if (scene.background) {
-    scene.background.dispose();
-    scene.background = null;
-  }
-
-  const fbo = new WebGLCubeRenderTarget(resolution);
-  fbo.texture.type = HalfFloatType;
-  const cubeCamera = new CubeCamera(near, far, fbo);
-
-  virtualScene.add(cubeCamera);
-
-  const topLight = generateVirtualLight({
-    intensity: 1.5,
-    scale: [10, 10, 1],
-    position: [0, 5, -9],
-    rotation: [Math.PI / 2, 0, 0],
-  });
-
-  const leftTopLight = generateVirtualLight({
-    intensity: 5,
-    scale: [20, 0.1, 1],
-    position: [-5, 1, -1],
-    rotation: [0, Math.PI / 2, 0],
-  });
-  const leftBottomLight = generateVirtualLight({
-    intensity: 2,
-    scale: [20, 0.5, 1],
-    position: [-5, -1, -1],
-    rotation: [0, Math.PI / 2, 0],
-  });
-  const rightTopLight = generateVirtualLight({
-    intensity: 2,
-    scale: [20, 1, 1],
-    position: [10, 1, 0],
-    rotation: [0, -Math.PI / 2, 0],
-  });
-
-  const floatLight = generateVirtualLight({
-    form: "ring",
-    color: "red",
-    intensity: 2,
-    scale: 10,
-    position: [-15, 4, -18],
-    target: [0, 0, 0],
-  });
-
-  virtualScene.add(topLight);
-  virtualScene.add(leftTopLight);
-  virtualScene.add(leftBottomLight);
-  virtualScene.add(rightTopLight);
-  virtualScene.add(floatLight);
-
-  if (background !== "only") {
-    scene.environment = fbo.texture;
-  }
-  if (background) {
-    scene.background = fbo.texture;
-  }
-
-  const geometry = new SphereGeometry(1, 64, 64);
-  const material = createCustomMaterial("#2f2f2f");
-
-  virtualBackgroundMesh = new Mesh(geometry, material);
-  virtualBackgroundMesh.scale.set(100, 100, 100);
-  virtualScene.add(virtualBackgroundMesh);
-
-  floatMesh({
-    group: floatLight,
-    speed: 5,
-    rotationIntensity: 2,
-    floatIntensity: 2,
-  });
-
-  let count = 1;
-  const virtualRender = () => {
-    if (frames === Infinity || count < frames) {
-      cubeCamera.update(renderer, virtualScene);
-      count++;
-    }
-    requestAnimationFrame(virtualRender);
-  };
-  virtualRender();
-};
-
-// 设置相机动画
-let stopID;
-const clock = new Clock();
-let cameraX, cameraZ;
-const setCameraAnimate = () => {
-  const vector = new Vector3();
-
-  if (cameraMoveClock) {
-    cancelAnimationFrame(stopID);
-  } else {
-    const t = clock.getElapsedTime();
-    const theta = t / 6;
-    const newx = 14 * Math.sin(theta) - 6;
-    const newy = 14 * Math.cos(theta) - 6;
-    cameraX = newx < -10 ? cameraX : newx;
-    cameraZ = newy < -10 ? cameraZ : newy;
-
-    camera.position.lerp(vector.set(cameraX, 0.5, cameraZ), 0.05);
-    camera.lookAt(model.scene.position);
-  }
-
-  stopID = requestAnimationFrame(setCameraAnimate);
-};
-
-// 设置舞台聚光灯
-const setBigSpotLight = () => {
-  scene.traverse((child) => {
-    if (child.geometry instanceof PlaneGeometry) {
-      if (child.material) {
-        if (Array.isArray(child.material)) {
-          child.material.forEach(m => m.dispose());
-        } else {
-          child.material.dispose();
-        }
-      }
-      if (child.geometry) {
-        child.geometry.dispose();
-      }
-      scene.remove(child);
-    }
-  });
-
-  scene.background = new Color("#d4cfa3");
-  renderer.shadowMap.type = PCFSoftShadowMap;
-
-  const material = new MeshPhongMaterial({
-    side: DoubleSide,
-    color: "#00ff1a",
-    emissive: "#ac8f3e",
-  });
-  const FloorGeometry = new PlaneGeometry(200, 200);
-
-  const floorMesh = new Mesh(FloorGeometry, material);
-
-  floorMesh.rotation.x = Math.PI / 2;
-  floorMesh.receiveShadow = true;
-
-  floorMesh.position.set(0, -1.02, 0);
-
-  scene.add(floorMesh);
-
-  scene.traverse((child) => {
-    if (child instanceof SpotLight && child !== spotLight) {
-      scene.remove(child);
-    }
-  });
-
-  const bigSpotLight = new SpotLight("#ffffff", 2);
-
-  bigSpotLight.angle = Math.PI / 8;
-  bigSpotLight.penumbra = 0.2;
-  bigSpotLight.decay = 2;
-  bigSpotLight.distance = 30;
-
-  bigSpotLight.position.set(0, 10, 0);
-  bigSpotLight.target.position.set(0, 0, modelZ);
-
-  scene.add(bigSpotLight.target);
-  scene.add(bigSpotLight);
-};
-
-// 初始化场景
-const initScene = async () => {
-  scene = new Scene();
-  setRender();
-  setAmbientLight();
-  setCamera();
-  await load3DModel();
-  customModel();
-  setSpotLight();
-
-  const t = 600;
-  setTimeout(() => {
-    setEnvironment(scene, 256, Infinity);
-    setMovingSpot(virtualScene);
-  }, t * 2);
-  setTimeout(() => {
-    spotLight.visible = false;
-    setBigSpotLight();
-    setContactShadow();
-  }, 3 * t);
-
-  addControls();
-  canvas.value.appendChild(renderer.domElement);
-  autoRender();
-  watchColorChange();
-  listenPageSizeChange();
-};
-
-// 监听颜色变化
-const watchColorChange = () => {
-  watch(carCoatColor, (val, old) => {
-    requestAnimationFrame(() => {
-      if (val && model && model.materials) {
-        Object.entries(model.materials).forEach(([name, material]) => {
-          if (name.toLowerCase().includes('body') || 
-              name.toLowerCase().includes('paint') || 
-              name.toLowerCase().includes('coat')) {
-            material.color.set(val);
-            material.needsUpdate = true;
-          }
-        });
-      }
-    });
-  });
-
-  watch(wheelColor, (val, old) => {
-    requestAnimationFrame(() => {
-      if (val && model && model.materials) {
-        Object.entries(model.materials).forEach(([name, material]) => {
-          const lowerName = name.toLowerCase();
-          if ((lowerName.includes('wheel') || lowerName.includes('rim')) && 
-              !lowerName.includes('tire') && !lowerName.includes('rubber')) {
-            material.color.set(val);
-            material.needsUpdate = true;
-          }
-        });
-      }
-    });
-  });
-};
-
-// 重新设置渲染窗口大小
-const changeRenderSize = () => {
-  requestAnimationFrame(() => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-};
-
-// 添加页面变化监听
-const listenPageSizeChange = () => {
-  window.addEventListener("resize", changeRenderSize);
-};
-
-// 切换车辆的核心逻辑
-const selectVehicleById = async (newVehicleId) => {
-  const newVehicle = vehicles.value.find(v => v.id === newVehicleId);
-  if (!newVehicle || newVehicle.id === currentVehicle.value.id) {
-      console.log("Vehicle not found or already selected:", newVehicleId);
-    return;
-  }
-
-  currentVehicle.value = newVehicle;
-  localStorage.setItem('lastSelectedVehicleId', newVehicleId); // 保存选择
-
-  try {
-    const savedConfig = await loadVehicleConfig(newVehicleId);
-    
-    if (savedConfig && savedConfig.customSettings) {
-      debugScale.value = savedConfig.customSettings.scale || newVehicle.scale || 1.0;
-      debugPosition.value = savedConfig.customSettings.position || [...newVehicle.position] || [0, 0, 0];
-      debugRotationY.value = savedConfig.customSettings.rotation || 0;
-      carCoatColor.value = savedConfig.customSettings.colors?.body || newVehicle.colors?.body || "#2f426f";
-      wheelColor.value = savedConfig.customSettings.colors?.wheel || newVehicle.colors?.wheel || "#1a1a1a";
-    } else {
-      debugScale.value = newVehicle.scale || 1.0;
-      debugPosition.value = Array.isArray(newVehicle.position) ?
-        [...newVehicle.position] : [0, 0, 0];
-      debugRotationY.value = 0;
-      carCoatColor.value = newVehicle.colors?.body || "#2f426f";
-      wheelColor.value = newVehicle.colors?.wheel || "#1a1a1a";
-    }
-    
-    if (renderer) {
-      renderer.shadowMap.autoUpdate = false;
-    }
-    
-    cleanupScene();
-    
-    if (window.gc) window.gc();
-    
-    scene = new Scene();
-    setAmbientLight();
-    setCamera();
-    
-    await load3DModel();
-    customModel();
-    setSpotLight();
-    setEnvironment(scene, 256, Infinity);
-    setMovingSpot(virtualScene);
-    setBigSpotLight();
-    setContactShadow();
-    addControls();
-    
-    renderer.shadowMap.autoUpdate = true;
-    renderer.shadowMap.needsUpdate = true;
-
-    autoRender();
-
-  } catch (error) {
-    console.error('切换模型失败:', error);
-    showNotification('切换模型失败', 'error');
-  }
-};
-
-// 处理来自 DebugPanel 的更新事件
-const handleVehicleUpdate = (newVehicleId) => {
-  selectVehicleById(newVehicleId);
-};
-
-// 左右箭头切换车辆
-const changeVehicle = (direction) => {
-  const currentIndex = vehicles.value.findIndex(v => v.id === currentVehicle.value.id);
-  let nextIndex = currentIndex + direction;
-
-  if (nextIndex < 0) {
-    nextIndex = vehicles.value.length - 1; // 循环到最后一个
-  } else if (nextIndex >= vehicles.value.length) {
-    nextIndex = 0; // 循环到第一个
-  }
-
-  selectVehicleById(vehicles.value[nextIndex].id);
-};
-
-// 从数据库加载配置
-const loadVehicleConfig = async (vehicleId) => {
-  try {
-    const vehicle = await vehicleService.getVehicle(vehicleId);
-    return vehicle;
-  } catch (error) {
-    console.error('加载配置失败:', error);
-    return null;
-  }
-};
-
-// 处理配置导入
-const handleConfigsImported = async () => {
-  try {
-    vehicles.value = await getVehicles();
-    showNotification('配置导入成功', 'success');
-  } catch (error) {
-    console.error('更新车辆列表失败:', error);
-    showNotification('更新车辆列表失败', 'error');
-  }
-};
-
-// 初始化应用
-const initializeApp = async () => {
-  try {
-    // 先获取车辆列表
-    vehicles.value = await getVehicles();
-    
-    // 检查 currentVehicle 是否已被 onMounted 中的 localStorage 逻辑设置
-    // 如果没有（即仍然是默认的第一个），或者找不到，则重置为第一个
-    if (!currentVehicle.value || !vehicles.value.find(v => v.id === currentVehicle.value.id)) {
-        currentVehicle.value = vehicles.value[0];
-        localStorage.setItem('lastSelectedVehicleId', currentVehicle.value.id); // 确保 LocalStorage 更新
-    }
-    
-    // 使用确定好的 currentVehicle.value.id 初始化服务和加载配置
-    const vehicleIdToLoad = currentVehicle.value.id;
-
-    await Promise.all([
-      vehicleService.initializeVehicles(), // 这个可能不需要每次都执行?
-      settingsService.initializeSettings()
-    ]);
-
-    const savedConfig = await vehicleService.getVehicle(vehicleIdToLoad);
-    const vehicleData = vehicles.value.find(v => v.id === vehicleIdToLoad); // 获取基础数据
-
-    if (savedConfig && savedConfig.customSettings) {
-      debugScale.value = savedConfig.customSettings.scale ?? vehicleData?.scale ?? 1.0;
-      debugPosition.value = savedConfig.customSettings.position ?? [...(vehicleData?.position ?? [0, 0, 0])];
-      debugRotationY.value = savedConfig.customSettings.rotation ?? 0;
-      carCoatColor.value = savedConfig.customSettings.colors?.body ?? vehicleData?.colors?.body ?? "#2f426f";
-      wheelColor.value = savedConfig.customSettings.colors?.wheel ?? vehicleData?.colors?.wheel ?? "#1a1a1a";
-    } else {
-      debugScale.value = vehicleData?.scale ?? 1.0;
-      // 使用 Array.isArray 检查 position
-      debugPosition.value = Array.isArray(vehicleData?.position) ? [...vehicleData.position] : [0, 0, 0];
-      debugRotationY.value = 0;
-      carCoatColor.value = vehicleData?.colors?.body ?? "#2f426f";
-      wheelColor.value = vehicleData?.colors?.wheel ?? "#1a1a1a";
-    }
-
-    await initScene(); // initScene 内部会使用 currentVehicle.value
-
-    // 在模型加载后应用初始变换（initScene 内部已包含加载和设置）
-    // if (model && model.scene) { ... } // 这部分逻辑似乎在 initScene 内部处理了
-
-    console.log('初始化完成，车辆:', currentVehicle.value.name, '角度值:', debugRotationY.value);
-
-  } catch (error) {
-    console.error('初始化失败:', error);
-    showNotification('初始化失败', 'error');
-  }
-};
-
-onMounted(() => {
-  const lastVehicleId = localStorage.getItem('lastSelectedVehicleId');
-  console.log("LocalStorage read:", lastVehicleId);
-  if (lastVehicleId) {
-    // 暂时只设置 ID，让 initializeApp 去完整加载
-    // 注意：需要确保 vehiclesList 在此时可用，或者 initializeApp 先获取列表
-    // 更好的方法是 initializeApp 接收一个可选的 initialVehicleId
-    const foundVehicle = vehiclesList.find(v => v.id === lastVehicleId); // 直接用导入的列表查找
-    if(foundVehicle) {
-        currentVehicle.value = foundVehicle; // 先设置，initializeApp 会验证和加载
-        console.log("Found vehicle in list for stored ID:", foundVehicle.name);
-    } else {
-        console.log("Vehicle ID from storage not found in current list, defaulting.");
-        localStorage.removeItem('lastSelectedVehicleId'); // 清除无效 ID
-    }
-  }
-  initializeApp(); // initializeApp 现在会检查 currentVehicle.value
-});
-
-onUnmounted(() => {
-  cancelAnimationFrame(renderFrameId);
-  cleanupScene();
-  window.removeEventListener("resize", changeRenderSize);
-});
-
+import { useSceneSetup } from '@/composables/useSceneSetup';
+import { useEnvironmentSetup } from '@/composables/useEnvironmentSetup';
+
+const containerRef = ref(null);
+const canvasElementRef = ref(null);
+const isDebugMode = ref(true);
+const vehicles = ref([]);
+const currentVehicle = ref(null);
+const model = shallowRef(null);
+const carCoatColor = ref("#2f426f");
+const wheelColor = ref("#1a1a1a");
+const notification = ref({ show: false, message: '', type: 'info' });
 const debugScale = ref(1.0);
 const debugPosition = ref([0, 0, 0]);
 const debugRotationY = ref(0);
 
-// 更新模型缩放
+const {
+    scene,
+    camera,
+    renderer,
+    controls,
+    startAnimationLoop,
+    stopAnimationLoop,
+    cleanup: cleanupScene,
+    addGridHelper: addGridHelperInternal,
+    removeGridHelper: removeGridHelperInternal,
+    addAxesHelper: addAxesHelperInternal,
+    removeAxesHelper: removeAxesHelperInternal,
+    updateGridHelperSize: updateGridHelperSizeInternal,
+    updateAxesHelperSize: updateAxesHelperSizeInternal
+} = useSceneSetup(canvasElementRef, {
+    cameraPosition: new THREE.Vector3(0, 0.8, 8),
+    cameraFov: 30,
+    enableOrbitControls: true,
+    orbitControlsOptions: {
+         enableDamping: true,
+         dampingFactor: 0.05,
+         rotateSpeed: 0.5,
+         enableZoom: true,
+         zoomSpeed: 0.5,
+         enablePan: true,
+         panSpeed: 0.5,
+         minDistance: 3,
+         maxDistance: 20,
+         minPolarAngle: Math.PI / 4,
+         maxPolarAngle: Math.PI / 2,
+    }
+});
+
+const {
+  initializeEnvironment,
+  cleanupEnvironment,
+} = useEnvironmentSetup({
+    enableContactShadow: true,
+    enableEnvironmentMap: true,
+    enableBigSpotLight: true
+});
+
+const showNotification = (message, type = 'info', duration = 3000) => {
+    notification.value = { show: true, message, type };
+    setTimeout(() => { notification.value.show = false; }, duration);
+};
+
+const cleanupModelRefs = () => {
+    if (model.value) {
+        const rawScene = toRaw(scene.value);
+        if (rawScene && model.value.parent === rawScene) {
+            rawScene.remove(model.value);
+        }
+        model.value.traverse((child) => {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+               if (Array.isArray(child.material)) {
+                   child.material.forEach(m => {
+                       Object.values(m).forEach(value => {
+                           if (value instanceof THREE.Texture) value.dispose();
+                       });
+                       m?.dispose();
+                   });
+               } else {
+                    Object.values(child.material).forEach(value => {
+                           if (value instanceof THREE.Texture) value.dispose();
+                       });
+                    child.material?.dispose();
+               }
+            }
+        });
+        console.log("Garage: Cleaned up previous model resources.");
+    }
+    model.value = null;
+};
+
+const load3DModel = async () => {
+    cleanupModelRefs();
+    const rawScene = toRaw(scene.value);
+    if (!rawScene) {
+         console.error("Garage: Scene not available for loading model.");
+         showNotification('场景未初始化，无法加载模型', 'error');
+         return;
+    }
+    if (!currentVehicle.value?.model) {
+        console.error("Garage: No valid vehicle model path selected.");
+        showNotification('无效的车辆模型路径', 'error');
+        return;
+    }
+    console.log(`Garage: Loading model: ${currentVehicle.value.model}`);
+
+    try {
+        const dracoLoader = new DRACOLoader().setDecoderPath("/libs/draco/");
+        const gltfLoader = new GLTFLoader().setDRACOLoader(dracoLoader);
+        const loadedGltf = await gltfLoader.loadAsync(currentVehicle.value.model);
+
+        if (loadedGltf.scene) {
+             const loadedModelGroup = markRaw(loadedGltf.scene);
+
+             loadedModelGroup.scale.set(debugScale.value, debugScale.value, debugScale.value);
+             loadedModelGroup.position.set(...debugPosition.value);
+             loadedModelGroup.rotation.set(0, debugRotationY.value, 0);
+
+             loadedModelGroup.traverse((child) => {
+                 if (child.isMesh) {
+                     child.castShadow = true;
+                     child.receiveShadow = true;
+                 }
+             });
+
+             model.value = loadedModelGroup;
+             rawScene.add(model.value);
+
+             console.log("Garage: Model loaded and added to scene:", currentVehicle.value.name);
+
+             await nextTick();
+             customModel();
+
+             const rawControls = toRaw(controls.value);
+             if (rawControls && model.value) {
+                 const box = new THREE.Box3().setFromObject(model.value);
+                 const center = box.getCenter(new THREE.Vector3());
+                 rawControls.target.copy(center);
+                 console.log("Garage: OrbitControls target updated to model center:", center);
+             }
+
+        } else {
+             console.error('Garage: Loaded GLTF does not contain a scene.');
+             showNotification('加载的模型无效', 'error');
+        }
+    } catch (error) {
+        console.error('Garage: Model loading failed:', error);
+        showNotification(`模型加载失败: ${error.message}`, 'error');
+    }
+};
+
+const customModel = () => {
+    if (!model.value) {
+        console.warn("Garage: customModel called but no model loaded.");
+        return;
+    }
+    console.log("Garage: Applying material customizations...");
+
+    model.value.traverse((child) => {
+        if (child.isMesh && child.material) {
+            const materials = Array.isArray(child.material) ? child.material : [child.material];
+            const nodeNameLower = child.name.toLowerCase();
+
+            materials.forEach(material => {
+                if (!material) return;
+                material.needsUpdate = false;
+                const materialNameLower = material.name ? material.name.toLowerCase() : '';
+
+                if (nodeNameLower.includes('rubber') || nodeNameLower.includes('tire') || materialNameLower.includes('rubber') || materialNameLower.includes('tire')) {
+                    if (material.color) material.color.set("#222");
+                    material.roughness = 0.6;
+                    material.metalness = 0.1;
+                    material.roughnessMap = null;
+                    if (material.normalScale) material.normalScale.set(4, 4);
+                    material.needsUpdate = true;
+                }
+                else if (nodeNameLower.includes('window') || nodeNameLower.includes('glass') || materialNameLower.includes('window') || materialNameLower.includes('glass')) {
+                    if (material.color) material.color.set("black");
+                    material.roughness = 0;
+                    material.metalness = 0;
+                    if ('clearcoat' in material) material.clearcoat = 0.1;
+                    material.envMapIntensity = 2;
+                    material.needsUpdate = true;
+                }
+                else if (nodeNameLower.includes('body') || nodeNameLower.includes('paint') || nodeNameLower.includes('coat') || materialNameLower.includes('body') || materialNameLower.includes('paint') || materialNameLower.includes('coat')) {
+                    if (material.color) material.color.set(carCoatColor.value);
+                    material.roughness = 0.2;
+                    material.metalness = 0.3;
+                    if ('clearcoat' in material) material.clearcoat = 0.5;
+                    if ('clearcoatRoughness' in material) material.clearcoatRoughness = 0.1;
+                    material.envMapIntensity = 4;
+                    material.needsUpdate = true;
+                }
+                else if ((nodeNameLower.includes('wheel') || nodeNameLower.includes('rim') || materialNameLower.includes('wheel') || materialNameLower.includes('rim')) &&
+                         !(nodeNameLower.includes('tire') || nodeNameLower.includes('rubber') || materialNameLower.includes('tire') || materialNameLower.includes('rubber'))) {
+                    if (material.color) material.color.set(wheelColor.value);
+                    material.roughness = 0.1;
+                    material.metalness = 0.9;
+                    material.envMapIntensity = 3;
+                    material.needsUpdate = true;
+                }
+                else {
+                    material.roughness = 0.6;
+                    material.metalness = 0.4;
+                    material.envMapIntensity = 1.5;
+                }
+            });
+        }
+    });
+     console.log("Garage: Material customizations applied.");
+};
+
+const loadVehicleConfig = async (vehicleId) => {
+    try {
+        const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
+        const baseVehicleData = vehicles.value.find(v => v.id === vehicleId);
+
+        if (!baseVehicleData) {
+            console.error(`Base data for vehicle ID ${vehicleId} not found!`);
+            showNotification('找不到车辆基础数据', 'error');
+            return vehicles.value[0] || null;
+        }
+
+        let finalConfig = {
+             ...baseVehicleData,
+             customSettings: baseVehicleData.customSettings || {}
+        };
+
+        if (vehicleDataFromDB) {
+             finalConfig = {
+                 ...finalConfig,
+                 ...vehicleDataFromDB,
+                 customSettings: {
+                     ...finalConfig.customSettings,
+                     ...(vehicleDataFromDB.customSettings || {})
+                 }
+             };
+        } else {
+            console.warn(`Config for ${vehicleId} not found in DB, using base data defaults.`);
+        }
+
+        const settings = finalConfig.customSettings;
+        const basePos = Array.isArray(baseVehicleData.position) ? baseVehicleData.position : [0, 0, 0];
+        const savedPos = settings.position;
+
+        debugScale.value = settings.scale ?? baseVehicleData.scale ?? 1.0;
+        debugPosition.value = Array.isArray(savedPos) ? savedPos : basePos;
+        debugRotationY.value = settings.rotation ?? 0;
+        carCoatColor.value = settings.colors?.body ?? baseVehicleData.colors?.body ?? "#2f426f";
+        wheelColor.value = settings.colors?.wheel ?? baseVehicleData.colors?.wheel ?? "#1a1a1a";
+
+        return finalConfig;
+
+    } catch (error) {
+        console.error(`Error loading config for ${vehicleId}:`, error);
+        showNotification('加载车辆配置失败', 'error');
+        const baseVehicleData = vehicles.value.find(v => v.id === vehicleId) || vehicles.value[0] || null;
+        if (baseVehicleData) {
+            debugScale.value = baseVehicleData.scale || 1.0;
+            debugPosition.value = Array.isArray(baseVehicleData.position) ? [...baseVehicleData.position] : [0, 0, 0];
+            debugRotationY.value = 0;
+            carCoatColor.value = baseVehicleData.colors?.body || "#2f426f";
+            wheelColor.value = baseVehicleData.colors?.wheel || "#1a1a1a";
+            return baseVehicleData;
+        }
+        return null;
+    }
+};
+
+const selectVehicleById = async (newVehicleId) => {
+    console.log("Garage: Selecting vehicle:", newVehicleId);
+    if (currentVehicle.value?.id === newVehicleId) {
+        console.log("Garage: Vehicle already selected.");
+        return;
+    }
+
+    const newVehicleBase = vehicles.value.find(v => v.id === newVehicleId);
+    if (!newVehicleBase) {
+         console.error("Garage: Vehicle not found in list:", newVehicleId);
+         showNotification('车辆列表中找不到该车辆', 'error');
+         return;
+    }
+
+    const loadedFullConfig = await loadVehicleConfig(newVehicleId);
+    if (!loadedFullConfig) return;
+    currentVehicle.value = loadedFullConfig;
+    localStorage.setItem('lastSelectedVehicleId', newVehicleId);
+
+    console.log("Garage: Cleaning up for vehicle switch...");
+    stopAnimationLoop();
+    cleanupEnvironment();
+    cleanupModelRefs();
+
+    const rawScene = toRaw(scene.value);
+    const rawRenderer = toRaw(renderer.value);
+    if (rawScene && rawRenderer) {
+        initializeEnvironment(rawScene, rawRenderer, debugPosition.value[2] || 0);
+        console.log("Garage: Environment re-initialized.");
+    } else {
+        console.error("Garage: Scene/Renderer invalid during environment re-init.");
+    }
+
+    await load3DModel();
+
+    startAnimationLoop();
+    console.log("Garage: Vehicle switch complete, animation loop restarted.");
+};
+
+const handleVehicleUpdate = (newVehicleId) => {
+    if (currentVehicle.value?.id !== newVehicleId) {
+        selectVehicleById(newVehicleId);
+    }
+};
+
+const changeVehicle = (direction) => {
+    if (!vehicles.value || vehicles.value.length === 0) return;
+    const currentIndex = vehicles.value.findIndex(v => v.id === currentVehicle.value?.id);
+    let nextIndex = (currentIndex === -1 ? 0 : currentIndex) + direction;
+    if (nextIndex < 0) nextIndex = vehicles.value.length - 1;
+    else if (nextIndex >= vehicles.value.length) nextIndex = 0;
+    selectVehicleById(vehicles.value[nextIndex].id);
+};
+
 const updateModelScale = (scale) => {
-  debugScale.value = scale;
-  if (model && model.scene) {
-    model.scene.scale.set(scale, scale, scale);
-  }
-  // 同步缩放阴影组
-  if (shadowGroup) {
-      // 假设阴影组的初始缩放是 1, 1, 1
-      // 注意：如果阴影的创建方式不同，这里的逻辑可能需要调整
-      shadowGroup.scale.set(scale, scale, 1); 
-      // 可能只需要缩放 x 和 y，取决于阴影平面的朝向
-      // 如果 shadowGroup.rotation 是 (0, PI/2, 0)，则 x,y 对应原始平面的 x,y
-  }
+    debugScale.value = scale;
+    if (model.value) model.value.scale.set(scale, scale, scale);
 };
-
-// 更新模型位置
 const updateModelPosition = (position) => {
-  debugPosition.value = position;
-  if (model && model.scene) {
-    model.scene.position.set(...position);
-  }
+    debugPosition.value = position;
+    if (model.value) model.value.position.set(...position);
+    const rawControls = toRaw(controls.value);
+    if (rawControls && model.value) {
+        const box = new THREE.Box3().setFromObject(model.value);
+        const center = box.getCenter(new THREE.Vector3());
+        rawControls.target.copy(center);
+    }
 };
-
-// 更新模型旋转
 const updateModelRotation = (rotation) => {
-  debugRotationY.value = rotation;
-  if (model && model.scene) {
-    model.scene.rotation.set(0, rotation, 0);
-  }
+    debugRotationY.value = rotation;
+    if (model.value) model.value.rotation.set(0, rotation, 0);
 };
+const updateCarColor = (color) => { carCoatColor.value = color; customModel(); };
+const updateWheelColor = (color) => { wheelColor.value = color; customModel(); };
 
-// 更新相机位置
-const updateCameraPosition = (position) => {
-  if (camera) {
-    camera.position.set(...position);
-  }
-};
-
-// 更新相机FOV
-const updateCameraFov = (fov) => {
-  if (camera) {
-    camera.fov = fov;
-    camera.updateProjectionMatrix();
-  }
-};
-
-// 切换自动旋转
 const toggleAutoRotate = (enabled) => {
-  if (controls) {
-    controls.autoRotate = enabled;
-  }
+    const rawControls = toRaw(controls.value);
+    if (rawControls) {
+        rawControls.autoRotate = enabled;
+    }
 };
-
-// 切换网格显示
 const toggleGridHelper = (enabled) => {
-  if (enabled) {
-    const gridHelper = new GridHelper(10, 10);
-    scene.add(gridHelper);
-  } else {
-    scene.children.forEach(child => {
-      if (child instanceof GridHelper) {
-        scene.remove(child);
-      }
-    });
-  }
+   if (enabled) addGridHelperInternal();
+   else removeGridHelperInternal();
 };
-
-// 切换坐标轴显示
 const toggleAxesHelper = (enabled) => {
-  if (enabled) {
-    const axesHelper = new AxesHelper(1);
-    scene.add(axesHelper);
-  } else {
-    scene.children.forEach(child => {
-      if (child instanceof AxesHelper) {
-        scene.remove(child);
-      }
-    });
-  }
+    if (enabled) addAxesHelperInternal();
+    else removeAxesHelperInternal();
 };
-
-// 更新网格设置
 const updateGridHelper = (settings) => {
-  scene.children.forEach(child => {
-    if (child instanceof GridHelper) {
-      scene.remove(child);
-    }
-  });
-  const gridHelper = new GridHelper(settings.size, settings.divisions);
-  scene.add(gridHelper);
+    updateGridHelperSizeInternal(settings.size, settings.divisions);
+};
+const updateAxesHelper = (size) => {
+    updateAxesHelperSizeInternal(size);
 };
 
-// 更新坐标轴大小
-const updateAxesHelper = (size) => {
-  scene.children.forEach(child => {
-    if (child instanceof AxesHelper) {
-      scene.remove(child);
+const handleConfigsImported = async () => {
+    try {
+        const oldVehicleId = currentVehicle.value?.id;
+        vehicles.value = await getVehicles();
+        showNotification('配置导入成功', 'success');
+        if (oldVehicleId && vehicles.value.some(v => v.id === oldVehicleId)) {
+             await selectVehicleById(oldVehicleId);
+        } else if (vehicles.value.length > 0) {
+             await selectVehicleById(vehicles.value[0].id);
+        } else {
+            cleanupModelRefs();
+            currentVehicle.value = null;
+        }
+    } catch (error) {
+        console.error('更新车辆列表失败:', error);
+        showNotification('更新车辆列表失败', 'error');
     }
-  });
-  const axesHelper = new AxesHelper(size);
-  scene.add(axesHelper);
 };
+
+const initializeApp = async () => {
+    console.log("Garage: Initializing application...");
+    let initSuccess = false;
+    try {
+        vehicles.value = await getVehicles();
+        if (!vehicles.value || vehicles.value.length === 0) {
+            console.error("Garage: No vehicles available to load.");
+            showNotification('没有可用的车辆', 'error');
+            return;
+        }
+
+        let vehicleIdToLoad = vehicles.value[0].id;
+        const lastVehicleId = localStorage.getItem('lastSelectedVehicleId');
+        if (lastVehicleId && vehicles.value.some(v => v.id === lastVehicleId)) {
+            vehicleIdToLoad = lastVehicleId;
+            console.log(`Garage: Loading last selected vehicle: ${vehicleIdToLoad}`);
+        } else {
+             console.log(`Garage: Loading default vehicle: ${vehicleIdToLoad}`);
+             if(lastVehicleId) localStorage.removeItem('lastSelectedVehicleId');
+        }
+
+        const initialConfig = await loadVehicleConfig(vehicleIdToLoad);
+        if (!initialConfig) {
+             console.error("Garage: Failed to load initial vehicle configuration.");
+             showNotification('加载初始车辆配置失败', 'error');
+             return;
+        }
+        currentVehicle.value = initialConfig;
+
+        const stopWatchScene = watch([scene, renderer], async ([sceneVal, rendererVal]) => {
+            if (sceneVal && rendererVal && !initSuccess) {
+                console.log("Garage: Scene and Renderer are ready from useSceneSetup.");
+
+                initializeEnvironment(sceneVal, rendererVal, debugPosition.value[2] || 0);
+                console.log("Garage: Environment initialization initiated.");
+
+                await load3DModel();
+
+                startAnimationLoop(() => {
+                });
+                console.log("Garage: Animation loop started.");
+
+                setupKeyListener();
+                initSuccess = true;
+                stopWatchScene();
+            }
+        }, { immediate: true });
+
+        console.log('Garage: Initialization sequence started (waiting for scene/renderer).');
+
+    } catch (error) {
+        console.error('Garage: Initialization failed:', error);
+        showNotification(`初始化失败: ${error.message}`, 'error');
+    }
+};
+
+onMounted(() => {
+    initializeApp();
+});
+
+onUnmounted(() => {
+    console.log("Garage: Cleaning up component...");
+
+    // 1. Stop animation loop FIRST
+    stopAnimationLoop();
+    console.log("Garage: Animation loop stopped by component.");
+
+    // 2. Clean up environment resources (needs renderer)
+    cleanupEnvironment();
+    console.log("Garage: Environment cleanup called by component.");
+
+    // 3. Clean up the loaded 3D model
+    cleanupModelRefs();
+    console.log("Garage: Model cleanup called by component.");
+
+    // 4. Clean up scene, camera, renderer (disposes renderer)
+    cleanupScene();
+    console.log("Garage: Scene cleanup called by component.");
+
+    // 5. Remove event listeners
+    removeKeyListener();
+    console.log("Garage: Key listener removed by component.");
+
+    console.log("Garage: Component cleanup finished.");
+});
+
+const handleKeyDown = (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) {
+        return;
+    }
+    if (event.key === 'p' || event.key === 'P') {
+         isDebugMode.value = !isDebugMode.value;
+    } else if (event.key === 'ArrowLeft') {
+         changeVehicle(-1);
+    } else if (event.key === 'ArrowRight') {
+         changeVehicle(1);
+    }
+};
+const setupKeyListener = () => { window.addEventListener('keydown', handleKeyDown); };
+const removeKeyListener = () => { window.removeEventListener('keydown', handleKeyDown); };
+
+watch(carCoatColor, () => {
+  if (model.value) {
+    customModel();
+  }
+});
+watch(wheelColor, () => {
+  if (model.value) {
+    customModel();
+  }
+});
+
 </script>
 
 <style scoped>
@@ -1048,6 +563,7 @@ const updateAxesHelper = (size) => {
   height: 100vh;
   position: relative;
   overflow: hidden;
+  background-color: #111;
 }
 
 .navigation-buttons {
@@ -1101,7 +617,6 @@ const updateAxesHelper = (size) => {
   background-color: rgba(52, 152, 219, 0.9);
 }
 
-/* 添加箭头按钮样式 */
 .arrow-btn {
   position: fixed;
   top: 50%;
@@ -1114,7 +629,7 @@ const updateAxesHelper = (size) => {
   width: 40px;
   height: 40px;
   font-size: 20px;
-  line-height: 38px; /* 微调垂直居中 */
+  line-height: 38px;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
@@ -1134,9 +649,8 @@ const updateAxesHelper = (size) => {
   right: 20px;
 }
 
-/* 确保 DebugPanel 的 z-index 低于箭头按钮，如果需要的话 */
-.debug-panel { 
-  z-index: 1000; /* 确保调试面板在箭头下方 */
+.debug-panel {
+  z-index: 1000;
 }
 
 .notification {
@@ -1183,5 +697,14 @@ const updateAxesHelper = (size) => {
 @keyframes fadeOut {
   from { opacity: 1; transform: translateY(0); }
   to { opacity: 0; transform: translateY(-20px); }
+}
+
+.webgl-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 </style> 

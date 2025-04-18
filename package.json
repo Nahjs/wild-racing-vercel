@@ -11,6 +11,7 @@
   "dependencies": {
     "cannon-es": "^0.20.0",
     "lamina": "^1.1.15",
+    "pinia": "^3.0.2",
     "three": "^0.139.2",
     "vue": "^3.2.33",
     "vue-router": "^4.5.0"

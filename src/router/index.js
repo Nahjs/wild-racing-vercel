@@ -21,6 +21,11 @@ const routes = [
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue')
+  },
+  {
+    path: '/track-editor',
+    name: 'TrackEditor',
+    component: () => import('../views/TrackEditorView.vue')
   }
 ]
 

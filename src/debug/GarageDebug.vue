@@ -42,23 +42,12 @@
       </div>
 
       <div class="debug-section">
-        <h4>相机设置</h4>
-        <div class="debug-control">
-          <label>位置:</label>
-          <div class="vector-input">
-            <input type="number" v-model="cameraPosition[0]" step="0.1" @change="updateCameraPosition" placeholder="X" />
-            <input type="number" v-model="cameraPosition[1]" step="0.1" @change="updateCameraPosition" placeholder="Y" />
-            <input type="number" v-model="cameraPosition[2]" step="0.1" @change="updateCameraPosition" placeholder="Z" />
-          </div>
-        </div>
-        <div class="debug-control">
-          <label>FOV:</label>
-          <input type="number" v-model="cameraFov" step="1" @change="updateCameraFov" />
-        </div>
-        <div class="debug-control">
-          <label>自动旋转:</label>
-          <input type="checkbox" v-model="autoRotate" @change="toggleAutoRotate" />
-        </div>
+        <h4>轨道控制器</h4>
+         <div class="debug-control">
+           <label>自动旋转:</label>
+           <input type="checkbox" :checked="autoRotate" @change="$emit('update:autoRotate', $event.target.checked)" />
+         </div>
+         <!-- Add other OrbitControls related settings if needed -->
       </div>
 
       <div class="debug-section">
@@ -137,6 +126,10 @@ const props = defineProps({
   wheelColor: {
     type: String,
     required: true
+  },
+  autoRotate: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -144,8 +137,6 @@ const emit = defineEmits([
   'update:scale',
   'update:position',
   'update:rotation',
-  'update:cameraPosition',
-  'update:cameraFov',
   'update:autoRotate',
   'update:showGrid',
   'update:showAxes',
@@ -154,7 +145,7 @@ const emit = defineEmits([
   'update:carColor',
   'update:wheelColor',
   'configsImported',
-  'update:currentVehicleId'
+  'update:currentVehicleId',
 ]);
 
 // 面板状态
@@ -164,9 +155,7 @@ const isCollapsed = ref(false);
 const debugScale = ref(1.0);
 const debugPosition = ref([0, 0, 0]);
 const debugRotationY = ref(0);
-const cameraPosition = ref([0, 0.8, 8]);
-const cameraFov = ref(30);
-const autoRotate = ref(false);
+const autoRotate = ref(props.autoRotate);
 const showGrid = ref(false);
 const showAxes = ref(false);
 const gridSize = ref(10);
@@ -183,20 +172,15 @@ const currentVehicleName = computed(() => {
   return vehicle ? vehicle.name : '未知车辆';
 });
 
-// 监听 currentVehicleId 变化，当父组件通过左右箭头切换时，更新面板内的设置
+// 监听 currentVehicleId 变化
 watch(() => props.currentVehicleId, (newId) => {
     const vehicle = props.vehicles.find(v => v.id === newId);
     if (vehicle) {
-        // 根据新车辆的默认或保存的设置更新面板内的值
-        // 注意：这里假设父组件(`Garage.vue`)在切换车辆后会重新加载配置并更新 props
-        // 因此这里可能不需要像 resetSettings 那样手动更新所有值
-        // 但需要确保颜色等 props 正确更新
         debugScale.value = vehicle.customSettings?.scale ?? vehicle.scale ?? 1.0;
         debugPosition.value = vehicle.customSettings?.position ?? [...(vehicle.position ?? [0,0,0])];
         debugRotationY.value = vehicle.customSettings?.rotation ?? 0;
-        // 颜色需要父组件传递正确的 props
     }
-}, { immediate: true }); // immediate: true 确保初始加载时也执行
+}, { immediate: true });
 
 // 监听颜色变化
 watch(() => props.carCoatColor, (newVal) => {
@@ -205,6 +189,10 @@ watch(() => props.carCoatColor, (newVal) => {
 
 watch(() => props.wheelColor, (newVal) => {
   wheelColor.value = newVal;
+});
+
+watch(() => props.autoRotate, (newVal) => {
+  autoRotate.value = newVal;
 });
 
 // 切换折叠状态
@@ -225,21 +213,6 @@ const updatePosition = () => {
 // 更新模型旋转
 const updateRotation = () => {
   emit('update:rotation', debugRotationY.value);
-};
-
-// 更新相机位置
-const updateCameraPosition = () => {
-  emit('update:cameraPosition', [...cameraPosition.value]);
-};
-
-// 更新相机FOV
-const updateCameraFov = () => {
-  emit('update:cameraFov', cameraFov.value);
-};
-
-// 切换自动旋转
-const toggleAutoRotate = () => {
-  emit('update:autoRotate', autoRotate.value);
 };
 
 // 切换网格显示
@@ -343,7 +316,7 @@ const changeVehicle = (direction) => {
   }
 
   const nextVehicleId = props.vehicles[nextIndex].id;
-  emit('update:currentVehicleId', nextVehicleId); // 触发事件，通知父组件
+  emit('update:currentVehicleId', nextVehicleId);
 };
 
 // 显示通知
@@ -537,5 +510,19 @@ const showNotification = (message, type = 'info', duration = 3000) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.camera-settings-section {
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 15px;
+    margin-top: 15px;
+}
+
+.camera-settings-section small {
+    display: block;
+    margin-top: 10px;
+    color: #aaa;
+    text-align: center;
+    font-size: 11px;
 }
 </style> 

@@ -5,11 +5,32 @@ const DEFAULT_SETTINGS = {
     theme: 'light',
     language: 'zh',
     showTutorial: true,
-    cameraSettings: {
-        fov: 30,
-        near: 0.1,
-        far: 1000,
-        position: [0, 0.8, 8]
+  
+    camera: {
+        currentMode: 0, // NEAR_FOLLOW
+        autoRotate: false,
+        modes: {
+            // NEAR_FOLLOW 模式
+            0: { 
+                distance: 8, 
+                height: 3, 
+                lookAtOffset: [0, 1.5, 0], 
+                fov: 75, 
+                damping: 0.05 
+            },
+            // FAR_FOLLOW 模式
+            1: { 
+                distance: 15, 
+                height: 6, 
+                lookAtOffset: [0, 2.0, 0], 
+                fov: 65, 
+                damping: 0.05 
+            },
+            // FREE_LOOK 模式
+            2: { 
+                fov: 60 
+            }
+        }
     },
     gridSettings: {
         showGrid: true,

@@ -56,56 +56,6 @@
 *   **代码规范:** [待定，例如 Airbnb JavaScript Style Guide]
 *   **版本控制:** Git
 
-## 3. 代码模块设计
-
-按照高内聚、低耦合原则，将代码组织为以下模块：
-
-```
-wild-racing-vercel/
-├── public/             # 静态资源 (模型, 纹理, 音频 - 由资源模块管理加载)
-├── src/
-│   ├── components/     # UI 组件 (React/Vue/Svelte/Web Components)
-│   │   ├── common/     # 通用 UI 元素 (按钮, 加载指示器)
-│   │   ├── game/       # 游戏特定 UI (HUD, 菜单, 成绩板)
-│   │   └── layout/     # 页面布局结构
-│   ├── core/           # 核心引擎模块 (与具体游戏逻辑解耦)
-│   │   ├── rendering/    # Three.js 相关: 场景设置, 渲染循环, 相机控制, 灯光
-│   │   │   ├── SceneManager.js
-│   │   │   ├── CameraController.js
-│   │   │   └── Renderer.js
-│   │   ├── physics/      # Cannon.js 相关: 世界设置, 物理同步, 碰撞材质, 触发器
-│   │   │   ├── PhysicsWorld.js
-│   │   │   └── materials.js
-│   │   ├── resources/    # 资源加载与管理
-│   │   │   ├── AssetLoader.js  # 核心加载逻辑
-│   │   │   ├── ModelCache.js   # 缓存实现 (内存 + IndexedDB)
-│   │   │   └── TrackLoader.js  # 赛道模型和配置加载
-│   │   └── input/        # 输入处理 (键盘, 手柄适配)
-│   │       └── InputManager.js
-│   ├── game/           # 游戏逻辑模块
-│   │   ├── user/         # 用户本地状态管理
-│   │   │   └── UserSettings.js # 读写 IndexedDB 中的设置
-│   │   ├── vehicle/      # 车辆逻辑
-│   │   │   ├── Vehicle.js        # 车辆基类/接口
-│   │   │   ├── VehicleController.js # 连接输入、物理和车辆状态
-│   │   │   └── VehiclePhysics.js  # Cannon.js 车辆物理实现 (RaycastVehicle)
-│   │   ├── race/         # 比赛逻辑 (单人模式)
-│   │   │   ├── RaceManager.js    # 比赛状态机, 流程控制
-│   │   │   ├── Track.js          # 赛道数据表示 (含检查点, 终点线)
-│   │   │   └── Timer.js          # 计时器逻辑
-│   │   └── state/        # 全局游戏状态管理 (可选, 如使用 Zustand/Redux/Context)
-│   ├── utils/          # 通用工具函数和类
-│   │   ├── db/           # IndexedDB 封装
-│   │   │   └── index.js
-│   │   ├── logger.js     # 日志工具
-│   │   └── helpers.js    # 其他辅助函数
-│   ├── styles/         # CSS 样式
-│   ├── App.js / main.js # 应用入口
-│   └── index.css       # 全局样式入口
-├── .gitignore
-├── package.json
-└── README.md
-```
 
 ## 4. 实施计划与任务分解 (阶段一)
 
@@ -220,3 +170,30 @@ wild-racing-vercel/
 
 ---
 **文档维护:** 请保持本文档的更新，反映项目进度、决策变更和新增任务。 
+
+
+接下来完善赛道功能是提升游戏核心体验的关键。基于当前的项目结构，以下是一些可以推进的方向：
+核心集成：让赛车在赛道上跑 (Race.vue)
+加载赛道环境： 在 Race.vue 的 setup 或 onMounted 中，需要决定是加载预设赛道 (trackManager.loadTrack) 还是生成程序化赛道 (trackGenerator.generateTrack)。这可能需要一个新的“赛道选择”视图或通过路由参数传递。
+添加赛道到场景/物理世界： 加载或生成赛道后，需要将其返回的 Three.js Object3D 添加到 scene.value，并将其对应的 Cannon-es Body 添加到 world.value。这是最基本的一步，让赛车有“地面”可以行驶。
+物理材质： 确保赛道物理体 (CANNON.Body) 有合适的物理材质 (CANNON.Material)，以便设置与车轮的摩擦力等。
+检查点系统 (CheckpointSystem.js & Race.vue)
+初始化： 从加载/生成的赛道数据中获取检查点信息 (位置、大小、顺序)，并调用 checkpointSystem.initialize(checkpoints, { maxLaps: totalLaps.value })。
+可视化： 调用 checkpointSystem.addCheckpointsToScene(scene.value) 将检查点的触发器（可能是透明的 THREE.Mesh）添加到场景中，以便调试时可以看到。
+碰撞检测： 在 Race.vue 的物理更新逻辑中 (例如 onPhysicsUpdate 或 VehicleController 内部)，检测车辆 (carChassisBody) 是否与下一个检查点触发器发生碰撞。
+触发通过： 如果发生碰撞且是正确的检查点顺序，调用 checkpointSystem.checkpointPassed(checkpointIndex)。
+更新UI： 使用 checkpointSystem 的状态 (如 currentLap, lapTimes, raceFinished) 来更新比赛界面的圈数、计时等信息，替换掉当前的 placeholder 逻辑。
+赛道编辑器 (TrackEditor.vue & TrackEditorView.vue)
+物理集成： 当生成赛道 (generateTrack) 或放置物体 (onMouseClick in placement mode) 时，不仅要创建 Three.js 网格，还要创建对应的 CANNON.Body 并添加到 physicsWorld.value 中。
+可视化编辑：
+放置预览： 在 onMouseMove 中，当处于放置模式时，可以创建一个临时的预览物体 (例如半透明的锥桶) 并实时更新其位置到鼠标射线与地面的交点，给用户更直观的反馈。
+编辑节点： 对于程序化赛道，可以考虑显示赛道的控制点，并允许用户拖动这些点来调整赛道形状。
+保存/加载增强：
+使用 IndexedDB: 将 saveTrack 函数修改为使用 trackService.js (需要先实现 trackService) 将赛道数据（包括节点、物体、生成参数等）保存到 IndexedDB，而不是 localStorage。
+加载自定义赛道： 添加加载已保存自定义赛道的功能。
+赛道内容 (TrackManager.js, TrackGenerator.js, TrackObjects.js)
+更多预设： 创建更多不同风格的 .glb 赛道模型，并在 TrackManager 中注册它们。确保这些模型包含检查点信息（可以通过空的 Object3D 作为标记）或者有明确的路径可供提取。
+生成选项： 增加 TrackGenerator 的选项，例如不同类型的弯道（发夹弯、S弯）、坡度变化、特殊路面（如沙地、冰面，需要不同的物理材质）。
+更多物体： 在 TrackObjects.js 中添加更多类型的障碍物或道具模型（如跳板、水坑、减速带），并赋予它们相应的物理效果（如果需要）。
+先让车能在“地面”跑: 聚焦于在 Race.vue 中加载一个简单的预设赛道（或生成一个基础环形赛道），确保其物理体被正确添加到 world，并且车辆能够在其上行驶而不会掉下去。
+再集成检查点: 实现检查点的碰撞检测和 checkpointPassed 的调用，让圈数能够正确计算。

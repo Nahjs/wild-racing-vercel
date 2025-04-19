@@ -107,8 +107,6 @@ export function useSceneSetup(canvasRef, options = {}) {
 
     // Handle Resize
     window.addEventListener('resize', handleResize);
-
-    console.log('useSceneSetup: Scene initialized.');
   }
 
   function handleResize() {
@@ -150,17 +148,13 @@ export function useSceneSetup(canvasRef, options = {}) {
     // Prevent multiple loops
     if (animationFrameId === null) {
         animate();
-        console.log('useSceneSetup: Animation loop started.');
-    } else {
-        console.log('useSceneSetup: Animation loop already running.');
-    }
+    } 
   }
 
   function stopAnimationLoop() {
     if (animationFrameId) {
       cancelAnimationFrame(animationFrameId);
       animationFrameId = null;
-      console.log('useSceneSetup: Animation loop stopped.');
     }
   }
 
@@ -263,7 +257,6 @@ export function useSceneSetup(canvasRef, options = {}) {
     rawControls = null;
     gridHelper = null;
     axesHelper = null;
-    console.log('useSceneSetup: Cleaned up resources.');
   }
 
   onMounted(() => {

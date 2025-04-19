@@ -5,7 +5,7 @@
       <nav>
         <router-link to="/">首页</router-link>
         <router-link to="/garage">车库</router-link>
-        <router-link to="/race">赛道</router-link>
+        <router-link to="/race">比赛</router-link>
         <router-link to="/profile">个人中心</router-link>
       </nav>
       <div class="user-controls">

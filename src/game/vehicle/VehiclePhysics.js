@@ -6,8 +6,8 @@ export const createVehicleChassis = (world, options = {}) => {
     mass: 100, // Default mass
     linearDamping: 0.01, // Default damping
     angularDamping: 0.01, // Default damping
-    position: new CANNON.Vec3(0, 1, 0),
-    dimensions: { length: 4.5, width: 2, height: 1.2 }
+    position: new CANNON.Vec3(0, 1 , 0),
+    dimensions: { length: 4.5, width: 2.0, height: 1.2 }
   };
 
   // Merge provided options with defaults
@@ -15,7 +15,7 @@ export const createVehicleChassis = (world, options = {}) => {
 
   const chassisMaterial = new CANNON.Material('chassis');
   const { length, width, height } = config.dimensions;
-  const chassisShape = new CANNON.Box(new CANNON.Vec3(length / 2, height / 2, width / 2));
+  const chassisShape = new CANNON.Box(new CANNON.Vec3(width / 2, height / 2, length / 2));
 
   // 创建车身刚体, 使用 config 中的值
   const chassisBody = new CANNON.Body({
@@ -23,10 +23,11 @@ export const createVehicleChassis = (world, options = {}) => {
     position: config.position,
     material: chassisMaterial,
     linearDamping: config.linearDamping, // Use linearDamping from config
-    angularDamping: config.angularDamping // Use angularDamping from config
+    angularDamping: config.angularDamping, // Use angularDamping from config
+    quaternion: config.quaternion || new CANNON.Quaternion() // Apply initial quaternion
   });
   // Log the applied values
-  console.log(`Chassis Body Created - Mass: ${chassisBody.mass}, LinearDamping: ${chassisBody.linearDamping}, AngularDamping: ${chassisBody.angularDamping}`);
+  console.log(`Chassis Body Created - Mass: ${chassisBody.mass}, LinearDamping: ${chassisBody.linearDamping}, AngularDamping: ${chassisBody.angularDamping}, Quaternion:`, chassisBody.quaternion.toString());
 
   chassisBody.addShape(chassisShape);
   world.addBody(chassisBody);

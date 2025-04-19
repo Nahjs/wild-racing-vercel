@@ -74,9 +74,7 @@ export function useEnvironmentSetup(options = {}) {
     // Dispose FBO first, before cleaning scene children
     if (fbo.value && typeof fbo.value.dispose === 'function') {
         fbo.value.dispose();
-        console.log("useEnvironmentSetup: FBO disposed.");
     } else {
-        console.log("useEnvironmentSetup: FBO was null or had no dispose method, or already disposed.");
     }
     fbo.value = null;
     
@@ -101,8 +99,6 @@ export function useEnvironmentSetup(options = {}) {
     virtualScene.value = null; 
     virtualBackgroundMesh.value = null;
     cubeCamera.value = null;
-    // fbo is already nulled out above
-    console.log("useEnvironmentSetup: Virtual scene cleaned up.");
   }
 
   function _setAmbientLight(targetScene) {
@@ -111,7 +107,6 @@ export function useEnvironmentSetup(options = {}) {
     const light = markRaw(new AmbientLight(0x404040, 0.6));
     targetScene.add(light);
     ambientLight.value = light;
-    console.log("useEnvironmentSetup: Ambient light set.");
   }
 
   function _setSpotLight(targetScene) {
@@ -129,12 +124,10 @@ export function useEnvironmentSetup(options = {}) {
     targetScene.add(light.target);
     targetScene.add(light);
     spotLight.value = light;
-    console.log("useEnvironmentSetup: Initial spotlight set.");
   }
 
   function _setBigSpotLight(targetScene, targetRenderer, modelZ = 0) {
     if (!targetScene || !targetRenderer) return;
-    console.log("useEnvironmentSetup: Setting big spotlight...");
     cleanupRef(bigSpotLight, targetScene, true);
     cleanupRef(floorMesh, targetScene);
 
@@ -168,7 +161,6 @@ export function useEnvironmentSetup(options = {}) {
     floor.position.set(0, -1.02, 0);
     targetScene.add(floor);
     floorMesh.value = floor;
-    console.log("useEnvironmentSetup: Floor mesh added.");
 
     const lightsToRemove = [];
     targetScene.traverse((child) => {
@@ -191,17 +183,14 @@ export function useEnvironmentSetup(options = {}) {
     targetScene.add(light.target);
     targetScene.add(light);
     bigSpotLight.value = light;
-    console.log("useEnvironmentSetup: Big spotlight added.");
 
     if (spotLight.value) {
       spotLight.value.visible = false;
-      console.log("useEnvironmentSetup: Original spotlight hidden.");
     }
   }
 
   function _setContactShadow(targetScene, targetRenderer, modelZ = 0) {
     if (!targetScene || !targetRenderer) return;
-    console.log("useEnvironmentSetup: Setting contact shadow...");
     cleanupRef(shadowGroup, targetScene);
     shadowGroup.value = markRaw(new Group());
     shadowGroup.value.position.set(0, -1.01, modelZ);
@@ -209,7 +198,6 @@ export function useEnvironmentSetup(options = {}) {
     targetScene.add(shadowGroup.value);
     try {
         createContactShadow(targetScene, targetRenderer, shadowGroup.value);
-        console.log("useEnvironmentSetup: Contact shadow created.");
     } catch (error) {
         console.error("useEnvironmentSetup: Error creating contact shadow:", error);
         cleanupRef(shadowGroup, targetScene);
@@ -218,7 +206,6 @@ export function useEnvironmentSetup(options = {}) {
 
   function _setEnvironment(targetScene, targetRenderer) {
     if (!targetScene || !targetRenderer) return;
-    console.log("useEnvironmentSetup: Setting environment map...");
     _cleanupVirtualScene();
 
     if (targetScene.environment) {
@@ -283,7 +270,6 @@ export function useEnvironmentSetup(options = {}) {
         cancelAnimationFrame(virtualRenderFrameId);
     }
     virtualRenderFrameId = requestAnimationFrame(virtualRender);
-    console.log("useEnvironmentSetup: Environment map setup complete and virtual render loop started.");
   }
 
   // --- Public API --- 
@@ -298,7 +284,6 @@ export function useEnvironmentSetup(options = {}) {
       console.error("useEnvironmentSetup: Scene or renderer is not set.");
       return;
     }
-    console.log("useEnvironmentSetup: Initializing environment...");
     try {
       _setAmbientLight(targetScene);
       _setSpotLight(targetScene);
@@ -314,17 +299,13 @@ export function useEnvironmentSetup(options = {}) {
             if (config.enableContactShadow) {
                  _setContactShadow(targetScene, targetRenderer, modelZ);
             }
-            console.log("useEnvironmentSetup: Delayed environment setup complete.");
       }, 900);
-
-      console.log("useEnvironmentSetup: Initial environment setup complete (delayed steps scheduled).");
     } catch (error) {
       console.error("Environment initialization failed:", error);
     }
   };
 
   const cleanupEnvironment = () => {
-    console.log("useEnvironmentSetup: Cleaning up environment...");
     const targetScene = toRaw(scene.value);
     _cleanupVirtualScene();
     cleanupRef(shadowGroup, targetScene);
@@ -334,7 +315,6 @@ export function useEnvironmentSetup(options = {}) {
     cleanupRef(floorMesh, targetScene);
     scene.value = null;
     renderer.value = null;
-    console.log("useEnvironmentSetup: Cleanup complete.");
   };
 
   // Add onUnmounted hook to automatically call cleanup

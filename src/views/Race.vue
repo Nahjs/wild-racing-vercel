@@ -72,7 +72,7 @@
       @save-tuning="tuningStore.saveTuning"
       @update:cameraParam="updateCameraParameters"
       @update:cameraLookAtOffset="handleCameraLookAtOffsetUpdate"
-      @saveCameraSettings="saveCameraSettingsFromComposable"
+      @saveCameraSettings="saveCameraSettings"
     />
     
     <VehicleController
@@ -200,7 +200,7 @@ export default {
       setMode: setCameraMode,
       nextMode: nextCameraModeComposable,
       updateParameters: updateCameraParameters,
-      saveSettings: saveCameraSettingsFromComposable,
+      saveSettings: saveCameraSettings,
       loadSettings: loadCameraSettingsFromComposable,
       update: updateCamera
     } = useCamera(cameraRef, carModel, rendererElement, { initialMode: CameraMode.FREE_LOOK });
@@ -667,8 +667,9 @@ export default {
       cameraParams: cameraParamsFromComposable,
       isSavingCamera,
       updateCameraParameters,
-      saveCameraSettings: saveCameraSettingsFromComposable,
+      saveCameraSettings,
       handleCameraLookAtOffsetUpdate,
+      currentCamera // <--- 添加 currentCamera 到 return 语句
     };
   }
 };

@@ -21,6 +21,7 @@ export const createGround = (world) => {
   });
   groundBody.addShape(groundShape);
   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2); // 使地面水平
+  groundBody.position.set(0, -1, 0); // 设置地面 Y 坐标为 -1
   world.addBody(groundBody);
   return { groundBody, groundMaterial };
 };
@@ -66,6 +67,15 @@ export class CannonDebugRenderer {
         }
       });
     });
+  }
+  
+  // 新增：清理所有调试网格的方法
+  clearMeshes() {
+    this.meshes.forEach(mesh => {
+      this.scene.remove(mesh);
+    });
+    this.meshes = [];
+    console.log("[CannonDebugRenderer] Cleared debug meshes.");
   }
   
   _createMesh(shape) {

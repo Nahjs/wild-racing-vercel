@@ -95,6 +95,12 @@
               "body": "#ffffff",
               "wheel": "#1a1a1a"
             }
+          },
+          "wheelNodeNames": {
+            "fl": "WheelFL",
+            "fr": "WheelFR",
+            "rl": "WheelBL",
+            "rr": "WheelBR"
           }
         },
         {
@@ -144,7 +150,7 @@
             "handling": 9.8,
             "braking": 9.7
           },
-          "scale": 1,
+          "scale": 100,
           "position": [
             0,
             -1,

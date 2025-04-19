@@ -13,98 +13,99 @@ const defaultTuning = {
   brakePower: 36,
   slowDownForce: 19.6,
   suspensionStiffness: 55,
-  suspensionRestLength: 0.5,
+  suspensionRestLength: 0.6,
   frictionSlip: 30,
   dampingRelaxation: 2.3,
   dampingCompression: 4.3,
   maxSuspensionForce: 10000,
   rollInfluence: 0.01,
-  maxSuspensionTravel: 1,
+  maxSuspensionTravel: 1.2,
+  customSlidingRotationalSpeed: 30,
   initialCorrectionAxis: 'x',
   initialCorrectionAngle: 90,
   showWheelAxes: false,
+  // 新增：驱动类型 ('RWD', 'FWD', 'AWD')
+  driveType: 'RWD',
+  // 新增：视觉 Y 偏移量
+  visualOffsetY: -1.0,
+  // 新增：车轮索引映射 (确保键与 Garage.vue 中使用的 wheelMeshRefs 一致)
+  wheelIndices: { FL: 1, FR: 0, BL: 3, BR: 2 }, 
+  // 调整默认悬挂连接点以匹配新尺寸和更低的位置
+  connectionPoints: [ 
+    { x: -0.85, y: -0.15, z:  1.4 }, // FL
+    { x:  0.85, y: -0.15, z:  1.4 }, // FR
+    { x: -0.85, y: -0.15, z: -1.4 }, // BL
+    { x:  0.85, y: -0.15, z: -1.4 }  // BR
+  ],
   // Add other tunable parameters if needed (e.g., customSlidingRotationalSpeed, wheelRadius)
 };
 
-export const useTuningStore = defineStore('tuning', () => {
-  // State: Use refs for individual parameters
-  const currentVehicleId = ref(null);
-  const tuningParams = ref({ ...defaultTuning });
-  const isLoading = ref(false);
-  const isSaving = ref(false);
-
-  // Actions
-  async function loadTuning(vehicleId) {
-    if (!vehicleId) return;
-    isLoading.value = true;
-    currentVehicleId.value = vehicleId;
-    try {
-      const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
-      if (vehicleDataFromDB?.customSettings) {
-        // Merge DB settings with defaults, ensuring all keys exist
-        tuningParams.value = { 
-          ...defaultTuning, 
-          ...vehicleDataFromDB.customSettings 
-        };
-        console.log('Loaded tuning from DB for:', vehicleId, tuningParams.value);
-      } else {
-        // Reset to defaults if no custom settings found in DB
-        tuningParams.value = { ...defaultTuning };
-        console.log('No custom tuning found in DB for:', vehicleId, '. Using defaults.');
+export const useTuningStore = defineStore('tuning', {
+  state: () => ({
+    currentVehicleId: ref(null),
+    tuningParams: ref({ ...defaultTuning }),
+    isLoading: ref(false),
+    isSaving: ref(false)
+  }),
+  actions: {
+    async loadTuning(vehicleId) {
+      if (!vehicleId) return;
+      this.isLoading = true;
+      this.currentVehicleId = vehicleId;
+      try {
+        const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
+        if (vehicleDataFromDB?.customSettings) {
+          // Merge DB settings with defaults, ensuring all keys exist
+          this.tuningParams = { 
+            ...defaultTuning, 
+            ...vehicleDataFromDB.customSettings 
+          };
+          console.log('Loaded tuning from DB for:', vehicleId, this.tuningParams);
+        } else {
+          // Reset to defaults if no custom settings found in DB
+          this.tuningParams = { ...defaultTuning };
+          console.log('No custom tuning found in DB for:', vehicleId, '. Using defaults.');
+        }
+      } catch (error) {
+        console.error("Failed to load tuning from DB:", error);
+        // Fallback to defaults on error
+        this.tuningParams = { ...defaultTuning };
+      } finally {
+        this.isLoading = false;
       }
-    } catch (error) {
-      console.error("Failed to load tuning from DB:", error);
-      // Fallback to defaults on error
-      tuningParams.value = { ...defaultTuning };
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  async function saveTuning() {
-    if (!currentVehicleId.value) {
-      console.warn("Cannot save tuning: No current vehicle ID set.");
-      return;
-    }
-    isSaving.value = true;
-    try {
-      // Pass only the tuningParams object as customSettings
-      await vehicleService.batchUpdateVehicle(currentVehicleId.value, {
-        customSettings: tuningParams.value
-      });
-      console.log('Tuning saved successfully for:', currentVehicleId.value);
-      // Optional: Add success feedback (e.g., via another store or event)
-    } catch (error) {
-      console.error("Failed to save tuning:", error);
-      // Optional: Add error feedback
-    } finally {
-      isSaving.value = false;
-    }
-  }
-
-  // Update individual tuning parameter
-  function updateParam(paramName, value) {
-    if (tuningParams.value.hasOwnProperty(paramName)) {
-      tuningParams.value[paramName] = value;
-    } else {
-      console.warn(`Trying to update non-existent tuning parameter: ${paramName}`);
-    }
-  }
-  
-  // Reset tuning to defaults
-  function resetToDefaults() {
-      tuningParams.value = { ...defaultTuning };
+    },
+    async saveTuning() {
+      if (!this.currentVehicleId) {
+        console.warn("Cannot save tuning: No current vehicle ID set.");
+        return;
+      }
+      this.isSaving = true;
+      try {
+        // Pass only the tuningParams object as customSettings
+        await vehicleService.batchUpdateVehicle(this.currentVehicleId, {
+          customSettings: this.tuningParams
+        });
+        console.log('Tuning saved successfully for:', this.currentVehicleId);
+        // Optional: Add success feedback (e.g., via another store or event)
+      } catch (error) {
+        console.error("Failed to save tuning:", error);
+        // Optional: Add error feedback
+      } finally {
+        this.isSaving = false;
+      }
+    },
+    updateParam(paramName, value) {
+      if (this.tuningParams.hasOwnProperty(paramName)) {
+        this.tuningParams[paramName] = value;
+        console.log(`TuningStore: Updated ${paramName} to ${value}`);
+        // Here you could potentially trigger re-application logic if needed immediately
+      } else {
+        console.warn(`TuningStore: Attempted to update unknown parameter "${paramName}"`);
+      }
+    },
+    resetToDefaults() {
+      this.tuningParams = { ...defaultTuning };
       console.log('Tuning reset to defaults.');
+    }
   }
-
-  return {
-    currentVehicleId,
-    tuningParams,
-    isLoading,
-    isSaving,
-    loadTuning,
-    saveTuning,
-    updateParam,
-    resetToDefaults
-  };
 }); 

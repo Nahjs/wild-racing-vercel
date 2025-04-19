@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { 
@@ -42,11 +42,6 @@ export default {
       const { groundBody } = createGround(world.value);
       bodies.value.push(groundBody);
       
-      // 如果开启了调试模式，创建调试渲染器
-      if (props.debug && props.scene) {
-        debugRenderer.value = new CannonDebugRenderer(props.scene, world.value);
-      }
-      
       // 通知父组件物理世界已经初始化
       emit('physics-ready', {
         world: world.value,
@@ -63,6 +58,8 @@ export default {
         // 更新调试渲染器
         if (props.debug && debugRenderer.value) {
           debugRenderer.value.update();
+        } else if (props.debug && !debugRenderer.value) {
+          console.warn("[PhysicsEngine Debug] Debug prop is true, but debugRenderer is not initialized!");
         }
         
         // 发送物理更新事件
@@ -120,6 +117,21 @@ export default {
         bodies.value = [];
       }
     });
+    
+    // 监听 debug prop 的变化来创建/销毁调试渲染器
+    watch(() => props.debug, (newDebugValue) => {
+      console.log(`[PhysicsEngine] Debug prop changed to: ${newDebugValue}`);
+      if (newDebugValue) {
+        if (!debugRenderer.value && props.scene && world.value) {
+          debugRenderer.value = new CannonDebugRenderer(props.scene, world.value);
+        } 
+      } else {
+        if (debugRenderer.value) {
+          debugRenderer.value.clearMeshes(); // 调用清理方法
+          debugRenderer.value = null;
+        }
+      }
+    }, { immediate: true }); // immediate: true 确保组件加载时也会根据初始 debug 值执行一次
     
     // 暴露给父组件的方法
     return {

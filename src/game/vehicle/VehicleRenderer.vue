@@ -16,8 +16,6 @@ import * as THREE from 'three';
 import { markRaw } from 'vue';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-// OrbitControls might not be needed directly here if managed by composable
-// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { useSceneSetup } from '@/composables/useSceneSetup'; // Import the scene setup composable
 import { useEnvironmentSetup } from '@/composables/useEnvironmentSetup'; // 引入环境设置组合式函数
 
@@ -86,8 +84,6 @@ export default {
     
     // 使用环境设置组合式函数
     const { 
-      setScene, 
-      setRenderer, 
       initializeEnvironment, 
       cleanupEnvironment 
     } = useEnvironmentSetup({
@@ -498,12 +494,14 @@ export default {
           console.log("VehicleRenderer: onMounted nextTick - Start");
           if (scene.value && renderer.value) { // Check if scene and renderer from composable are ready
               // 设置环境组合式函数的场景和渲染器引用
-              setScene(scene.value);
-              setRenderer(renderer.value);
+              // 移除 setScene 和 setRenderer 的调用
+              // setScene(scene.value);
+              // setRenderer(renderer.value);
               
               // 初始化环境(如果启用)
               if (props.enableLighting) {
-                initializeEnvironment(scene.value, renderer.value, 0);
+                // 调用 initializeEnvironment 并传入 scene 和 renderer
+                initializeEnvironment(scene.value, renderer.value, 0); 
               }
               
               emit('scene-ready', scene.value); // Emit scene from composable

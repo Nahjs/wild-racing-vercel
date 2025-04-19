@@ -10,8 +10,8 @@ import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import { createVehicleChassis } from '@/game/vehicle/VehiclePhysics';
 import { useInputControls } from '@/composables/useInputControls';
-import { vehicleService } from '@/services/vehicleService';
 import { useTuningStore } from '@/store/tuning';
+import { storeToRefs } from 'pinia';
 
 export default {
   name: 'VehicleController',
@@ -36,9 +36,14 @@ export default {
       type: Object,
       required: true
     },
+    scale: {
+      type: Number,
+      default: 1.0
+    }
   },
   setup(props, { emit }) {
     const tuningStore = useTuningStore();
+    const { tuningParams } = storeToRefs(tuningStore);
 
     const chassisBody = ref(null);
     const vehicle = ref(null);
@@ -47,21 +52,15 @@ export default {
     const { controlState } = useInputControls();
     
     const localUp = new THREE.Vector3(0, 1, 0);
+    
     const worldUp = new THREE.Vector3();
     const resetThreshold = 0.1;
     let justReset = false;
     let resetCooldownTimer = null;
     
     const wheelRadius = computed(() => props.selectedVehicle?.wheelRadius ?? 0.34);
-    const connectionPoints = computed(() => props.selectedVehicle?.connectionPoints ?? [
-      new CANNON.Vec3(-0.78, 0.1, -1.25),
-      new CANNON.Vec3(0.78, 0.1, -1.25),
-      new CANNON.Vec3(-0.75, 0.1, 1.32),
-      new CANNON.Vec3(0.75, 0.1, 1.32)
-    ]);
-    const customSlidingRotationalSpeed = computed(() => tuningStore.tuningParams.customSlidingRotationalSpeed ?? 30);
     
-    const initializePhysics = () => {
+    function initializePhysics() {
       if (isReady.value) return;
       try {
         createCarPhysics();
@@ -69,18 +68,16 @@ export default {
         emit('car-ready');
         
       } catch (error) {
-        console.error("VehicleController: Failed to initialize physics:", error);
         isReady.value = false;
       } finally {
-        console.log("VehicleController: initializePhysics attempt finished.");
       }
     };
     
-    const createCarPhysics = () => {
+    function createCarPhysics() {
       const position = new CANNON.Vec3(
-        props.initialPosition.x, 
-        props.initialPosition.y,
-        props.initialPosition.z
+        props.initialPosition.x * props.scale, 
+        props.initialPosition.y * props.scale,
+        props.initialPosition.z * props.scale
       );
       
       const { chassisBody: createdChassisBody } = createVehicleChassis(props.world, {
@@ -99,11 +96,13 @@ export default {
         indexForwardAxis: 2
       });
 
+      const currentScale = props.scale;
+
       const options = {
-        radius: wheelRadius.value,
+        radius: (wheelRadius.value || 0.34) * currentScale,
         directionLocal: new CANNON.Vec3(0, -1, 0),
         suspensionStiffness: tuningStore.tuningParams.suspensionStiffness,
-        suspensionRestLength: tuningStore.tuningParams.suspensionRestLength,
+        suspensionRestLength: (tuningStore.tuningParams.suspensionRestLength || 0.5) * currentScale,
         frictionSlip: tuningStore.tuningParams.frictionSlip,
         dampingRelaxation: tuningStore.tuningParams.dampingRelaxation,
         dampingCompression: tuningStore.tuningParams.dampingCompression,
@@ -111,24 +110,43 @@ export default {
         rollInfluence: tuningStore.tuningParams.rollInfluence,
         axleLocal: new CANNON.Vec3(-1, 0, 0),
         chassisConnectionPointLocal: new CANNON.Vec3(0, 0, 0),
-        maxSuspensionTravel: tuningStore.tuningParams.maxSuspensionTravel,
-        customSlidingRotationalSpeed: customSlidingRotationalSpeed.value,
+        maxSuspensionTravel: (tuningStore.tuningParams.maxSuspensionTravel || 1) * currentScale,
+        customSlidingRotationalSpeed: tuningStore.tuningParams.customSlidingRotationalSpeed,
       };
 
-      connectionPoints.value.forEach((connectionPoint, index) => {
+      tuningParams.value.connectionPoints.forEach((point, index) => {
+          const scaledConnectionPoint = new CANNON.Vec3(
+            point.x * currentScale,
+            point.y * currentScale,
+            point.z * currentScale
+          );
           vehicle.value.addWheel({
               ...options,
-              chassisConnectionPointLocal: connectionPoint
+              chassisConnectionPointLocal: scaledConnectionPoint 
           });
       });
       
       vehicle.value.wheelInfos.forEach(wheel => {
-        wheel.suspensionLength = tuningStore.tuningParams.suspensionRestLength;
+        wheel.suspensionLength = (tuningStore.tuningParams.suspensionRestLength || 0.5) * currentScale;
       });
       
       vehicle.value.addToWorld(props.world);
     };
     
+    // 使用 watchEffect 确保物理在条件满足时初始化
+    // 将 watchEffect 移到函数声明之后
+    watchEffect(() => {
+       // 检查所有依赖项是否有效
+      if (props.world && props.selectedVehicle && props.carModel && !isReady.value) {
+            initializePhysics();
+      } else if (!props.world || !props.selectedVehicle || !props.carModel) {
+        // 如果依赖项失效 (例如车辆切换时)，确保清理旧的物理实体
+        if (isReady.value) {
+             cleanupPhysics(); // 现在可以安全调用
+        }
+      }
+    });
+
     const updateCarModel = () => {
       if (props.carModel && vehicle.value && vehicle.value.chassisBody && 
           vehicle.value.chassisBody.position && vehicle.value.chassisBody.quaternion &&
@@ -140,7 +158,7 @@ export default {
         const wheelQuaternions = [];
         const wheelPositions = [];
         if (vehicle.value.wheelInfos) {
-            for (let i = 0; i < vehicle.value.wheelInfos.length; i++) {
+              for (let i = 0; i < vehicle.value.wheelInfos.length; i++) {
               vehicle.value.updateWheelTransform(i);
               const transform = vehicle.value.wheelInfos[i].worldTransform;
               
@@ -173,7 +191,6 @@ export default {
           speed: currentSpeed
         });
       } else {
-          console.warn("updateCarModel skipped: carModel or vehicle physics not ready.");
       }
     };
     
@@ -181,50 +198,89 @@ export default {
       if (isReady.value && vehicle.value && vehicle.value.chassisBody && props.carModel) {
         const steerValue = (controlState.value.turnLeft ? 1 : 0) - (controlState.value.turnRight ? 1 : 0);
         const actualSteer = steerValue * tuningStore.tuningParams.turnStrength;
+        // console.log(`[Debug Controls] steerValue: ${steerValue}, actualSteer: ${actualSteer.toFixed(2)}`); // 调试转向
 
-        vehicle.value.setSteeringValue(actualSteer, 2);
-        vehicle.value.setSteeringValue(actualSteer, 3);
+        // --- 动态获取转向轮索引 ---
+        const steerLeftIndex = tuningParams.value.wheelIndices?.FL ?? 0;
+        const steerRightIndex = tuningParams.value.wheelIndices?.FR ?? 1;
+        // console.log(`[Debug Controls] Steering Indices: Left=${steerLeftIndex}, Right=${steerRightIndex}`);
+        vehicle.value.setSteeringValue(actualSteer, steerLeftIndex);
+        vehicle.value.setSteeringValue(actualSteer, steerRightIndex);
+        // --- 结束 ---
 
         const forwardVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
         const forwardVelocity = forwardVelocityVec ? forwardVelocityVec.z : 0;
         const reverseThreshold = 0.5;
+        // console.log(`[Debug Controls] forwardVelocity: ${forwardVelocity.toFixed(2)}`); // 调试速度
 
+        // --- 动态获取驱动轮和刹车轮索引 (根据驱动类型) ---
+        const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
+        let driveWheelIndices = [];
+        const allWheelIndices = [wheelIndices.FL, wheelIndices.FR, wheelIndices.BL, wheelIndices.BR];
+
+        switch (tuningParams.value.driveType) {
+          case 'FWD':
+            driveWheelIndices = [wheelIndices.FL, wheelIndices.FR];
+            break;
+          case 'AWD':
+            driveWheelIndices = allWheelIndices;
+            break;
+          case 'RWD':
+          default:
+            driveWheelIndices = [wheelIndices.BL, wheelIndices.BR];
+            break;
+        }
+        // 刹车通常作用于所有轮子
+        const brakeWheelIndices = allWheelIndices;
+       
+        // --- 重新启用地面接触检查日志 ---
+        let driveWheelsOnGround = true;
+        driveWheelIndices.forEach(index => {
+            if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index] && !vehicle.value.wheelInfos[index].raycastResult.hasHit) {
+                driveWheelsOnGround = false;
+                console.warn(`[Debug Controls] Drive wheel index ${index} is NOT on the ground!`);
+            }
+        });
+        if (!driveWheelsOnGround) {
+            console.warn("[Debug Controls] One or more drive wheels are not touching the ground!");
+        }
+        // --- 结束检查 ---
+        
         if (controlState.value.accelerate) {
-            vehicle.value.setBrake(0, 0);
-            vehicle.value.setBrake(0, 1);
-            vehicle.value.setBrake(0, 2);
-            vehicle.value.setBrake(0, 3);
+            // 使用 brakeWheelIndices 清除所有轮子的刹车
+            brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
+
             const force = -tuningStore.tuningParams.enginePower;
-            vehicle.value.applyEngineForce(force, 0);
-            vehicle.value.applyEngineForce(force, 1);
-        } else if (controlState.value.brake) {
-            if (forwardVelocity < reverseThreshold) {
-                vehicle.value.setBrake(0, 0);
-                vehicle.value.setBrake(0, 1);
-                vehicle.value.setBrake(0, 2);
-                vehicle.value.setBrake(0, 3);
-                const reverseForce = tuningStore.tuningParams.enginePower * 0.5;
-                vehicle.value.applyEngineForce(reverseForce, 0);
-                vehicle.value.applyEngineForce(reverseForce, 1);
+            if (driveWheelsOnGround) {
+                // 使用 driveWheelIndices 施加驱动力
+                driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
             } else {
-                vehicle.value.applyEngineForce(0, 0);
-                vehicle.value.applyEngineForce(0, 1);
-                vehicle.value.applyEngineForce(0, 2);
-                vehicle.value.applyEngineForce(0, 3);
-                vehicle.value.setBrake(tuningStore.tuningParams.brakePower, 0);
-                vehicle.value.setBrake(tuningStore.tuningParams.brakePower, 1);
-                vehicle.value.setBrake(tuningStore.tuningParams.brakePower, 2);
-                vehicle.value.setBrake(tuningStore.tuningParams.brakePower, 3);
+                console.warn("[Debug Controls] Skipping acceleration force because drive wheels are not on ground."); // 重新启用
+            }
+        } else if (controlState.value.brake) {
+              if (forwardVelocity < reverseThreshold) {
+                  // 使用 brakeWheelIndices 清除所有轮子的刹车
+                brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
+
+                const reverseForce = tuningStore.tuningParams.enginePower * 0.5;
+                if (driveWheelsOnGround) {
+                    // 使用 driveWheelIndices 施加倒车力
+                    driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index));
+                } else {
+                    console.warn("[Debug Controls] Skipping reverse force because drive wheels are not on ground."); // 重新启用
+                }
+            } else {
+                    // 清除引擎力
+                 driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
+
+                   // 使用 brakeWheelIndices 施加刹车力
+                 brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.brakePower, index));
             }
         } else {
-            vehicle.value.applyEngineForce(0, 0);
-            vehicle.value.applyEngineForce(0, 1);
-            vehicle.value.applyEngineForce(0, 2);
-            vehicle.value.applyEngineForce(0, 3);
-            vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, 0);
-            vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, 1);
-            vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, 2);
-            vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, 3);
+                // 清除引擎力
+             driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
+             // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
+             brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
         }
 
         if (!justReset && chassisBody.value && chassisBody.value.quaternion) {
@@ -275,22 +331,66 @@ export default {
       }
     };
     
-    onMounted(() => {
-      if (!props.world || !props.scene || !props.selectedVehicle) {
-           console.warn("VehicleController: World, Scene, or SelectedVehicle missing on mount. Initialization delayed.");
-           return; 
+    function cleanupPhysics() {
+      if (props.world && vehicle.value) {
+        vehicle.value.removeFromWorld(props.world);
+        // 可能还需要清理 chassisBody (如果 RaycastVehicle 不自动处理)
+        // props.world.removeBody(chassisBody.value); // 可能不需要
+        vehicle.value = null; // 清除引用
+        chassisBody.value = null; // 清除引用
+        isReady.value = false; // 重置状态
       }
+      if (resetCooldownTimer) {
+          clearTimeout(resetCooldownTimer);
+          resetCooldownTimer = null;
+      }
+    };
+    
+    onMounted(() => {
+      // 不再需要在这里初始化物理
+      // if (!props.world || !props.scene || !props.selectedVehicle) {
+      // }, 50);
+      // } else {
+      // console.warn("VehicleController: Cannot reinitialize physics, world or vehicle data missing.");
+      // }
     });
     
     onUnmounted(() => {
-      if (props.world && vehicle.value) {
-        vehicle.value.removeFromWorld(props.world);
-      }
-      
-      if (resetCooldownTimer) {
-          clearTimeout(resetCooldownTimer);
-      }
+      cleanupPhysics(); // 在卸载时调用清理
     });
+    
+    // onMounted 现在可以保持为空或用于其他非物理初始化逻辑
+    onMounted(() => {
+      // 不再需要在这里初始化物理
+      // if (!props.world || !props.scene || !props.selectedVehicle) {
+      // }, 50);
+      // } else {
+      // console.warn("VehicleController: Cannot reinitialize physics, world or vehicle data missing.");
+      // }
+    });
+    
+    // 移除旧的 watch, 因为 watchEffect 覆盖了初始化和部分清理逻辑
+    // 如果还需要监听特定 tuning 参数变化来重建物理，可以保留或重写该 watch
+    // 例如，只监听需要完全重建物理的参数（如 connectionPoints, mass 等）
+    // Watch for specific parameters that require full physics reinitialization
+    watch(
+      [
+        () => tuningParams.value.connectionPoints, // 示例：连接点变化需要重建
+        () => tuningParams.value.vehicleMass,      // 示例：质量变化需要重建
+        // 添加其他需要完全重建物理的参数
+        // () => props.scale, // 缩放可能也需要重建
+      ],
+      (newValues, oldValues) => {
+        // 仅当物理已就绪且值确实发生变化时才重建
+        if (isReady.value && JSON.stringify(newValues) !== JSON.stringify(oldValues)) {
+          console.log("VehicleController: Critical physics parameters changed, reinitializing physics...", { newValues, oldValues });
+          cleanupPhysics();
+          // 让 watchEffect 来处理重新初始化
+          // initializePhysics(); // 不再直接调用
+        }
+      },
+      { deep: true }
+    );
     
     return {
       vehicle,
@@ -299,6 +399,7 @@ export default {
       initializePhysics,
       resetCar,
       handlePhysicsUpdate,
+      cleanupPhysics,
     };
   }
 };

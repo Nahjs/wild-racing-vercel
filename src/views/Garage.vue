@@ -186,7 +186,7 @@ const {
     gridHelperRef,
     axesHelperRef
 } = useSceneSetup(canvasElementRef, {
-    cameraPosition: new THREE.Vector3(0, 0.8, 8),
+    cameraPosition: new THREE.Vector3(0, 0.8, 15),
     cameraFov: 30,
     enableOrbitControls: true,
     orbitControlsOptions: {
@@ -197,15 +197,15 @@ const {
          zoomSpeed: 0.5,
          enablePan: true,
          panSpeed: 0.5,
-         minDistance: 3,
-         maxDistance: 20,
+         minDistance: 2,
+         maxDistance: 100,
          minPolarAngle: Math.PI / 4,
          maxPolarAngle: Math.PI / 2,
     }
 });
 
 const { initializeEnvironment, cleanupEnvironment } = useEnvironmentSetup({
-    enableContactShadow: true,
+    enableContactShadow: false,
     enableEnvironmentMap: true,
     enableBigSpotLight: true
 });
@@ -607,7 +607,7 @@ const selectVehicleById = async (newVehicleId) => {
         console.log("Garage: Cleaning up previous vehicle physics...");
         oldVehicleController.cleanupPhysics();
         // 显式设置 null 可能有助于垃圾回收和状态判断
-        // vehicleControllerRef.value = null; 
+        vehicleControllerRef.value = null;
     } else {
         console.log("Garage: No old vehicle physics to clean up.");
     }
@@ -869,6 +869,14 @@ const handleVehiclePositionUpdate = (update) => {
   // 1. 更新车身模型的世界位置和旋转 (应用偏移)
   model.value.position.copy(update.position).add(new THREE.Vector3(0, tuningParams.value.visualOffsetY, 0));
   model.value.quaternion.copy(update.quaternion);
+
+  // --- 添加: 更新 OrbitControls 的目标点 ---
+  const rawControls = toRaw(controls.value);
+  if (rawControls && model.value) {
+      rawControls.target.copy(model.value.position); 
+  }
+  // --- 结束添加 ---
+
   // 确保车身模型的世界矩阵是最新的
   model.value.updateMatrixWorld(true);
 

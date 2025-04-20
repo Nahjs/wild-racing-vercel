@@ -28,7 +28,7 @@
 
     <footer v-if="showHeader">
       <div class="copyright">© 2025-2026 Drift Pulse Zero</div>
-      <div class="version">Version: 0.1.8 Beta</div>
+      <div class="version">Version: 0.2.3 Beta</div>
     </footer>
   </div>
 </template>

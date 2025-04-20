@@ -345,11 +345,11 @@ const load3DModel = async () => {
                               wheelMeshRefs.value.FR = markRaw(child);
                              foundWheels.fr = true;
                              assignedNodes.add(child);
-                         } else if (wheelNodeNames.rl && childNameTrimmed === wheelNodeNames.rl) { // 使用 rl 键
+                         } else if (wheelNodeNames.rl && childNameTrimmed === wheelNodeNames.rl) { // 配置使用 rl
                               wheelMeshRefs.value.BL = markRaw(child); // 存入 BL
                              foundWheels.bl = true; // 标记 bl
                              assignedNodes.add(child);
-                         } else if (wheelNodeNames.rr && childNameTrimmed === wheelNodeNames.rr) { // 使用 rr 键
+                         } else if (wheelNodeNames.rr && childNameTrimmed === wheelNodeNames.rr) { // 配置使用 rr
                               wheelMeshRefs.value.BR = markRaw(child); // 存入 BR
                              foundWheels.br = true; // 标记 br
                              assignedNodes.add(child);
@@ -358,29 +358,51 @@ const load3DModel = async () => {
                  }
              });
 
-             const allConfiguredWheelsFound = Object.keys(wheelNodeNames).every(key => {
-                 const mappedKey = key === 'rl' ? 'bl' : (key === 'rr' ? 'br' : key);
-                 return foundWheels[mappedKey.toLowerCase()];
-             });
+             // --- Fallback Logic: Auto-detect missing wheels --- 
+             if (!foundWheels.fl || !foundWheels.fr || !foundWheels.bl || !foundWheels.br) {
+                 console.warn("Garage: Some wheels not found via config (or config missing/empty), attempting auto-detection...");
 
-             if (Object.keys(wheelNodeNames).length > 0 && !allConfiguredWheelsFound) {
-                console.error("Garage: Failed to find all configured wheel nodes!",
-                            "Expected:", wheelNodeNames,
-                            "Found:", wheelMeshRefs.value);
-                console.warn("Garage: All node names and types in the model:", Object.fromEntries(allNodesMap));
-             }
-             else if (!foundWheels.fl || !foundWheels.fr || !foundWheels.bl || !foundWheels.br) {
-                console.warn("Garage: Some wheels not found via config (or config empty), attempting auto-detection for remaining...");
-             }
+                 const wheelPatterns = {
+                     FL: /wheel.*fl|fl.*wheel|tyre.*fl|fl.*tyre|tire.*fl|fl.*tire/i,
+                     FR: /wheel.*fr|fr.*wheel|tyre.*fr|fr.*tyre|tire.*fr|fr.*tire/i,
+                     BL: /wheel.*bl|bl.*wheel|tyre.*bl|bl.*tyre|tire.*bl|bl.*tire|wheel.*rl|rl.*wheel|tyre.*rl|rl.*tyre|tire.*rl|rl.*tire/i, // Includes RL
+                     BR: /wheel.*br|br.*wheel|tyre.*br|br.*tyre|tire.*br|br.*tire|wheel.*rr|rr.*wheel|tyre.*rr|rr.*tyre|tire.*rr|rr.*tire/i  // Includes RR
+                 };
 
+                 loadedModelGroup.traverse((child) => {
+                     if (child instanceof THREE.Object3D && !assignedNodes.has(child)) {
+                         const childNameLower = child.name.toLowerCase();
+                         
+                         // Iterate through patterns only for wheels that are still missing
+                         for (const wheelKey of ['FL', 'FR', 'BL', 'BR']) {
+                             if (!wheelMeshRefs.value[wheelKey] && wheelPatterns[wheelKey].test(childNameLower)) {
+                                 wheelMeshRefs.value[wheelKey] = markRaw(child);
+                                 foundWheels[wheelKey.toLowerCase()] = true; // Mark as found (using bl/br keys)
+                                 assignedNodes.add(child);
+                                 console.warn(`Garage: Fallback - Detected ${wheelKey} wheel: ${child.name}`);
+                                 break; // Move to the next child once a match is found for this child
+                             }
+                         }
+                     }
+                 });
+             }
+             // --- End Fallback Logic ---
+
+             // Final Check and Logging
              const allWheelsAssigned = wheelMeshRefs.value.FL && wheelMeshRefs.value.FR && wheelMeshRefs.value.BL && wheelMeshRefs.value.BR;
+
              if (allWheelsAssigned) {
                   console.log("Garage: Successfully found/assigned all wheel nodes:", wheelMeshRefs.value);
              } else {
-                 console.error("Garage: Failed to find all required wheel nodes after config and auto-detection.", foundWheels);
+                 console.error("Garage: Failed to find all required wheel nodes after config and fallback detection.");
+                 console.log("   Found Wheels Mapping:", { 
+                     FL: wheelMeshRefs.value.FL?.name ?? 'Not Found',
+                     FR: wheelMeshRefs.value.FR?.name ?? 'Not Found',
+                     BL: wheelMeshRefs.value.BL?.name ?? 'Not Found',
+                     BR: wheelMeshRefs.value.BR?.name ?? 'Not Found'
+                 });
                  console.warn("Garage: All node names in the model:", nodeNames);
                  console.warn("Garage: All node names and types in the model:", Object.fromEntries(allNodesMap));
-            
              }
 
            
@@ -556,7 +578,9 @@ const loadVehicleConfig = async (vehicleId) => {
         }
          console.log(`Using settings for ${vehicleId} from: ${settingsSource}`);
 
-        tuningStore.setInitialParams(finalConfig.customSettings);
+        // Now, initialize the tuning store with the determined settings
+        // Pass both the settings object and the vehicleId
+        tuningStore.setInitialParams(finalConfig.customSettings, vehicleId);
 
         const settings = finalConfig.customSettings ?? {};
         const basePos = Array.isArray(baseVehicleData.position) ? baseVehicleData.position : [0, -1.0, 0];

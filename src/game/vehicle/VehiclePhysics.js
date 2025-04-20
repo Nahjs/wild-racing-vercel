@@ -26,9 +26,6 @@ export const createVehicleChassis = (world, options = {}) => {
     angularDamping: config.angularDamping, // Use angularDamping from config
     quaternion: config.quaternion || new CANNON.Quaternion() // Apply initial quaternion
   });
-  // Log the applied values
-  console.log(`Chassis Body Created - Mass: ${chassisBody.mass}, LinearDamping: ${chassisBody.linearDamping}, AngularDamping: ${chassisBody.angularDamping}, Quaternion:`, chassisBody.quaternion.toString());
-
   chassisBody.addShape(chassisShape);
   world.addBody(chassisBody);
 

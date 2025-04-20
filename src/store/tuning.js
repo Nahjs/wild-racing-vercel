@@ -50,17 +50,24 @@ export const useTuningStore = defineStore('tuning', {
   }),
   actions: {
     // New action to directly set tuning parameters from a source object
-    setInitialParams(initialSettings) {
+    setInitialParams(initialSettings, vehicleId) {
+      // Set the current vehicle ID first
+      if (vehicleId) {
+        this.currentVehicleId = vehicleId;
+      } else {
+        console.warn('[TuningStore] setInitialParams called without a vehicleId.');
+        this.currentVehicleId = null; // Ensure it's null if no ID provided
+      }
+      
       if (initialSettings && typeof initialSettings === 'object') {
         // Ensure all default keys are present, merging initialSettings over defaults
         this.tuningParams = { ...defaultTuning, ...initialSettings };
-        console.log('[TuningStore] Initialized tuningParams with provided settings:', this.tuningParams);
+        console.log(`[TuningStore] Initialized tuningParams for ${vehicleId} with provided settings:`, this.tuningParams);
       } else {
         // Fallback to defaults if initialSettings are invalid
         this.tuningParams = { ...defaultTuning };
-        console.warn('[TuningStore] Invalid initialSettings provided, falling back to defaults.');
+        console.warn(`[TuningStore] Invalid initialSettings provided for ${vehicleId}, falling back to defaults.`);
       }
-      // We don't need isLoading here as it's synchronous initialization
     },
 
     // We will no longer call loadTuning directly from Garage for initial load

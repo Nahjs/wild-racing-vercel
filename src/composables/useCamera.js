@@ -321,6 +321,35 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                 }
                 // --- 重置结束 ---
             }
+            // --- 新增：为 CHASE 模式设置初始状态 ---
+            else if (currentCameraMode.value === CameraMode.CHASE) {
+                // 确保 OrbitControls 禁用
+                controls.value.enabled = false;
+                controls.value.autoRotate = false; // Chase 模式通常不自动旋转
+                
+                if (targetRef.value && cameraRef.value) {
+                    const params = {...defaultCameraParams[CameraMode.CHASE], ...cameraParams.value};
+                    const targetPosition = targetRef.value.position.clone();
+                    const targetQuaternion = targetRef.value.quaternion.clone();
+                    
+                    // 计算初始相机位置
+                    const offset = new THREE.Vector3(params.offset.x, params.offset.y, params.offset.z);
+                    offset.applyQuaternion(targetQuaternion);
+                    const initialCameraPos = targetPosition.clone().add(offset);
+                    cameraRef.value.position.copy(initialCameraPos);
+                    
+                    // 计算初始看向点
+                    const lookAtOffset = new THREE.Vector3(params.lookAtOffset.x, params.lookAtOffset.y, params.lookAtOffset.z);
+                    lookAtOffset.applyQuaternion(targetQuaternion);
+                    const initialLookAtPoint = targetPosition.clone().add(lookAtOffset);
+                    cameraRef.value.lookAt(initialLookAtPoint);
+                    
+                    console.log('useCamera: Set initial position and lookAt for CHASE mode.');
+                } else {
+                     console.warn('useCamera: Cannot set initial CHASE state, target or camera ref missing.');
+                }
+            }
+            // --- CHASE 模式初始状态设置结束 ---
             // 特殊处理电影视角模式
             else if (currentCameraMode.value === CameraMode.CINEMATIC) {
                 controls.value.autoRotate = true;

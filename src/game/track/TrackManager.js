@@ -65,7 +65,7 @@ class TrackManager {
     if (trackId === 'default') {
       return this.defaultTrackPath;
     }
-    return `/track/karting_club_lider__karting_race_track_early.glb`;
+    return `/track/drift_race_track_free.glb`;
   }
   
   // 处理赛道模型
@@ -116,7 +116,7 @@ class TrackManager {
   
   // 获取起始位置
   getStartPosition() {
-    const defaultStart = new THREE.Vector3(0, 0.3, 0);
+    const defaultStart = new THREE.Vector3(0, 0.2, 8);
     
     if (!this.currentTrack) return defaultStart;
     

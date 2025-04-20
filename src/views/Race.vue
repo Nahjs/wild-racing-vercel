@@ -118,7 +118,7 @@ export default {
     // 赛道信息
     const trackId = ref('karting_club_lider__karting_race_track_early'); // 赛道ID，可从配置或路由参数获取
     const isLoadingTrack = ref(true);
-    const startPosition = ref(new THREE.Vector3(0, 0, 0)); // 临时起点位置
+    const startPosition = ref(new THREE.Vector3(0, 0.2, 30)); // 临时起点位置
     
     // 在setup函数中添加currentVehicle引用，初始化为 null
     const currentVehicle = ref(null);
@@ -197,7 +197,7 @@ export default {
           // 标记起点位置对象
           let startMarker = null;
           trackModel.traverse(node => {
-            if (node.name === 'startfinish_line' || node.name.toLowerCase().includes('start')) {
+            if (node.name === 'object_200' || node.name.toLowerCase().includes('start')) {
               console.log(`[Race] 找到起点标记: ${node.name}`, node.position);
               startMarker = node;
             }
@@ -205,7 +205,7 @@ export default {
           
           if (startMarker) {
             // 使用起点标记的位置，并增加Y轴偏移量
-            startPosition.value = startMarker.position.clone().add(new THREE.Vector3(0, 0.2, 0));
+            startPosition.value = startMarker.position.clone().add(new THREE.Vector3(0, 0.2, 8));
           } else {
             // 尝试使用TrackManager的getStartPosition方法
             const trackStartPosition = trackManager.getStartPosition();
@@ -490,8 +490,12 @@ export default {
       if (newStatus === 'racing' && oldStatus !== 'racing') {
         console.log('[Race] Detected race start via raceStatus watch. Attempting to switch camera mode.');
         if (isCameraInitialized.value) {
-          // 使用 cameraControls 对象调用 nextMode
-          cameraControls.nextMode(); 
+          // 使用 nextTick 延迟切换，确保车辆状态更新
+          nextTick(() => {
+            // 设置追逐视角 (模式 3)
+            cameraControls.setMode(3);
+            console.log('[Race] Automatically switched to CHASE mode (3) after nextTick.');
+          });
         } else {
           console.warn('[Race] Camera not initialized when race started, cannot switch mode automatically.');
         }

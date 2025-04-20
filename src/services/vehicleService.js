@@ -75,7 +75,7 @@ class VehicleService {
         }
     }
 
-    // 添加车辆
+    // 添加车辆 (修改为使用 update[内部调用put] 以实现幂等性)
     async addVehicle(vehicle) {
         try {
             if (!vehicle.customSettings) {
@@ -90,9 +90,9 @@ class VehicleService {
                 };
             }
             vehicle.updatedAt = new Date().toISOString();
-            await db.add('vehicles', vehicle);
+            await db.update('vehicles', vehicle);
         } catch (error) {
-            console.error('添加车辆失败:', error);
+            console.error('添加或更新车辆失败:', error);
             throw error;
         }
     }
@@ -207,7 +207,6 @@ class VehicleService {
     
     // 重试所有待处理的更新
     async retryPendingUpdates() {
-        console.log(`尝试提交 ${pendingUpdates.size} 个待处理更新`);
         
         if (pendingUpdates.size === 0) return;
         

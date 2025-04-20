@@ -60,6 +60,46 @@ export default {
     
     const wheelRadius = computed(() => props.selectedVehicle?.wheelRadius ?? 0.34);
     
+    // --- Watch for dynamic suspension updates ---
+    watch(
+      [
+        () => tuningParams.value.suspensionStiffness,
+        () => tuningParams.value.suspensionRestLength,
+        () => tuningParams.value.frictionSlip,
+        () => tuningParams.value.dampingRelaxation,
+        () => tuningParams.value.dampingCompression,
+        () => tuningParams.value.maxSuspensionForce,
+        () => tuningParams.value.rollInfluence,
+        () => tuningParams.value.maxSuspensionTravel,
+        // Note: We don't watch customSlidingRotationalSpeed here as it might be less common to update live 
+        // or might require physics reset depending on implementation.
+      ],
+      (newValues) => {
+        if (isReady.value && vehicle.value) {
+          const [
+            stiffness, restLength, friction, dampRelax, dampComp, maxForce, rollInfluence, maxTravel
+          ] = newValues;
+          
+          const currentScale = props.scale; // Get current scale for calculations
+
+          vehicle.value.wheelInfos.forEach(wheelInfo => {
+            wheelInfo.suspensionStiffness = stiffness;
+            // Ensure restLength and maxTravel are scaled correctly if needed
+            wheelInfo.suspensionRestLength = (restLength ?? 0.5) * currentScale; 
+            wheelInfo.frictionSlip = friction;
+            wheelInfo.dampingRelaxation = dampRelax;
+            wheelInfo.dampingCompression = dampComp;
+            wheelInfo.maxSuspensionForce = maxForce;
+            wheelInfo.rollInfluence = rollInfluence;
+            wheelInfo.maxSuspensionTravel = (maxTravel ?? 1) * currentScale;
+          });
+          console.log("VehicleController: Dynamically updated suspension parameters.");
+        }
+      },
+      { deep: false } // Not deep, watching individual refs/values
+    );
+    // --- End dynamic suspension watch ---
+
     function initializePhysics() {
       if (isReady.value) return;
       try {
@@ -238,11 +278,9 @@ export default {
         driveWheelIndices.forEach(index => {
             if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index] && !vehicle.value.wheelInfos[index].raycastResult.hasHit) {
                 driveWheelsOnGround = false;
-                console.warn(`[Debug Controls] Drive wheel index ${index} is NOT on the ground!`);
             }
         });
         if (!driveWheelsOnGround) {
-            console.warn("[Debug Controls] One or more drive wheels are not touching the ground!");
         }
         // --- 结束检查 ---
         
@@ -255,7 +293,6 @@ export default {
                 // 使用 driveWheelIndices 施加驱动力
                 driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
             } else {
-                console.warn("[Debug Controls] Skipping acceleration force because drive wheels are not on ground."); // 重新启用
             }
         } else if (controlState.value.brake) {
               if (forwardVelocity < reverseThreshold) {
@@ -267,7 +304,6 @@ export default {
                     // 使用 driveWheelIndices 施加倒车力
                     driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index));
                 } else {
-                    console.warn("[Debug Controls] Skipping reverse force because drive wheels are not on ground."); // 重新启用
                 }
             } else {
                     // 清除引擎力
@@ -383,8 +419,8 @@ export default {
       (newValues, oldValues) => {
         // 仅当物理已就绪且值确实发生变化时才重建
         if (isReady.value && JSON.stringify(newValues) !== JSON.stringify(oldValues)) {
-          console.log("VehicleController: Critical physics parameters changed, reinitializing physics...", { newValues, oldValues });
-          cleanupPhysics();
+            console.log("VehicleController: Rebuilding physics due to core parameter change (mass/connectionPoints).");
+            cleanupPhysics();
           // 让 watchEffect 来处理重新初始化
           // initializePhysics(); // 不再直接调用
         }

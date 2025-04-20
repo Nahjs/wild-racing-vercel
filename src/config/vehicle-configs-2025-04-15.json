@@ -5,12 +5,6 @@
           "name": "玛莎拉蒂 MC12",
           "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/maserati_mc12.glb",
           "preview": "/images/cars/default.jpg",
-          "specs": {
-            "topSpeed": 330,
-            "acceleration": 3.2,
-            "handling": 9.3,
-            "braking": 9.2
-          },
           "scale": 1,
           "position": [
             0,
@@ -23,16 +17,66 @@
             "wheel": "#1a1a1a"
           },
           "customSettings": {
-            "scale": 1,
-            "position": [
-              0,
-              -1,
-              0
-            ],
-            "rotation": 0,
-            "colors": {
-              "body": "#ffffff",
-              "wheel": "#1a1a1a"
+              "enginePower": 2750,
+              "turnStrength": 0.5,
+              "vehicleMass": 653,
+              "linearDamping": 0.1,
+              "angularDamping": 0.5,
+              "groundFriction": 0.3,
+              "brakePower": 36,
+              "slowDownForce": 19.6,
+              "suspensionStiffness": 55,
+              "suspensionRestLength": 0.6,
+              "frictionSlip": 30,
+              "dampingRelaxation": 2.3,
+              "dampingCompression": 4.3,
+              "maxSuspensionForce": 10000,
+              "rollInfluence": 0.01,
+              "maxSuspensionTravel": 1.2,
+              "customSlidingRotationalSpeed": 30,
+              "initialCorrectionAxis": "x",
+              "initialCorrectionAngle": 90,
+              "showWheelAxes": false,
+              "driveType": "RWD",
+              "visualOffsetY": -1,
+              "wheelIndices": {
+                "FL": 1,
+                "FR": 0,
+                "BL": 3,
+                "BR": 2
+              },
+              "connectionPoints": [
+                {
+                  "x": -0.85,
+                  "y": -0.15,
+                  "z": 1.4
+                },
+                {
+                  "x": 0.85,
+                  "y": -0.15,
+                  "z": 1.4
+                },
+                {
+                  "x": -0.85,
+                  "y": -0.15,
+                  "z": -1.4
+                },
+                {
+                  "x": 0.85,
+                  "y": -0.15,
+                  "z": -1.4
+                }
+              ],
+              "scale": 1,
+              "position": [
+                0,
+                -1,
+                0
+              ],
+              "rotation": -1.5707963267948966,
+              "colors": {
+                "body": "#ffffff",
+                "wheel": "#1a1a1a"
             }
           },
           "wheelNodeNames": {
@@ -143,42 +187,6 @@
             "rotation": 0,
             "colors": {
               "body": "#d32f2f",
-              "wheel": "#1a1a1a"
-            }
-          }
-        },
-        {
-          "id": "czinger-21c-2021",
-          "name": "辛格 21C 2021",
-          "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c.glb",
-          "preview": "/images/cars/default.jpg",
-          "specs": {
-            "topSpeed": 432,
-            "acceleration": 1.9,
-            "handling": 9.8,
-            "braking": 9.7
-          },
-          "scale": 100,
-          "position": [
-            0,
-            -1,
-            0
-          ],
-          "rotation": -1.5707963267948966,
-          "colors": {
-            "body": "#ff3a00",
-            "wheel": "#1a1a1a"
-          },
-          "customSettings": {
-            "scale": 1,
-            "position": [
-              0,
-              -1,
-              0
-            ],
-            "rotation": 0,
-            "colors": {
-              "body": "#ff3a00",
               "wheel": "#1a1a1a"
             }
           }
@@ -581,7 +589,42 @@
         }
       }
     },
-   
+     {
+      "id": "czinger-21c-2021",
+      "name": "辛格 21C 2021",
+      "model": "https://cdn.jsdelivr.net/gh/Nahjs/wild-racing-models@master/models/Czinger/2021_czinger_21c.glb",
+      "preview": "/images/cars/default.jpg",
+      "specs": {
+        "topSpeed": 432,
+        "acceleration": 1.9,
+        "handling": 9.8,
+        "braking": 9.7
+      },
+      "scale": 100,
+      "position": [
+        0,
+        -1,
+        0
+      ],
+      "rotation": -1.5707963267948966,
+      "colors": {
+        "body": "#ff3a00",
+        "wheel": "#1a1a1a"
+      },
+      "customSettings": {
+        "scale": 1,
+        "position": [
+          0,
+          -1,
+          0
+        ],
+        "rotation": 0,
+        "colors": {
+          "body": "#ff3a00",
+          "wheel": "#1a1a1a"
+        }
+      }
+    },
     {
       "id": "czinger-21c-v1",
       "name": "辛格 21C V1",

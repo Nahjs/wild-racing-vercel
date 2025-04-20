@@ -43,37 +43,50 @@ const defaultTuning = {
 export const useTuningStore = defineStore('tuning', {
   state: () => ({
     currentVehicleId: ref(null),
-    tuningParams: ref({ ...defaultTuning }),
+    // Initialize with defaults, will be overwritten by setInitialParams
+    tuningParams: ref({ ...defaultTuning }), 
     isLoading: ref(false),
     isSaving: ref(false)
   }),
   actions: {
-    async loadTuning(vehicleId) {
-      if (!vehicleId) return;
+    // New action to directly set tuning parameters from a source object
+    setInitialParams(initialSettings) {
+      if (initialSettings && typeof initialSettings === 'object') {
+        // Ensure all default keys are present, merging initialSettings over defaults
+        this.tuningParams = { ...defaultTuning, ...initialSettings };
+        console.log('[TuningStore] Initialized tuningParams with provided settings:', this.tuningParams);
+      } else {
+        // Fallback to defaults if initialSettings are invalid
+        this.tuningParams = { ...defaultTuning };
+        console.warn('[TuningStore] Invalid initialSettings provided, falling back to defaults.');
+      }
+      // We don't need isLoading here as it's synchronous initialization
+    },
+
+    // We will no longer call loadTuning directly from Garage for initial load
+    // Keeping it might be useful for other potential scenarios, but clean up reset logic
+    async _internalLoadFromDB(vehicleId) { // Renamed to avoid confusion
+      if (!vehicleId) return null; // Return null if no ID
       this.isLoading = true;
       this.currentVehicleId = vehicleId;
       try {
         const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
         if (vehicleDataFromDB?.customSettings) {
-          // Merge DB settings with defaults, ensuring all keys exist
-          this.tuningParams = { 
-            ...defaultTuning, 
-            ...vehicleDataFromDB.customSettings 
-          };
-          console.log('Loaded tuning from DB for:', vehicleId, this.tuningParams);
+          console.log('Loaded tuning from DB for:', vehicleId);
+          // Return the settings found in DB, merged with defaults for safety
+          return { ...defaultTuning, ...vehicleDataFromDB.customSettings }; 
         } else {
-          // Reset to defaults if no custom settings found in DB
-          this.tuningParams = { ...defaultTuning };
-          console.log('No custom tuning found in DB for:', vehicleId, '. Using defaults.');
+          console.log('No custom tuning found in DB for:', vehicleId);
+          return null; // Return null if not found
         }
       } catch (error) {
         console.error("Failed to load tuning from DB:", error);
-        // Fallback to defaults on error
-        this.tuningParams = { ...defaultTuning };
+        return null; // Return null on error
       } finally {
         this.isLoading = false;
       }
     },
+
     async saveTuning() {
       if (!this.currentVehicleId) {
         console.warn("Cannot save tuning: No current vehicle ID set.");
@@ -81,12 +94,15 @@ export const useTuningStore = defineStore('tuning', {
       }
       this.isSaving = true;
       try {
+        // --- 添加日志记录以方便复制 ---
+        console.log(`[TuningStore Save] Preparing to save tuningParams for ${this.currentVehicleId}:`, JSON.parse(JSON.stringify(this.tuningParams))); 
+        // 使用 JSON.parse(JSON.stringify(...)) 来获取纯净的 JS 对象副本，方便复制
+        // --- 日志记录结束 ---
+
         // Pass only the tuningParams object as customSettings
         await vehicleService.batchUpdateVehicle(this.currentVehicleId, {
-          customSettings: this.tuningParams
+          customSettings: this.tuningParams // 整个 tuningParams 作为 customSettings 保存
         });
-        console.log('Tuning saved successfully for:', this.currentVehicleId);
-        // Optional: Add success feedback (e.g., via another store or event)
       } catch (error) {
         console.error("Failed to save tuning:", error);
         // Optional: Add error feedback
@@ -97,7 +113,6 @@ export const useTuningStore = defineStore('tuning', {
     updateParam(paramName, value) {
       if (this.tuningParams.hasOwnProperty(paramName)) {
         this.tuningParams[paramName] = value;
-        console.log(`TuningStore: Updated ${paramName} to ${value}`);
         // Here you could potentially trigger re-application logic if needed immediately
       } else {
         console.warn(`TuningStore: Attempted to update unknown parameter "${paramName}"`);
@@ -105,7 +120,6 @@ export const useTuningStore = defineStore('tuning', {
     },
     resetToDefaults() {
       this.tuningParams = { ...defaultTuning };
-      console.log('Tuning reset to defaults.');
     }
   }
 }); 

@@ -72,10 +72,13 @@ export class CannonDebugRenderer {
   // 新增：清理所有调试网格的方法
   clearMeshes() {
     this.meshes.forEach(mesh => {
-      this.scene.remove(mesh);
+      if (mesh.parent) {
+           this.scene.remove(mesh); // 从场景移除
+      }
+      mesh.geometry?.dispose(); // 释放几何体资源
+      mesh.material?.dispose(); // 释放材质资源
     });
     this.meshes = [];
-    console.log("[CannonDebugRenderer] Cleared debug meshes.");
   }
   
   _createMesh(shape) {

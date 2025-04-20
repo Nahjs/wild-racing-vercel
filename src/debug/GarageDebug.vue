@@ -13,9 +13,6 @@
           </option>
         </select>
       </div>
-        <label>
-          <input type="checkbox" :checked="showPhysicsDebug" @change="$emit('update:showPhysicsDebug', $event.target.checked)"> 显示物理调试框
-        </label>
       <hr>
       <h3>外观与基础</h3>
        <!-- Appearance Controls (Keep existing) -->
@@ -28,10 +25,10 @@
         <input type="color" id="wheelColor" :value="wheelColor" @input="$emit('update:wheelColor', $event.target.value)">
       </div>
        <!-- Transform Controls (Keep existing) -->
-      <div class="control-group">
+      <!-- <div class="control-group">
           <label>缩放: {{ scale?.toFixed(2) ?? 'N/A' }}</label>
           <input type="range" min="1" max="100" step="0.05" :value="scale" @input="$emit('update:scale', Number($event.target.value))">
-      </div>
+      </div> -->
       <!-- <div class="control-group">
         <label>位置 X: {{ position?.[0]?.toFixed(2) ?? 'N/A' }}</label>
         <input type="range" min="-10" max="10" step="0.1" :value="position?.[0] ?? 0" @input="$emit('update:position', [Number($event.target.value), position?.[1] ?? 0, position?.[2] ?? 0])">
@@ -44,14 +41,17 @@
         <label>旋转 Y: {{ rotation?.toFixed(2) ?? 'N/A' }}</label>
         <input type="range" min="-3.14" max="3.14" step="0.01" :value="rotation" @input="$emit('update:rotation', Number($event.target.value))">
       </div> -->
-      <div class="control-group">
+      <!-- <div class="control-group">
         <label>视觉 Y 偏移: {{ visualOffsetY?.toFixed(2) ?? 'N/A' }}</label>
         <input type="range" min="-1.0" max="1.0" step="0.01" :value="visualOffsetY" @input="$emit('update:visualOffsetY', Number($event.target.value))">
-      </div>
+      </div> -->
       <!-- Scene Controls (Keep existing) -->
       <div class="control-group checkbox-group">
         <label>
-          <input type="checkbox" :checked="autoRotate" @change="$emit('update:autoRotate', $event.target.checked)"> 自动旋转相机
+          <input type="checkbox" :checked="showPhysicsDebug" @change="$emit('update:showPhysicsDebug', $event.target.checked)"> 显示物理实体
+        </label>
+        <label>
+          <input type="checkbox" :checked="autoRotate" @change="$emit('update:autoRotate', $event.target.checked)"> 旋转展示
         </label>
         <label>
           <input type="checkbox" :checked="showGrid" @change="$emit('update:showGrid', $event.target.checked)"> 显示网格

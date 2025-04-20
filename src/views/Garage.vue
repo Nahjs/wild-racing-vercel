@@ -120,7 +120,6 @@
       :scale="debugScale"
       :initialPosition="{ x: debugPosition[0], y: -0.5, z: debugPosition[2] }"
       :selectedVehicle="currentVehicle"
-      @car-ready="handleCarReady"
       @position-update="handleVehiclePositionUpdate"
     />
   </div>
@@ -163,10 +162,10 @@ const carCoatColor = ref("#2f426f");
 const wheelColor = ref("#1a1a1a");
 const sceneAutoRotate = ref(false);
 const sceneShowGrid = ref(false);
-const sceneGridSize = ref(10);
-const sceneGridDivisions = ref(10);
+const sceneGridSize = ref(1000);
+const sceneGridDivisions = ref(1000);
 const sceneShowAxes = ref(false);
-const sceneAxesSize = ref(1);
+const sceneAxesSize = ref(10);
 const showPhysicsDebug = ref(false);
 
 const {
@@ -195,12 +194,11 @@ const {
          rotateSpeed: 0.5,
          enableZoom: true,
          zoomSpeed: 0.5,
-         enablePan: true,
-         panSpeed: 0.5,
+         enablePan: false,
          minDistance: 2,
          maxDistance: 100,
          minPolarAngle: Math.PI / 4,
-         maxPolarAngle: Math.PI / 2,
+         maxPolarAngle: Math.PI * 0.9,
     }
 });
 
@@ -242,11 +240,9 @@ const cleanupModelRefs = () => {
                }
             }
         });
-        console.log("Garage: Cleaned up previous model resources.");
     }
     model.value = null;
     wheelMeshRefs.value = { FL: null, FR: null, RL: null, RR: null };
-    console.log("Garage: Cleaned up model and wheel references.");
 };
 
 const wheelMeshRefs = ref({ FL: null, FR: null, RL: null, RR: null });
@@ -274,12 +270,13 @@ const removeWheelAxes = () => {
 };
 
 watch(() => tuningParams.value.showWheelAxes, (show) => {
+    if (!model.value) return;
     if (show) {
         addWheelAxes();
     } else {
         removeWheelAxes();
     }
-}, { immediate: true });
+});
 
 const load3DModel = async () => {
     cleanupModelRefs();
@@ -321,7 +318,7 @@ const load3DModel = async () => {
              model.value = loadedModelGroup;
 
              const baseData = currentVehicle.value;
-             let wheelNodeNames = baseData.wheelNodeNames || {}; 
+             let wheelNodeNames = baseData.wheelNodeNames || {};
              console.log("Garage: Using configured wheel node names:", JSON.stringify(wheelNodeNames));
 
              wheelMeshRefs.value = { FL: null, FR: null, BL: null, BR: null };
@@ -334,30 +331,26 @@ const load3DModel = async () => {
                  allNodesMap.set(child.name, child.type);
                  nodeNames.push(child.name);
                  if (child instanceof THREE.Object3D) {
-                     child.castShadow = true; 
-                     child.receiveShadow = true; 
-                     
+                     child.castShadow = true;
+                     child.receiveShadow = true;
+
                      if (!assignedNodes.has(child)) {
                          const childNameTrimmed = child.name.trim(); // 去除前后空格
                          
                          if (wheelNodeNames.fl && childNameTrimmed === wheelNodeNames.fl) {
-                             console.log(`Garage: Matched FL config: '${wheelNodeNames.fl}' with node '${child.name}' (Type: ${child.type})`);
-                             wheelMeshRefs.value.FL = markRaw(child);
+                              wheelMeshRefs.value.FL = markRaw(child);
                              foundWheels.fl = true;
                              assignedNodes.add(child);
                          } else if (wheelNodeNames.fr && childNameTrimmed === wheelNodeNames.fr) {
-                             console.log(`Garage: Matched FR config: '${wheelNodeNames.fr}' with node '${child.name}' (Type: ${child.type})`);
-                             wheelMeshRefs.value.FR = markRaw(child);
+                              wheelMeshRefs.value.FR = markRaw(child);
                              foundWheels.fr = true;
                              assignedNodes.add(child);
                          } else if (wheelNodeNames.rl && childNameTrimmed === wheelNodeNames.rl) { // 使用 rl 键
-                             console.log(`Garage: Matched RL(BL) config: '${wheelNodeNames.rl}' with node '${child.name}' (Type: ${child.type})`);
-                             wheelMeshRefs.value.BL = markRaw(child); // 存入 BL
+                              wheelMeshRefs.value.BL = markRaw(child); // 存入 BL
                              foundWheels.bl = true; // 标记 bl
                              assignedNodes.add(child);
                          } else if (wheelNodeNames.rr && childNameTrimmed === wheelNodeNames.rr) { // 使用 rr 键
-                             console.log(`Garage: Matched RR(BR) config: '${wheelNodeNames.rr}' with node '${child.name}' (Type: ${child.type})`);
-                             wheelMeshRefs.value.BR = markRaw(child); // 存入 BR
+                              wheelMeshRefs.value.BR = markRaw(child); // 存入 BR
                              foundWheels.br = true; // 标记 br
                              assignedNodes.add(child);
                          }
@@ -369,10 +362,10 @@ const load3DModel = async () => {
                  const mappedKey = key === 'rl' ? 'bl' : (key === 'rr' ? 'br' : key);
                  return foundWheels[mappedKey.toLowerCase()];
              });
-             
+
              if (Object.keys(wheelNodeNames).length > 0 && !allConfiguredWheelsFound) {
-                console.error("Garage: Failed to find all configured wheel nodes!", 
-                            "Expected:", wheelNodeNames, 
+                console.error("Garage: Failed to find all configured wheel nodes!",
+                            "Expected:", wheelNodeNames,
                             "Found:", wheelMeshRefs.value);
                 console.warn("Garage: All node names and types in the model:", Object.fromEntries(allNodesMap));
              }
@@ -387,19 +380,15 @@ const load3DModel = async () => {
                  console.error("Garage: Failed to find all required wheel nodes after config and auto-detection.", foundWheels);
                  console.warn("Garage: All node names in the model:", nodeNames);
                  console.warn("Garage: All node names and types in the model:", Object.fromEntries(allNodesMap));
-                  console.log("Garage: Partially found wheel nodes:", wheelMeshRefs.value);
+            
              }
 
-             // Log wheel parent structure
-             console.log('Wheel Parent Check (FL):', wheelMeshRefs.value.FL?.parent?.name, ' | Model Root:', model.value?.name);
-             console.log('Wheel Parent Check (RR):', wheelMeshRefs.value.RR?.parent?.name, ' | Model Root:', model.value?.name);
-
+           
              if (tuningParams.value.showWheelAxes) {
                 addWheelAxes();
              }
 
              rawScene.add(model.value);
-             console.log("Garage: Model loaded and added to scene:", currentVehicle.value.name);
 
              await nextTick();
              customModel();
@@ -409,11 +398,7 @@ const load3DModel = async () => {
                  const box = new THREE.Box3().setFromObject(model.value);
                  const center = box.getCenter(new THREE.Vector3());
                  rawControls.target.copy(center);
-                 console.log("Garage: OrbitControls target updated to model center:", center);
-             }
-
-             // 由 VehicleController 内部 watch 或 onMounted 逻辑处理物理初始化
-             // tryInitializeVehiclePhysics(); 
+                }
 
         } else {
              console.error('Garage: Loaded GLTF does not contain a scene.');
@@ -430,228 +415,212 @@ const customModel = () => {
         console.warn("Garage: customModel called but no model loaded.");
         return;
     }
-    console.log("Garage: Applying material customizations (using local color refs)...", { body: carCoatColor.value, wheel: wheelColor.value });
-
+  
     model.value.traverse((child) => {
         if (child instanceof THREE.Object3D) {
-            const isWheelParent = Object.values(wheelMeshRefs.value).some(ref => ref === child);
-            if (isWheelParent) {
+            const isWheel = Object.values(wheelMeshRefs.value).some(ref => ref === child);
+
+            if (isWheel) {
+                if (child.isMesh && child.material) {
+                    applyMaterialLogic(child, true);
+                }
                 child.traverse((wheelPart) => {
                     if (wheelPart.isMesh && wheelPart.material) {
-                        applyMaterialLogic(wheelPart);
+                         applyMaterialLogic(wheelPart, true);
                     }
-                });
+                 });
             } else if (child.isMesh && child.material) {
-                applyMaterialLogic(child);
+                applyMaterialLogic(child, false);
             }
         }
     });
-    console.log("Garage: Material customizations applied.");
 };
 
-const applyMaterialLogic = (mesh) => {
+const applyMaterialLogic = (mesh, isWheel) => {
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
     const nodeNameLower = mesh.name.toLowerCase();
 
     materials.forEach(material => {
-        if (!material) return;
-        material.needsUpdate = false;
+        // Initial check if material exists at all
+        if (!material) return; 
+
+        let needsUpdate = false;
+        const originalMaterial = material; 
+        let currentMaterial = material; 
         const materialNameLower = material.name ? material.name.toLowerCase() : '';
 
-        if (nodeNameLower.includes('body') || nodeNameLower.includes('paint') || nodeNameLower.includes('coat') || materialNameLower.includes('body') || materialNameLower.includes('paint') || materialNameLower.includes('coat')) {
-            if (material.color) material.color.set(carCoatColor.value);
-            material.roughness = 0.2;
-            material.metalness = 0.3;
-            if ('clearcoat' in material) material.clearcoat = 0.5;
-            if ('clearcoatRoughness' in material) material.clearcoatRoughness = 0.1;
-            material.envMapIntensity = 4;
-            material.needsUpdate = true;
-        }
-        else if ((nodeNameLower.includes('wheel') || nodeNameLower.includes('rim') || materialNameLower.includes('wheel') || materialNameLower.includes('rim')) &&
-                 !(nodeNameLower.includes('tire') || nodeNameLower.includes('rubber') || materialNameLower.includes('tire') || materialNameLower.includes('rubber'))) {
-            if (material.color) material.color.set(wheelColor.value);
-            material.roughness = 0.1;
-            material.metalness = 0.9;
-            material.envMapIntensity = 3;
-            material.needsUpdate = true;
-        }
-        else if (nodeNameLower.includes('rubber') || nodeNameLower.includes('tire') || materialNameLower.includes('rubber') || materialNameLower.includes('tire')) {
-            if (material.color) material.color.set("#222");
-            material.roughness = 0.6;
-            material.metalness = 0.1;
-            if (material.normalScale) material.normalScale.set(4, 4);
-            material.needsUpdate = true;
-        }
-        else if (nodeNameLower.includes('window') || nodeNameLower.includes('glass') || materialNameLower.includes('window') || materialNameLower.includes('glass')) {
-            material.metalness = 0;
-            if ('clearcoat' in material) material.clearcoat = 0.1;
-
-            // Ensure it's MeshPhysicalMaterial for proper transmission/ior
-            if (!(material instanceof THREE.MeshPhysicalMaterial)) {
-                const physicalMaterial = new THREE.MeshPhysicalMaterial({
-                    color: new THREE.Color("black"),
-                    roughness: 0,
-                    metalness: 0,
-                    transmission: 0.9, 
-                    ior: 1.5,
-                    thickness: 0.1, // Add thickness for refraction
-                    transparent: true,
-                    opacity: 0.3, // Keep opacity for visual effect
-                    envMapIntensity: 2,
-                    // Copy other relevant properties if needed from original material
-                    // map: material.map, // Example: copy texture map
-                });
-                // If the mesh had multiple materials, replace only this one
-                if (Array.isArray(material)) {
-                    const index = material.indexOf(material);
-                    if (index !== -1) material[index] = physicalMaterial;
-                } else {
-                    material = physicalMaterial;
-                }
-                material = physicalMaterial; // Update reference for needsUpdate
-            } else {
-                // Already PhysicalMaterial, just set properties
-                if (material.color) material.color.set("black");
-                material.roughness = 0;
-                material.metalness = 0;
-                material.transmission = 0.9;
-                material.ior = 1.5;
-                material.thickness = 0.1; // Ensure thickness is set
-                material.opacity = 0.3;
-                material.transparent = true;
-                material.envMapIntensity = 2;
+        // --- Material logic checks ---
+        // 1. Body/Paint Logic
+        if (!isWheel && (nodeNameLower.includes('body') || nodeNameLower.includes('paint') || nodeNameLower.includes('coat') || materialNameLower.includes('body') || materialNameLower.includes('paint') || materialNameLower.includes('coat'))) {
+            // Ensure currentMaterial is valid before accessing properties
+            if (currentMaterial && typeof currentMaterial === 'object') {
+                if (currentMaterial.color) currentMaterial.color.set(carCoatColor.value);
+                currentMaterial.roughness = 0.2;
+                currentMaterial.metalness = 0.3;
+                if ('clearcoat' in currentMaterial) currentMaterial.clearcoat = 0.5;
+                if ('clearcoatRoughness' in currentMaterial) currentMaterial.clearcoatRoughness = 0.1;
+                currentMaterial.envMapIntensity = 4;
+                needsUpdate = true;
             }
-            material.needsUpdate = true;
         }
-        else {
+        // 2. Wheel/Rim Logic 
+        else if (isWheel || (nodeNameLower.includes('wheel') || nodeNameLower.includes('rim') || materialNameLower.includes('wheel') || materialNameLower.includes('rim'))) {
+             if (currentMaterial && typeof currentMaterial === 'object') {
+                if (currentMaterial.color) currentMaterial.color.set(wheelColor.value);
+                 currentMaterial.roughness = 0.1;
+                 currentMaterial.metalness = 0.9;
+                 currentMaterial.envMapIntensity = 3;
+                 needsUpdate = true;
+             }
+        }
+        // 3. Tire/Rubber Logic
+        else if (nodeNameLower.includes('rubber') || nodeNameLower.includes('tire') || materialNameLower.includes('rubber') || materialNameLower.includes('tire')) {
+             if (currentMaterial && typeof currentMaterial === 'object') {
+                if (currentMaterial.color) currentMaterial.color.set("#222");
+                 currentMaterial.roughness = 0.6;
+                 currentMaterial.metalness = 0.1;
+                 if (currentMaterial.normalScale) currentMaterial.normalScale.set(4, 4);
+                 needsUpdate = true;
+             }
+        }
+        // 4. Window/Glass Logic
+        else if (nodeNameLower.includes('window') || nodeNameLower.includes('glass') || materialNameLower.includes('window') || materialNameLower.includes('glass')) {
+             // Check originalMaterial before potentially replacing it
+             if (originalMaterial && typeof originalMaterial === 'object') {
+                 if (!(originalMaterial instanceof THREE.MeshPhysicalMaterial)) {
+                    // Create new material (already an object)
+                    currentMaterial = new THREE.MeshPhysicalMaterial({
+                        color: originalMaterial.color ? originalMaterial.color.clone() : new THREE.Color("black"),
+                        map: originalMaterial.map || null,
+                        roughness: 0,
+                        metalness: 0,
+                        transmission: 0.9,
+                        ior: 1.5,
+                        thickness: 0.1,
+                        transparent: true,
+                        opacity: 0.3,
+                        envMapIntensity: 2,
+                    });
+                    // Replace material on mesh
+                    if (Array.isArray(mesh.material)) {
+                        const index = mesh.material.indexOf(originalMaterial);
+                        if (index !== -1) mesh.material[index] = currentMaterial;
+                    } else {
+                        mesh.material = currentMaterial;
+                    }
+                 }
+                 // Now apply properties to currentMaterial (which is guaranteed to be an object)
+                 if (currentMaterial.color) currentMaterial.color.set("black");
+                 currentMaterial.roughness = 0;
+                 currentMaterial.metalness = 0;
+                 currentMaterial.transmission = 0.9;
+                 currentMaterial.ior = 1.5;
+                 currentMaterial.thickness = 0.1;
+                 currentMaterial.opacity = 0.3;
+                 currentMaterial.transparent = true;
+                 currentMaterial.envMapIntensity = 2;
+                 needsUpdate = true; 
+             }
+        }
+        // --- End Material logic checks ---
+
+        // Final check before setting needsUpdate
+        if (needsUpdate && currentMaterial && typeof currentMaterial === 'object') {
+            currentMaterial.needsUpdate = true;
         }
     });
 };
 
 const loadVehicleConfig = async (vehicleId) => {
     try {
-        tuningStore.loadTuning(vehicleId);
-
         const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
         const baseVehicleData = vehicles.value.find(v => v.id === vehicleId);
 
         if (!baseVehicleData) {
             console.error(`Base data for vehicle ID ${vehicleId} not found!`);
             showNotification('找不到车辆基础数据', 'error');
-            return vehicles.value[0] || null;
+            return null;
         }
 
-        let finalConfig = {
-             ...baseVehicleData,
-             customSettings: vehicleDataFromDB?.customSettings ?? baseVehicleData.customSettings ?? {}
-        };
+        let finalConfig = { ...baseVehicleData };
+        let settingsSource = 'JSON';
 
-        const settings = finalConfig.customSettings;
-        const basePos = Array.isArray(baseVehicleData.position) ? baseVehicleData.position : [0, 0, 0];
+        if (vehicleDataFromDB?.customSettings) {
+             finalConfig.customSettings = {
+                 ...(baseVehicleData.customSettings ?? {}),
+                 ...(vehicleDataFromDB.customSettings ?? {})
+             };
+             settingsSource = 'DB';
+        } else {
+             finalConfig.customSettings = { ...(baseVehicleData.customSettings ?? {}) };
+        }
+         console.log(`Using settings for ${vehicleId} from: ${settingsSource}`);
+
+        tuningStore.setInitialParams(finalConfig.customSettings);
+
+        const settings = finalConfig.customSettings ?? {};
+        const basePos = Array.isArray(baseVehicleData.position) ? baseVehicleData.position : [0, -1.0, 0];
+        const baseColors = baseVehicleData.colors ?? {};
         const savedPos = settings.position;
+        const savedColors = settings.colors ?? {};
 
         debugScale.value = settings.scale ?? baseVehicleData.scale ?? 1.0;
         debugPosition.value = Array.isArray(savedPos) ? savedPos : basePos;
-        debugRotationY.value = settings.rotation ?? baseVehicleData.rotation ?? 0;
-        carCoatColor.value = settings.colors?.body ?? baseVehicleData.colors?.body ?? "#2f426f";
-        wheelColor.value = settings.colors?.wheel ?? baseVehicleData.colors?.wheel ?? "#1a1a1a";
+        if (debugPosition.value.length < 3) debugPosition.value = basePos;
+        if (debugPosition.value[1] === undefined || debugPosition.value[1] === null) debugPosition.value[1] = -1.0;
 
-        console.log(`Loaded config for ${vehicleId}:`, { finalConfig, debugScale: debugScale.value, debugPosition: debugPosition.value, debugRotationY: debugRotationY.value });
+        debugRotationY.value = settings.rotation ?? baseVehicleData.rotation ?? 0;
+        carCoatColor.value = savedColors.body ?? baseColors.body ?? "#2f426f";
+        wheelColor.value = savedColors.wheel ?? baseColors.wheel ?? "#1a1a1a";
 
         return finalConfig;
 
     } catch (error) {
         console.error(`Error loading config for ${vehicleId}:`, error);
         showNotification('加载车辆配置失败', 'error');
-        const baseVehicleData = vehicles.value.find(v => v.id === vehicleId) || vehicles.value[0] || null;
-        if (baseVehicleData) {
-             tuningStore.resetToDefaults();
-             debugScale.value = baseVehicleData.scale || 1.0;
-             debugPosition.value = Array.isArray(baseVehicleData.position) ? [...baseVehicleData.position] : [0, 0, 0];
-             debugRotationY.value = baseVehicleData.rotation || 0;
-             carCoatColor.value = baseVehicleData.colors?.body || "#2f426f";
-             wheelColor.value = baseVehicleData.colors?.wheel || "#1a1a1a";
-             return { ...baseVehicleData, customSettings: {} };
+        const fallbackVehicleData = vehicles.value.find(v => v.id === vehicleId) || vehicles.value[0];
+        if (fallbackVehicleData) {
+             tuningStore.resetToDefaults(); 
+             debugScale.value = fallbackVehicleData.scale || 1.0;
+             const basePos = Array.isArray(fallbackVehicleData.position) ? [...fallbackVehicleData.position] : [0, -1.0, 0];
+             debugPosition.value = basePos;
+             debugRotationY.value = fallbackVehicleData.rotation || 0;
+             carCoatColor.value = fallbackVehicleData.colors?.body || "#2f426f";
+             wheelColor.value = fallbackVehicleData.colors?.wheel || "#1a1a1a";
+             return { ...fallbackVehicleData, customSettings: {} };
         }
         return null;
     }
 };
 
-const selectVehicleById = async (newVehicleId) => {
-    console.log("Garage: Selecting vehicle:", newVehicleId);
-    if (currentVehicle.value?.id === newVehicleId) {
-        console.log("Garage: Vehicle already selected.");
-        return;
-    }
-
-    const newVehicleBase = vehicles.value.find(v => v.id === newVehicleId);
-    if (!newVehicleBase) {
-         console.error("Garage: Vehicle not found in list:", newVehicleId);
-         showNotification('车辆列表中找不到该车辆', 'error');
-         return;
-    }
-
-    // 2. 获取新车辆配置
-    const loadedFullConfig = await loadVehicleConfig(newVehicleId);
-    if (!loadedFullConfig) return;
-    currentVehicle.value = loadedFullConfig;
-    localStorage.setItem('lastSelectedVehicleId', newVehicleId);
-
-    // 3. 停止动画
-    stopAnimationLoop(); 
-    console.log("Garage: Animation loop stopped for vehicle switch.");
-
-    // 4. 清理物理引擎
-    const oldVehicleController = vehicleControllerRef.value;
-    if (oldVehicleController && typeof oldVehicleController.cleanupPhysics === 'function') {
-        console.log("Garage: Cleaning up previous vehicle physics...");
-        oldVehicleController.cleanupPhysics();
-        // 显式设置 null 可能有助于垃圾回收和状态判断
-        vehicleControllerRef.value = null;
-    } else {
-        console.log("Garage: No old vehicle physics to clean up.");
-    }
-
-    // 5. 清理视觉资源
-    console.log("Garage: Cleaning up THREE.js resources (environment and model)...");
-    cleanupEnvironment();
-    cleanupModelRefs();
-
-    const rawScene = toRaw(scene.value);
-    const rawRenderer = toRaw(renderer.value);
-    if (rawScene && rawRenderer) {
-        // 6. 重新初始化环境
-        initializeEnvironment(rawScene, rawRenderer, debugPosition.value[2] || 0);
-        console.log("Garage: Environment re-initialized for new vehicle.");
-    } else {
-        console.error("Garage: Scene/Renderer invalid during environment re-init.");
-    }
-
-    // 7. 加载新模型 (此时不应直接触发物理初始化)
-    await load3DModel();
- 
-    // 8. 最后再启动动画循环
-    // VehicleController 内部会根据 props 状态自行初始化物理
-    startAnimationLoop(() => {
-        // 确保 vehicleControllerRef 存在再调用
-        vehicleControllerRef.value?.handlePhysicsUpdate(); 
-    });
-    console.log("Garage: Vehicle switch complete, animation loop restarted.");
-};
-
 const handleVehicleUpdate = (newVehicleId) => {
-    if (currentVehicle.value?.id !== newVehicleId) {
-        selectVehicleById(newVehicleId);
+    const currentLoadedId = currentVehicle.value?.id;
+    if (currentLoadedId !== newVehicleId) {
+        localStorage.setItem('forceLoadVehicleId', newVehicleId);
+        window.location.reload();
+    } else {
     }
 };
 
 const changeVehicle = (direction) => {
-    if (!vehicles.value || vehicles.value.length === 0) return;
-    const currentIndex = vehicles.value.findIndex(v => v.id === currentVehicle.value?.id);
-    let nextIndex = (currentIndex === -1 ? 0 : currentIndex) + direction;
+    if (!vehicles.value || vehicles.value.length === 0 || !currentVehicle.value) return;
+
+    const currentIndex = vehicles.value.findIndex(v => v.id === currentVehicle.value.id);
+    if (currentIndex === -1) {
+        console.error("Garage: Current vehicle not found in list for switching.");
+        return;
+    }
+
+    let nextIndex = currentIndex + direction;
     if (nextIndex < 0) nextIndex = vehicles.value.length - 1;
     else if (nextIndex >= vehicles.value.length) nextIndex = 0;
-    selectVehicleById(vehicles.value[nextIndex].id);
+
+    const nextVehicleId = vehicles.value[nextIndex].id;
+
+    if (currentVehicle.value.id !== nextVehicleId) {
+        localStorage.setItem('forceLoadVehicleId', nextVehicleId);
+        window.location.reload();
+    }
 };
 
 const updateModelScale = (scale) => {
@@ -663,9 +632,7 @@ const updateModelPosition = (position) => {
     if (model.value) model.value.position.set(...position);
     const rawControls = toRaw(controls.value);
     if (rawControls && model.value) {
-        const box = new THREE.Box3().setFromObject(model.value);
-        const center = box.getCenter(new THREE.Vector3());
-        rawControls.target.copy(center);
+        rawControls.target.copy(model.value.position);
     }
 };
 const updateModelRotation = (rotation) => {
@@ -701,47 +668,65 @@ const updateAxesHelper = (size) => {
 };
 
 const updateTuningParam = (paramName, value) => {
-    tuningStore.updateParam(paramName, value);
+    if (paramName === 'connectionPoints') {
+        tuningStore.updateParam(paramName, value);
+    } else {
+        tuningStore.updateParam(paramName, value);
+    }
+    if (paramName === 'visualOffsetY' && model.value && physicsWorld.value) {
+        const physicsPosition = vehicleControllerRef.value?.vehicle?.chassisBody?.position;
+        if(physicsPosition) {
+            model.value.position.copy(physicsPosition).add(new THREE.Vector3(0, value, 0));
+        }
+    }
 };
 
 const handleSaveTuning = async () => {
     if (!currentVehicle.value?.id) {
-        showNotification('No vehicle selected to save tuning for.', 'error');
+        showNotification('未选择车辆，无法保存调优数据。', 'error');
         return;
     }
-    showNotification('Saving tuning...', 'info');
+
+    const customSettingsToSave = {
+        scale: debugScale.value,
+        position: debugPosition.value,
+        rotation: debugRotationY.value,
+        colors: {
+            body: carCoatColor.value,
+            wheel: wheelColor.value,
+        },
+        visualOffsetY: tuningParams.value.visualOffsetY,
+        wheelIndices: tuningParams.value.wheelIndices,
+        connectionPoints: tuningParams.value.connectionPoints,
+    };
+
+    showNotification('正在保存调优数据...', 'info');
     try {
-        await tuningStore.saveTuning(); 
-        showNotification('Tuning saved successfully!', 'success');
+        await tuningStore.saveTuning();
+        await vehicleService.batchUpdateVehicle(currentVehicle.value.id, { customSettings: customSettingsToSave });
+
+        showNotification('调优数据和设置已成功保存!', 'success');
     } catch (error) {
-        console.error("Garage: Failed to save tuning:", error);
-        showNotification('Failed to save tuning.', 'error');
+        console.error("Garage: Failed to save tuning/settings:", error);
+        showNotification('保存调优数据或设置失败。', 'error');
     }
 };
 
 const handleConfigsImported = async () => {
-    showNotification('Reloading vehicle configurations...', 'info');
+    showNotification('重新加载车辆配置...', 'info');
     try {
-        const oldVehicleId = currentVehicle.value?.id;
-        vehicles.value = await getVehicles();
-        showNotification('Configurations reloaded', 'success');
-        if (oldVehicleId && vehicles.value.some(v => v.id === oldVehicleId)) {
-             await selectVehicleById(oldVehicleId);
-        } else if (vehicles.value.length > 0) {
-             await selectVehicleById(vehicles.value[0].id);
-        } else {
-            cleanupModelRefs();
-            currentVehicle.value = null;
-            tuningStore.resetToDefaults();
+        if (currentVehicle.value?.id) {
+            localStorage.setItem('lastSelectedVehicleId', currentVehicle.value.id);
+            localStorage.setItem('forceLoadVehicleId', currentVehicle.value.id);
         }
+        window.location.reload();
     } catch (error) {
-        console.error('Failed to reload vehicle list:', error);
-        showNotification('Failed to reload configurations', 'error');
+        console.error('Error triggering configuration reload:', error);
+        showNotification('重新加载配置失败', 'error');
     }
 };
 
 const initializeApp = async () => {
-    console.log("Garage: Initializing application...");
     let initSuccess = false;
     try {
         vehicles.value = await getVehicles();
@@ -751,34 +736,67 @@ const initializeApp = async () => {
             return;
         }
 
-        let vehicleIdToLoad = vehicles.value[0].id;
-        const lastVehicleId = localStorage.getItem('lastSelectedVehicleId');
-        if (lastVehicleId && vehicles.value.some(v => v.id === lastVehicleId)) {
-            vehicleIdToLoad = lastVehicleId;
+        let vehicleIdToLoad = null;
+        let isForceLoad = false;
+        const forceLoadId = localStorage.getItem('forceLoadVehicleId');
+
+        if (forceLoadId && vehicles.value.some(v => v.id === forceLoadId)) {
+            vehicleIdToLoad = forceLoadId;
+            localStorage.removeItem('forceLoadVehicleId');
+            isForceLoad = true;
         } else {
-             if(lastVehicleId) localStorage.removeItem('lastSelectedVehicleId');
+            const lastVehicleId = localStorage.getItem('lastSelectedVehicleId');
+            if (lastVehicleId && vehicles.value.some(v => v.id === lastVehicleId)) {
+                vehicleIdToLoad = lastVehicleId;
+            } else {
+                if (lastVehicleId) localStorage.removeItem('lastSelectedVehicleId');
+                vehicleIdToLoad = vehicles.value[0].id;
+            }
+        }
+
+        if (!vehicleIdToLoad) {
+            console.error("Garage: Could not determine a valid vehicle ID to load.");
+            showNotification('无法确定要加载的车辆ID', 'error');
+            return;
         }
 
         const initialConfig = await loadVehicleConfig(vehicleIdToLoad);
         if (!initialConfig) {
-             console.error("Garage: Failed to load initial vehicle configuration.");
+             console.error("Garage: Failed to load initial vehicle configuration for ID:", vehicleIdToLoad);
              showNotification('加载初始车辆配置失败', 'error');
-             return;
+             if (vehicleIdToLoad !== vehicles.value[0].id) {
+                 const fallbackConfig = await loadVehicleConfig(vehicles.value[0].id);
+                 if (fallbackConfig) {
+                     currentVehicle.value = fallbackConfig;
+                     localStorage.setItem('lastSelectedVehicleId', vehicles.value[0].id);
+                 } else {
+                     return;
+                 }
+             } else {
+                 return;
+             }
+        } else {
+             currentVehicle.value = initialConfig;
+             localStorage.setItem('lastSelectedVehicleId', vehicleIdToLoad);
         }
-        currentVehicle.value = initialConfig;
 
         const stopWatchScene = watch([scene, renderer], async ([sceneVal, rendererVal]) => {
             if (sceneVal && rendererVal && !initSuccess) {
-                console.log("Garage: Scene and Renderer are ready.");
                 initializeEnvironment(sceneVal, rendererVal, debugPosition.value[2] || 0);
-                console.log("Garage: Environment initialized.");
 
                 await load3DModel();
 
                 startAnimationLoop(() => {
-                    vehicleControllerRef.value?.handlePhysicsUpdate();
+                    // Ensure physics updates happen in the animation loop
+                    // Check if the ref is populated AND the function exists before calling
+                    if (physicsEngineRef.value && typeof physicsEngineRef.value.stepPhysics === 'function') {
+                        physicsEngineRef.value.stepPhysics(); 
+                    }
+                    // Similarly, check for vehicle controller readiness if needed
+                    if (vehicleControllerRef.value && typeof vehicleControllerRef.value.handlePhysicsUpdate === 'function') {
+                       vehicleControllerRef.value.handlePhysicsUpdate(); 
+                    }
                 });
-                console.log("Garage: Animation loop started.");
 
                 setupKeyListener();
                 initSuccess = true;
@@ -786,7 +804,6 @@ const initializeApp = async () => {
             }
         }, { immediate: true });
 
-        console.log('Garage: Initialization sequence started.');
 
     } catch (error) {
         console.error('Garage: Initialization failed:', error);
@@ -799,20 +816,21 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-    console.log("Garage: Cleaning up component...");
     stopAnimationLoop();
     if (vehicleControllerRef.value && typeof vehicleControllerRef.value.cleanupPhysics === 'function') {
-        console.log("Garage: Cleaning up vehicle controller physics.");
+      
         vehicleControllerRef.value.cleanupPhysics();
     }
     vehicleControllerRef.value = null;
+    if (physicsEngineRef.value && typeof physicsEngineRef.value.cleanupPhysics === 'function') {
+        physicsEngineRef.value.cleanupPhysics();
+    }
     physicsEngineRef.value = null;
     physicsWorld.value = null;
     cleanupEnvironment();
     cleanupModelRefs();
     cleanupScene();
     removeKeyListener();
-    console.log("Garage: Component cleanup finished.");
 });
 
 const handleKeyDown = (event) => {
@@ -830,119 +848,87 @@ const handleKeyDown = (event) => {
 const setupKeyListener = () => { window.addEventListener('keydown', handleKeyDown); };
 const removeKeyListener = () => { window.removeEventListener('keydown', handleKeyDown); };
 
+watch(() => tuningParams.value.visualOffsetY, (value) => {
+    if (model.value && physicsWorld.value) {
+        const physicsPosition = vehicleControllerRef.value?.vehicle?.chassisBody?.position;
+        if(physicsPosition) {
+            model.value.position.copy(physicsPosition).add(new THREE.Vector3(0, value, 0));
+        }
+    }
+}, { immediate: false });
+
 watch(carCoatColor, () => { if (model.value) customModel(); });
 watch(wheelColor, () => { if (model.value) customModel(); });
 
 const physicsEngineRef = ref(null);
 const vehicleControllerRef = ref(null);
-
 const physicsWorld = shallowRef(null);
 
 const { controlState } = useInputControls();
 
 const handlePhysicsReady = (payload) => {
-  console.log("Garage: Physics world is ready.");
   physicsWorld.value = markRaw(payload.world);
-  // 由 VehicleController 内部 watch 或 onMounted 逻辑处理物理初始化
-  // tryInitializeVehiclePhysics(); 
-};
-
-const handleCarReady = () => {
-  console.log("Garage: VehicleController reported car physics ready.");
 };
 
 const finalWheelQuaternion = new THREE.Quaternion();
-const tempWorldPosition = new THREE.Vector3(); // Temporary vector for world position
 const initialCorrectionQuaternion = new THREE.Quaternion();
-const tempMatrix = new THREE.Matrix4(); // Reusable matrix
-const tempQuaternion = new THREE.Quaternion(); // Reusable quaternion
-const tempScale = new THREE.Vector3(); // Reusable vector for scale decomposition
 const targetWorldMatrix = new THREE.Matrix4();
 const targetLocalMatrix = new THREE.Matrix4();
-const tempPosition = new THREE.Vector3();
+const tempMatrix = new THREE.Matrix4();
+const tempScale = new THREE.Vector3();
 
 const handleVehiclePositionUpdate = (update) => {
   if (!model.value || !update.position || !update.quaternion || !update.wheelPositions || !update.wheelQuaternions) {
       return;
   }
 
-  // 1. 更新车身模型的世界位置和旋转 (应用偏移)
+  // 1. Update Chassis Model Position & Rotation (Applying Visual Offset)
   model.value.position.copy(update.position).add(new THREE.Vector3(0, tuningParams.value.visualOffsetY, 0));
   model.value.quaternion.copy(update.quaternion);
 
-  // --- 添加: 更新 OrbitControls 的目标点 ---
+  // 2. Update OrbitControls Target to follow the visual model position - 确保每次更新时都更新相机跟踪点
   const rawControls = toRaw(controls.value);
   if (rawControls && model.value) {
-      rawControls.target.copy(model.value.position); 
+      rawControls.target.copy(model.value.position);
   }
-  // --- 结束添加 ---
 
-  // 确保车身模型的世界矩阵是最新的
+  // Ensure the chassis model's world matrix is updated *before* calculating wheel positions
   model.value.updateMatrixWorld(true);
 
-  // 2. 准备初始旋转修正 (保持不变)
+  // 3. Prepare Initial Wheel Rotation Correction
   const axisMap = { x: new THREE.Vector3(1, 0, 0), y: new THREE.Vector3(0, 1, 0), z: new THREE.Vector3(0, 0, 1) };
   const correctionAxis = axisMap[tuningParams.value.initialCorrectionAxis] || axisMap.x;
   const angleRad = THREE.MathUtils.degToRad(tuningParams.value.initialCorrectionAngle);
   initialCorrectionQuaternion.setFromAxisAngle(correctionAxis, angleRad);
 
-  // 3. 遍历轮毂网格并更新其世界变换
+  // 4. Update Wheel Mesh Transforms
   const wheelIndices = tuningParams.value.wheelIndices;
   const wheelMeshes = wheelMeshRefs.value;
 
   for (const wheelKey in wheelMeshes) {
       const mesh = wheelMeshes[wheelKey];
-      const index = wheelIndices[wheelKey];
+      const physicsIndex = wheelIndices[wheelKey];
 
-      if (mesh && index !== undefined && index >= 0 && index < update.wheelPositions.length &&
-          update.wheelPositions[index] &&
-          update.wheelQuaternions[index]) {
+      if (mesh && physicsIndex !== undefined && physicsIndex >= 0 && physicsIndex < update.wheelPositions.length &&
+          update.wheelPositions[physicsIndex] && update.wheelQuaternions[physicsIndex]) {
 
-        const physicsWheelWorldPosition = update.wheelPositions[index];
-        const physicsWheelWorldQuaternion = update.wheelQuaternions[index];
+          const physicsWheelWorldPosition = update.wheelPositions[physicsIndex];
+          const physicsWheelWorldQuaternion = update.wheelQuaternions[physicsIndex];
 
-        // --- 更新变换逻辑 V2: 使用矩阵分解 ---
-        // 确保父级矩阵已更新
-        mesh.parent.updateMatrixWorld(true);
+          if (mesh.parent) {
+               mesh.parent.updateMatrixWorld(true);
+          } else {
+               console.warn(`Garage: Wheel mesh ${mesh.name} has no parent!`);
+               continue;
+          }
 
-        // a. 计算目标世界旋转 (物理旋转 * 初始修正)
-        finalWheelQuaternion.copy(physicsWheelWorldQuaternion).multiply(initialCorrectionQuaternion);
-
-        // b. 构造目标世界矩阵 (位置: 物理位置, 旋转: 最终旋转, 缩放: 1,1,1)
-        targetWorldMatrix.compose(physicsWheelWorldPosition, finalWheelQuaternion, tempScale.set(1, 1, 1));
-
-        // c. 计算父级的逆世界矩阵
-        tempMatrix.copy(mesh.parent.matrixWorld).invert(); // Reusable tempMatrix holds parent inverse
-
-        // d. 计算目标本地矩阵 (父级逆矩阵 * 目标世界矩阵)
-        targetLocalMatrix.multiplyMatrices(tempMatrix, targetWorldMatrix);
-
-        // e. 分解目标本地矩阵
-        targetLocalMatrix.decompose(mesh.position, mesh.quaternion, tempScale); // Decompose into mesh's local props, ignore scale
-
-        // f. 再次强制设置本地缩放为 1 (安全措施)
-        mesh.scale.set(1, 1, 1);
-        // --- 结束更新 V2 ---
-
-      } else if (mesh && (index === undefined || index < 0 || index >= update.wheelPositions.length)) {
-          // console.warn(`Garage: Invalid or out-of-bounds index (${index}) for wheel ${wheelKey} from tuningParams.wheelIndices.`);
-      } else if (mesh && (!update.wheelPositions[index] || !update.wheelQuaternions[index])) {
-          // console.warn(`Garage: Missing physics data for wheel ${mesh.name} or invalid index`);
+          finalWheelQuaternion.copy(physicsWheelWorldQuaternion).multiply(initialCorrectionQuaternion);
+          targetWorldMatrix.compose(physicsWheelWorldPosition, finalWheelQuaternion, tempScale.set(1, 1, 1));
+          tempMatrix.copy(mesh.parent.matrixWorld).invert();
+          targetLocalMatrix.multiplyMatrices(tempMatrix, targetWorldMatrix);
+          targetLocalMatrix.decompose(mesh.position, mesh.quaternion, tempScale);
+          mesh.scale.set(1, 1, 1);
       }
-  }
-};
-
-const tryInitializeVehiclePhysics = () => {
-  // 这个函数现在主要由 VehicleController 内部逻辑触发， Garage.vue 不再直接调用
-  const controller = vehicleControllerRef.value;
-  const world = physicsWorld.value;
-  const vehicleData = currentVehicle.value;
-  const carModel = model.value;
-
-  if (controller && world && vehicleData && carModel && !controller.isReady) {
-     console.log("Garage: Conditions met, initializing vehicle physics...");
-     controller.initializePhysics();
-  } else {
   }
 };
 

@@ -10,10 +10,6 @@ export function useInputControls() {
   function setupInputListeners() {
     // Setup Keyboard
     keyboardController = new KeyboardController(controlState.value);
-    
-    // Setup Touch (if/when implemented)
-    // touchController = new TouchController(controlState.value);
-    console.log("Input listeners setup.");
   }
 
   function removeInputListeners() {

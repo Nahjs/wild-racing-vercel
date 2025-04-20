@@ -153,6 +153,8 @@ export function useEnvironmentSetup(options = {}) {
       side: DoubleSide,
       color: "#00ff1a",
       emissive: "#ac8f3e",
+      transparent: true,
+      opacity: 0.6,
     }));
     const geometry = markRaw(new PlaneGeometry(200, 200));
     const floor = markRaw(new Mesh(geometry, material));

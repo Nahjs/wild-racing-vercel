@@ -120,7 +120,6 @@ export default {
     
     // 监听 debug prop 的变化来创建/销毁调试渲染器
     watch(() => props.debug, (newDebugValue) => {
-      console.log(`[PhysicsEngine] Debug prop changed to: ${newDebugValue}`);
       if (newDebugValue) {
         if (!debugRenderer.value && props.scene && world.value) {
           debugRenderer.value = new CannonDebugRenderer(props.scene, world.value);

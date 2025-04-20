@@ -27,7 +27,6 @@ export class KeyboardController {
     this.keyUpHandler = this.handleKeyUp.bind(this);     // Bind 'this'
     this.blurHandler = this.handleBlur.bind(this);       // Bind 'this'
     this.setupListeners();
-    console.log("KeyboardController initialized.");
   }
   
   handleKeyDown(e) {
@@ -61,7 +60,6 @@ export class KeyboardController {
   }
   
   handleBlur() {
-    console.log("Window lost focus (blur event), resetting controls.");
     this.controls.reset();
   }
   
@@ -129,7 +127,6 @@ export class TouchController {
   }
   
   handleBlur() {
-    console.log("Window lost focus (blur event), resetting touch controls.");
     this.controls.reset();
   }
 

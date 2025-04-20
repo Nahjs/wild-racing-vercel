@@ -27,10 +27,10 @@ const defaultOptions = {
     maxPolarAngle: Math.PI / 2,
   },
   enableGridHelper: false, // Initially false, controlled by debug panel
-  gridSize: 10,
-  gridDivisions: 10,
+  gridSize: 1000,
+  gridDivisions: 1000,
   enableAxesHelper: false, // Initially false, controlled by debug panel
-  axesSize: 1,
+  axesSize: 10,
 };
 
 export function useSceneSetup(canvasRef, options = {}) {
@@ -159,10 +159,11 @@ export function useSceneSetup(canvasRef, options = {}) {
   }
 
   // --- Helper Functions --- 
-  function addGridHelper(size = 10, divisions = 10) {
+  function addGridHelper(size = 100, divisions = 100) {
       if (!rawScene) return;
       removeGridHelper(); // Remove existing if any
       gridHelper = markRaw(new THREE.GridHelper(size, divisions));
+      gridHelper.position.y = -1;
       rawScene.add(gridHelper);
   }
 
@@ -175,10 +176,11 @@ export function useSceneSetup(canvasRef, options = {}) {
       }
   }
 
-  function addAxesHelper(size = 1) {
+  function addAxesHelper(size = 10) {
       if (!rawScene) return;
       removeAxesHelper(); // Remove existing if any
       axesHelper = markRaw(new THREE.AxesHelper(size));
+      axesHelper.position.y = -1;
       rawScene.add(axesHelper);
   }
 

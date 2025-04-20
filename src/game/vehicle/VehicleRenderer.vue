@@ -16,8 +16,8 @@ import * as THREE from 'three';
 import { markRaw } from 'vue';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { useSceneSetup } from '@/composables/useSceneSetup'; // Import the scene setup composable
-import { useEnvironmentSetup } from '@/composables/useEnvironmentSetup'; // 引入环境设置组合式函数
+import { useSceneSetup } from '@/composables/garage/useSceneSetup'; // Import the scene setup composable
+import { useEnvironmentSetup } from '@/composables/garage/useEnvironmentSetup'; // 引入环境设置组合式函数
 
 export default {
   name: 'VehicleRenderer', // Renamed component
@@ -41,6 +41,11 @@ export default {
     wheelPositions: {
       type: Array,
       default: () => []
+    },
+    // 添加车轮索引映射 prop
+    wheelIndices: {
+      type: Object,
+      required: true
     },
     // 添加车轮修正属性
     initialCorrectionAxis: {
@@ -367,7 +372,7 @@ export default {
     };
 
     // --- Wheel Rotation Logic (Remains mostly the same) ---
-    const updateWheelRotations = () => { 
+    const updateWheelRotations = () => {
       if (!carModel.value || !props.wheelQuaternions || props.wheelQuaternions.length < 4) return;
 
       const chassisQuaternion = carModel.value.quaternion;
@@ -387,16 +392,29 @@ export default {
       // --------------------------------------------
 
       try {
-          const wheelRefsMap = {
-              0: wheelMeshRefs.value.rl, // 左后
-              1: wheelMeshRefs.value.rr, // 右后
-              2: wheelMeshRefs.value.fl, // 左前
-              3: wheelMeshRefs.value.fr  // 右前
-          };
+          // --- 使用传入的 wheelIndices prop 进行映射 ---
+          // 创建一个反向查找映射：物理索引 -> 渲染器车轮键名 (fl, fr, rl, rr)
+          const physicsIndexToMeshKey = {};
+          for (const key in props.wheelIndices) {
+              // 注意转换: wheelIndices prop 的键是 'FL', 'FR', 'BL', 'BR'
+              // 而 wheelMeshRefs 的键是 'fl', 'fr', 'rl', 'rr'
+              const meshKey = key.toLowerCase().replace('b', 'r'); // 将 BL/BR 转换为 rl/rr
+              physicsIndexToMeshKey[props.wheelIndices[key]] = meshKey;
+          }
+          // -------------------------------------------------
 
           for (let i = 0; i < props.wheelQuaternions.length; i++) {
-              const wheelRef = wheelRefsMap[i];
-              const physicsQuaternion = props.wheelQuaternions[i]; 
+              // --- 根据物理索引 i 查找对应的渲染器车轮键名 ---
+              const meshKey = physicsIndexToMeshKey[i];
+              if (!meshKey) {
+                  console.warn(`VehicleRenderer: No mesh key found for physics index ${i} in wheelIndices.`);
+                  continue;
+              }
+              // --- 获取对应的车轮引用 ---
+              const wheelRef = wheelMeshRefs.value[meshKey];
+              // --------------------------
+
+              const physicsQuaternion = props.wheelQuaternions[i];
 
               if (wheelRef && physicsQuaternion instanceof THREE.Quaternion) {
                   // 1. 计算局部物理旋转

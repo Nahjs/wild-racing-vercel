@@ -9,7 +9,7 @@ class TrackManager {
     this.checkpoints = []; // 检查点列表
     this.trackObjects = []; // 赛道上的物体
     this.isLoading = false; // 加载状态
-    this.defaultTrackPath = '/models/tracks/default_track.glb';
+    this.defaultTrackPath = '/track/default_track.glb';
   }
 
   // 加载赛道模型
@@ -65,7 +65,7 @@ class TrackManager {
     if (trackId === 'default') {
       return this.defaultTrackPath;
     }
-    return `/models/tracks/${trackId}.glb`;
+    return `/track/karting_club_lider__karting_race_track_early.glb`;
   }
   
   // 处理赛道模型
@@ -112,25 +112,26 @@ class TrackManager {
   
   // 获取起始位置
   getStartPosition() {
-    const defaultStart = new THREE.Vector3(0, 0.5, 0);
+    const defaultStart = new THREE.Vector3(0, 0.3, 0);
     
     if (!this.currentTrack) return defaultStart;
     
     // 查找起始位置标记
     let startMarker = null;
     this.currentTrack.traverse(node => {
-      if (node.name === 'start_position') {
+      if (node.name.toLowerCase().includes('start')) {
+        console.log(`[TrackManager] 找到起点标记: ${node.name}`, node.position);
         startMarker = node;
       }
     });
     
     if (startMarker) {
-      return startMarker.position.clone().add(new THREE.Vector3(0, 0.5, 0));
+      return startMarker.position.clone().add(new THREE.Vector3(0, 0.3, 0));
     }
     
     // 如果没有找到起始位置标记，使用第一个检查点的位置
     if (this.checkpoints.length > 0) {
-      return this.checkpoints[0].position.clone().add(new THREE.Vector3(0, 0.5, 0));
+      return this.checkpoints[0].position.clone().add(new THREE.Vector3(0, 0.3, 0));
     }
     
     return defaultStart;

@@ -59,7 +59,7 @@ export default {
         if (props.debug && debugRenderer.value) {
           debugRenderer.value.update();
         } else if (props.debug && !debugRenderer.value) {
-          console.warn("[PhysicsEngine Debug] Debug prop is true, but debugRenderer is not initialized!");
+         // console.warn("[PhysicsEngine Debug] Debug prop is true, but debugRenderer is not initialized!");
         }
         
         // 发送物理更新事件

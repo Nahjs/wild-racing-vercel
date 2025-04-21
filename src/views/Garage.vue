@@ -120,6 +120,7 @@
       :scale="debugScale"
       :initialPosition="{ x: debugPosition[0], y: -0.5, z: debugPosition[2] }"
       :selectedVehicle="currentVehicle"
+      :controlState="controlState"
       @position-update="handleVehiclePositionUpdate"
     />
   </div>
@@ -813,6 +814,8 @@ const initializeApp = async () => {
                 startAnimationLoop(() => {
                     // Ensure physics updates happen in the animation loop
                     // Check if the ref is populated AND the function exists before calling
+                    console.log("[Garage Animation Loop] Checking controlState before calling child:", controlState);
+                    
                     if (physicsEngineRef.value && typeof physicsEngineRef.value.stepPhysics === 'function') {
                         physicsEngineRef.value.stepPhysics(); 
                     }

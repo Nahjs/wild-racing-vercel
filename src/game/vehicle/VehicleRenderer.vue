@@ -18,12 +18,14 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { useSceneSetup } from '@/composables/garage/useSceneSetup'; // Import the scene setup composable
 import { useEnvironmentSetup } from '@/composables/garage/useEnvironmentSetup'; // 引入环境设置组合式函数
+import { useDeviceDetection } from '@/composables/useDeviceDetection'; // 修正导入路径
 
 export default {
   name: 'VehicleRenderer', // Renamed component
   emits: [
     'scene-ready',
-    'model-ready'
+    'model-ready',
+    'camera-ready'
   ],
   props: {
     selectedVehicle: { 
@@ -82,20 +84,43 @@ export default {
   setup(props, { emit }) {
     const canvas = ref(null);
     const isLoading = ref(false); // Internal loading state for the model
+    
+    // 引入设备检测
+    const { isMobile } = useDeviceDetection();
 
     // Use the scene setup composable
     // Pass the canvas ref to the composable
     const { scene, camera, renderer, controls, startAnimationLoop, stopAnimationLoop } = useSceneSetup(canvas);
+    
+    // 如果是移动设备，设置较低的渲染质量
+    onMounted(() => {
+      nextTick(() => {
+        if (isMobile.value && renderer.value) {
+          console.log("移动设备检测到，降低渲染质量以提高性能");
+          renderer.value.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+          
+          // 根据设备性能降低阴影质量
+          if (renderer.value.shadowMap) {
+            renderer.value.shadowMap.autoUpdate = false;
+            renderer.value.shadowMap.needsUpdate = true;
+          }
+        }
+      });
+    });
     
     // 使用环境设置组合式函数
     const { 
       initializeEnvironment, 
       cleanupEnvironment 
     } = useEnvironmentSetup({
-      enableContactShadow: props.enableContactShadow,
+      enableContactShadow: props.enableContactShadow && !isMobile.value, // 移动设备禁用接触阴影
       enableEnvironmentMap: props.enableEnvironmentMap,
-      enableBigSpotLight: props.enableBigSpotLight
+      enableBigSpotLight: props.enableBigSpotLight && !isMobile.value, // 移动设备禁用大型聚光灯
+      isMobile
     });
+    
+    // 添加标志位防止 camera-ready 重复触发
+    const cameraReadyEmitted = ref(false);
     
     // Local refs for this component's specific objects
     const carModel = ref(null);
@@ -276,6 +301,16 @@ export default {
 
             // 发送 model-ready 事件，传递正确的模型对象 (THREE.Group)
             emit('model-ready', carModel.value); 
+            
+            // 模型加载完成后，尝试更新相机位置并发送相机就绪事件
+            nextTick(() => {
+              updateCameraPosition();
+              // 检查标志位，防止重复触发
+              if (camera.value && !cameraReadyEmitted.value) {
+                cameraReadyEmitted.value = true;
+                emit('camera-ready', camera.value);
+              }
+            });
         } else {
             console.error('VehicleRenderer: Loaded GLTF is invalid or does not contain a scene.');
             // 这里可以添加加载失败的 fallback 逻辑
@@ -501,6 +536,15 @@ export default {
       });
     };
 
+    // 监听相机引用变化
+    watch(() => camera.value, (newCamera) => {
+      // 检查标志位，防止重复触发
+      if (newCamera && !cameraReadyEmitted.value) {
+        cameraReadyEmitted.value = true;
+        emit('camera-ready', newCamera);
+      }
+    });
+
     // --- Lifecycle Hooks --- 
     onMounted(() => {
       // Scene init is handled by the composable automatically on mount.
@@ -508,11 +552,39 @@ export default {
       // and for the canvas to be ready.
       nextTick(async () => { 
           console.log("VehicleRenderer: onMounted nextTick - Start");
+          
+          // 确保先等待渲染器和场景初始化
+          let retries = 0;
+          const maxRetries = 10;
+          while ((!scene.value || !renderer.value) && retries < maxRetries) {
+            console.log(`VehicleRenderer: 等待场景和渲染器初始化，尝试 ${retries + 1}/${maxRetries}`);
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries++;
+          }
+          
           if (scene.value && renderer.value) { // Check if scene and renderer from composable are ready
               // 禁用useSceneSetup中的controls，让useCamera完全接管相机控制
               if (controls.value) {
                 controls.value.enabled = false;
                 console.log("VehicleRenderer: Disabled controls from useSceneSetup to let useCamera take over.");
+              }
+
+              // 在相机准备好时发送事件
+              if (camera.value) {
+                console.log("VehicleRenderer: 相机已初始化，发送camera-ready事件");
+                emit('camera-ready', camera.value);
+              } else {
+                console.warn("VehicleRenderer: 相机尚未初始化，将在创建后发送事件");
+                // 创建一个监听器检查camera.value变化
+                const unwatch = watch(() => camera.value, (newCamera) => {
+                  // 检查标志位，防止重复触发
+                  if (newCamera && !cameraReadyEmitted.value) {
+                    cameraReadyEmitted.value = true;
+                    console.log("VehicleRenderer: 相机已初始化(通过监听)，发送camera-ready事件");
+                    emit('camera-ready', newCamera);
+                    unwatch(); // 移除监听器
+                  }
+                }, { immediate: true });
               }
 
               // 初始化环境(如果启用)
@@ -619,8 +691,58 @@ export default {
       cameraMode, 
       updateWheelAxesVisibility,
       wheelMeshRefs, // 暴露车轮引用，便于调试
-      // 添加getCamera方法，返回相机引用
-      getCamera: () => camera.value,
+      // 修复getCamera方法，确保它能够正确返回相机引用
+      getCamera() {
+        try {
+          // camera是setup中定义的响应式引用，应该始终存在
+          // 检查camera.value是否存在
+          if (camera && camera.value) {
+            return camera.value;
+          } else {
+            console.warn('VehicleRenderer: Camera引用不可用，创建备用相机');
+            return this.createFallbackCamera();
+          }
+        } catch (error) {
+          console.error('VehicleRenderer: 获取相机时发生错误', error);
+          return this.createFallbackCamera();
+        }
+      },
+      
+      // 创建备用相机
+      createFallbackCamera() {
+        console.log('VehicleRenderer: 创建备用相机');
+        try {
+          // 创建一个基本的透视相机作为备用
+          const fallbackCamera = markRaw(new THREE.PerspectiveCamera(
+            75, // 视场角度
+            window.innerWidth / window.innerHeight, // 宽高比
+            0.1, // 近截面
+            1000 // 远截面
+          ));
+          
+          // 设置相机位置
+          fallbackCamera.position.set(0, 5, -10);
+          fallbackCamera.lookAt(0, 0, 0);
+          
+          // 确保相机MatrixWorld已更新
+          fallbackCamera.updateMatrixWorld(true);
+          
+          // 如果场景存在，将相机添加到场景中
+          if (scene && scene.value) {
+            scene.value.add(fallbackCamera);
+            console.log('VehicleRenderer: 备用相机已添加到场景');
+          }
+          
+          return fallbackCamera;
+        } catch (error) {
+          console.error('VehicleRenderer: 创建备用相机时出错', error);
+          // 创建最基本的相机作为最终备用
+          const basicCamera = markRaw(new THREE.PerspectiveCamera());
+          basicCamera.position.z = 5;
+          return basicCamera;
+        }
+      },
+      
       // 暴露自定义模型材质方法
       customizeModelMaterials
     };

@@ -14,6 +14,7 @@
       ref="track"
       @scene-ready="onSceneReady"
       @model-ready="onModelReady"
+      @camera-ready="onCameraReady"
       :is-loading-prop="isLoading"
       :selected-vehicle="currentVehicle"
       :wheel-quaternions="wheelQuaternions"
@@ -29,13 +30,14 @@
     />
     
     <VehicleController
-      v-if="!isLoadingVehicle && currentVehicle && world && scene"
-      ref="carController"
+      v-if="world && scene"
+      :ref="setCarControllerRef"
       :world="world"
       :scene="scene"
       :carModel="carModel"
       :initialPosition="startPosition"
       :selectedVehicle="currentVehicle"
+      :controlState="controls"
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
     />
@@ -56,6 +58,14 @@
       @restart="restartRace"
       @exit="exitRace"
     />
+    
+    <!-- 移动触摸控制 - 直接在Race.vue中添加 -->
+    <TouchControls 
+      v-if="controls" 
+      :controlState="controls" 
+      :currentCameraMode="currentCameraMode"
+      :switchCameraMode="cameraControls.nextMode"
+    />
   </div>
 </template>
 
@@ -69,12 +79,14 @@ import { vehiclesList } from '@/config/vehicles';
 import { vehicleService } from '@/services/vehicleService';
 import * as THREE from 'three'; // 导入THREE用于创建相机
 import { useTuningStore } from '@/store/tuning'; 
-import { useCamera } from '@/composables/useCamera'; // Import the composable
+import { useCamera } from '@/composables/game/useCamera'; // Import the composable
 import { useRaceLogic } from '@/composables/game/useRaceLogic'; // 引入比赛逻辑
 import { trackManager } from '@/game/track/TrackManager'; // 引入赛道管理器
+import { useInputControls } from '@/composables/useInputControls'; // 引入输入控制组合式函数
 
 // 引入UI组件
 import RaceHUD from '@/components/race/RaceHUD.vue';
+import TouchControls from '@/components/TouchControls.vue'; // 引入触摸控制组件
 
 // 引入 pinia storeToRefs
 import { storeToRefs } from 'pinia';
@@ -85,13 +97,17 @@ export default {
     PhysicsEngine,
     VehicleController,
     VehicleRenderer,
-    RaceHUD
+    RaceHUD,
+    TouchControls
   },
   setup() {
     const router = useRouter();
     
     // 储存动画帧ID
     let renderFrameId = null;
+    
+    // 获取输入控制
+    const { controlState: controls, isMobile } = useInputControls();
     
     // Instantiate the store
     const tuningStore = useTuningStore();
@@ -114,6 +130,9 @@ export default {
     // 添加视角演示状态跟踪
     const isAutoCameraRotationComplete = ref(false);
     
+    // 添加标志位防止重复执行视角演示
+    const isCameraDemoStarted = ref(false);
+    
     // 界面控制
     const showInterface = ref(true);
     const speed = ref(0);
@@ -121,7 +140,7 @@ export default {
     // 赛道信息
     const trackId = ref('karting_club_lider__karting_race_track_early'); // 赛道ID，可从配置或路由参数获取
     const isLoadingTrack = ref(true);
-    const startPosition = ref(new THREE.Vector3(0, 0.2, 30)); // 临时起点位置
+    const startPosition = ref(new THREE.Vector3(0, 0.2, 8)); // 临时起点位置
     
     // 在setup函数中添加currentVehicle引用，初始化为 null
     const currentVehicle = ref(null);
@@ -163,7 +182,7 @@ export default {
     // Destructure refs/functions needed in template/return, AND get the full object
     const cameraControls = useCamera(cameraRef, carModel, rendererElement, { initialMode: 0 });
     const {
-      isInitialized: isCameraInitialized,
+      isInitialized: isCameraComposableInitialized,
       currentCameraMode: cameraModeFromComposable,
       cameraParams: cameraParamsFromComposable,
       isSaving: isSavingCamera,
@@ -228,6 +247,7 @@ export default {
         
         // 如果车辆控制器已准备好且视角演示已完成，而且比赛还没开始，现在可以开始倒计时
         if (isCarControllerReady.value && isAutoCameraRotationComplete.value && raceStatus.value === 'waiting') {
+          console.log('[Race] 准备开始倒计时，当前控制状态:', controls.value);
           startCountdown();
         }
       } catch (error) {
@@ -239,20 +259,38 @@ export default {
     // Physics ready (remains the same)
     const onPhysicsReady = (data) => {
       world.value = data.world;
+      console.log("[Race] Physics ready, world ref set:", !!world.value); // 添加日志
     };
 
     // Physics update - Call camera update here
     const onPhysicsUpdate = () => {
+      // 添加日志，检查 carController 引用
+      console.log(`[Race] onPhysicsUpdate: isCarControllerReady=${isCarControllerReady.value}, carController=${!!carController.value}`);
+      
       if (isCarControllerReady.value && carController.value) {
+        // 添加日志确认调用
+        console.log("[Race] Calling carController.handlePhysicsUpdate"); 
         carController.value.handlePhysicsUpdate();
+      } else if (isCarControllerReady.value && !carController.value) {
+        // 如果 isReady 但 ref 仍为 null，尝试 nextTick
+        console.warn("[Race] onPhysicsUpdate: carController is null even when ready. Checking in nextTick...");
+        nextTick(() => {
+          console.log(`[Race] onPhysicsUpdate (nextTick): carController=${!!carController.value}`);
+          if (carController.value) {
+            console.log("[Race] Calling carController.handlePhysicsUpdate (from nextTick)");
+            carController.value.handlePhysicsUpdate();
+          } else {
+            console.error("[Race] FATAL: carController ref is still null in nextTick after onCarReady!");
+          }
+        });
       }
 
       // --- Update camera using the composable's update function ---
-      if (isCameraInitialized.value) { // Check if composable is ready
+      if (isCameraComposableInitialized.value) {
         updateCamera(); // Calls internal update logic for controller/controls
       }
 
-      if (raceStatus.value === 'racing') {
+      if (raceStatus.value === 'racing' && !isLoadingTrack.value && isCarControllerReady.value) {
         updateRaceTime();
         
         // 检查检查点通过
@@ -270,13 +308,11 @@ export default {
       isLoading.value = false;
       isInitializingPhysics.value = false; 
       
+      // 添加日志确认
+      console.log("[Race] onCarReady triggered. Setting isCarControllerReady to true.");
+      
       // 设置标志位，表示 VehicleController 已准备好
       isCarControllerReady.value = true; 
-      
-      // 只有在赛道加载完成且视角演示已完成时才开始倒计时
-      if (!isLoadingTrack.value && isAutoCameraRotationComplete.value) {
-        startCountdown();
-      }
     };
     
     // 更新车辆位置
@@ -301,6 +337,12 @@ export default {
     
     // 组件挂载
     onMounted(async () => { // Make onMounted async
+      // 添加日志检查 ref 是否在挂载时被赋值
+      console.log("[Race] onMounted: Checking carController ref after initial mount...");
+      nextTick(() => {
+        console.log(`[Race] onMounted (nextTick): carController = ${!!carController.value}`, carController.value);
+      });
+      
       isLoadingVehicle.value = true;
       isLoading.value = true; // Start general loading
       let vehicleIdToLoad = vehiclesList[0].id; // Default to first vehicle ID
@@ -356,6 +398,18 @@ export default {
       isLoadingVehicle.value = false; 
     });
     
+    // 监听 isCarControllerReady 变化
+    watch(isCarControllerReady, (newValue) => {
+      if (newValue === true) {
+        console.log(`[Race] Watcher triggered: isCarControllerReady is true. Checking carController ref immediately:`);
+        console.log(`[Race] Watcher: carController = ${!!carController.value}`, carController.value);
+        // 尝试再次检查 nextTick
+        nextTick(() => {
+          console.log(`[Race] Watcher (nextTick): carController = ${!!carController.value}`, carController.value);
+        });
+      }
+    });
+    
     // 自动切换相机视角
     const startAutoCameraRotation = () => {
       // 确保每次调用时重置状态
@@ -381,6 +435,7 @@ export default {
       
       // 清理函数
       const cleanup = () => {
+        console.log("[Race] Cleaning up auto camera rotation...");
         if (currentTimer) {
           clearTimeout(currentTimer);
           currentTimer = null;
@@ -398,11 +453,6 @@ export default {
         
         // 标记视角演示已完成
         isAutoCameraRotationComplete.value = true;
-        
-        // 如果车辆控制器已准备好但比赛尚未开始，现在可以开始倒计时
-        if (isCarControllerReady.value && raceStatus.value === 'waiting' && !isLoadingTrack.value) {
-          startCountdown();
-        }
       };
       
       // 递归函数，定期切换视角
@@ -455,11 +505,11 @@ export default {
       });
       
       // 如果相机已初始化，立即开始切换
-      if (isCameraInitialized.value) {
+      if (isCameraComposableInitialized.value) {
         scheduleSwitching();
       } else {
         // 否则等待相机初始化
-        initWatcherStop = watch(isCameraInitialized, (isInit) => {
+        initWatcherStop = watch(isCameraComposableInitialized, (isInit) => {
           if (isInit) {
             // 开始视角切换计划
             scheduleSwitching();
@@ -474,7 +524,8 @@ export default {
         
         // 设置超时，如果10秒后相机仍未初始化，则放弃
         currentTimer = setTimeout(() => {
-          if (!isCameraInitialized.value) {
+          if (!isCameraComposableInitialized.value) {
+            console.log("[Race] Camera initialization timed out during auto rotation.");
             cleanup();
             
             // 即使超时也标记为已完成，允许游戏继续
@@ -509,6 +560,7 @@ export default {
       // 执行所有注册的清理函数
       cleanupFunctions.forEach(cleanup => {
         if (typeof cleanup === 'function') {
+          console.log("[Race] Calling cleanup function on unmount...");
           cleanup();
         }
       });
@@ -523,61 +575,38 @@ export default {
     const onSceneReady = async (emittedScene) => { // 使用 async
       scene.value = emittedScene;
       console.log("[Race.vue] Scene is ready.");
+      console.log("[Race] Scene ref set:", !!scene.value); // 添加日志
 
       await loadTrack();
       await nextTick();
 
-      try {
-        let camInstance = null;
-        if (track.value?.getCamera) {
-          camInstance = track.value.getCamera();
-          if (camInstance) {
-            console.log("成功从VehicleRenderer获取相机引用");
-          } else {
-            console.warn("VehicleRenderer.getCamera() 返回 null，创建备用相机");
+      // 注释：在这里我们只创建备用相机，但通常会优先使用camera-ready事件接收到的相机
+      // 备用相机只在VehicleRenderer组件未能正确发送camera-ready事件时使用
+      if (!cameraRef.value && scene.value) {
+        const backupCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        backupCamera.position.set(0, 5, 10);
+        backupCamera.lookAt(0, 0, 0);
+        
+        const handleResize = () => {
+          if (backupCamera) {
+            backupCamera.aspect = window.innerWidth / window.innerHeight;
+            backupCamera.updateProjectionMatrix();
           }
-        } else {
-          console.warn("VehicleRenderer没有提供getCamera方法，创建备用相机");
+        };
+        window.addEventListener('resize', handleResize);
+        
+        // 添加到清理函数列表
+        cleanupFunctions.push(() => {
+          window.removeEventListener('resize', handleResize);
+        });
+        
+        console.log("[Race.vue] 已创建备用相机");
+        
+        // 只有在还没有通过camera-ready事件设置相机时才使用备用相机
+        if (!cameraRef.value) {
+          cameraRef.value = backupCamera;
+          console.log("[Race.vue] 使用备用相机作为主相机");
         }
-
-        if (!camInstance && scene.value) {
-          camInstance = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-          camInstance.position.set(0, 5, 10); 
-          camInstance.lookAt(0, 0, 0); 
-
-          const handleResize = () => {
-            if (camInstance) {
-              camInstance.aspect = window.innerWidth / window.innerHeight;
-              camInstance.updateProjectionMatrix();
-            }
-          };
-          window.addEventListener('resize', handleResize);
-
-          // 添加到清理函数列表
-          cleanupFunctions.push(() => {
-            window.removeEventListener('resize', handleResize);
-          });
-          console.log("已创建备用相机");
-        }
-
-        if (camInstance) {
-          cameraRef.value = camInstance;
-          console.log("[Race.vue] Camera instance assigned to ref");
-          
-          // 检查 carModel 是否也准备好了，如果是，则设置模式
-          if (carModel.value) {
-            console.log("[Race.vue] Both camera and model ready in onSceneReady");
-            // 使用 nextTick 确保 useCamera 的内部 watch 有机会响应 refs 的变化
-            nextTick(() => {
-              // 设置相机模式并启动视角演示
-              startCameraDemo();
-            });
-          }
-        } else {
-          console.error("[Race.vue] Failed to obtain or create a camera instance.");
-        }
-      } catch (error) {
-        console.error("onSceneReady 处理相机时出错:", error);
       }
     };
     
@@ -585,29 +614,6 @@ export default {
     const onModelReady = (model) => {
       carModel.value = model;
       console.log("[Race.vue] Model ref set for useCamera");
-      
-      // 检查 cameraRef 是否也准备好了，如果是，则设置模式
-      if (cameraRef.value) {
-        console.log("[Race.vue] Both camera and model ready in onModelReady");
-        // 使用 nextTick 确保 useCamera 的内部 watch 有机会响应 refs 的变化
-        nextTick(() => {
-          // 设置相机模式并启动视角演示
-          startCameraDemo();
-        });
-      }
-    };
-    
-    // 设置相机模式并启动视角演示
-    const startCameraDemo = () => {
-      // 首先设置FREE_LOOK模式(0)作为起点
-      const success = cameraControls.setMode(0);
-      if (success) {
-        // 启动视角演示
-        const cleanup = startAutoCameraRotation();
-        if (cleanup) {
-          cleanupFunctions.push(cleanup);
-        }
-      }
     };
     
     // 强制禁用VehicleRenderer中的控制器
@@ -665,7 +671,7 @@ export default {
     watch(raceStatus, (newStatus, oldStatus) => {
       // 确保是从非 racing 状态变为 racing 状态
       if (newStatus === 'racing' && oldStatus !== 'racing') {
-        if (isCameraInitialized.value) {
+        if (isCameraComposableInitialized.value) {
           // 使用 nextTick 延迟切换，确保车辆状态更新
           nextTick(() => {
             // 设置追逐视角 (模式 3 - CHASE)
@@ -675,23 +681,82 @@ export default {
       }
     });
     
+    // 处理相机准备好事件
+    const onCameraReady = (camera) => {
+      console.log("[Race.vue] 收到camera-ready事件，相机实例已准备就绪");
+      if (camera) {
+        cameraRef.value = camera;
+      } else {
+        console.warn("[Race.vue] camera-ready事件提供的相机实例为null");
+      }
+    };
+    
+    // --- 新增 watchEffect 处理视角演示启动 --- 
+    watchEffect(() => {
+      console.log("[Race WatchEffect Demo] Checking conditions: cameraInit=", isCameraComposableInitialized.value, "model=", !!carModel.value, "scene=", !!scene.value, "!trackLoading=", !isLoadingTrack.value, "status=", raceStatus.value, "demoStarted=", isCameraDemoStarted.value);
+      if (
+        isCameraComposableInitialized.value && // 确保 useCamera 初始化完成
+        carModel.value &&                  // 确保车辆模型加载完成
+        scene.value &&                     // 确保场景准备就绪
+        !isLoadingTrack.value &&           // 确保赛道加载完成
+        raceStatus.value === 'waiting' &&  // 确保比赛处于等待状态
+        !isCameraDemoStarted.value         // 确保演示尚未开始
+      ) {
+        console.log("[Race WatchEffect Demo] Conditions met, starting camera demo.");
+        // 直接调用 startAutoCameraRotation，并设置标志位
+        isCameraDemoStarted.value = true; 
+        const cleanup = startAutoCameraRotation();
+        if (cleanup) {
+          cleanupFunctions.push(cleanup);
+        }
+      }
+    });
+
+    // --- 新增 watchEffect 处理倒计时启动 --- 
+    watchEffect(() => {
+      console.log("[Race WatchEffect Countdown] Checking conditions: demoComplete=", isAutoCameraRotationComplete.value, "carReady=", isCarControllerReady.value, "status=", raceStatus.value);
+      if (
+        isAutoCameraRotationComplete.value && // 确保视角演示完成
+        isCarControllerReady.value &&       // 确保车辆控制器准备就绪
+        raceStatus.value === 'waiting'      // 确保比赛处于等待状态
+      ) {
+        console.log("[Race WatchEffect Countdown] Conditions met, starting countdown.");
+        startCountdown();
+      }
+    });
+
+    // --- Function Ref for VehicleController ---
+    const setCarControllerRef = (el) => {
+      console.log("[Race] setCarControllerRef called with:", el);
+      // Check if el is the expected component instance (usually has a $ property in Vue 3)
+      if (el && el.$) {
+        console.log("[Race] Assigning component instance to carController.");
+        carController.value = el;
+      } else if (el === null) {
+        console.log("[Race] setCarControllerRef called with null (unmounting?), setting carController to null.");
+        carController.value = null;
+      } else {
+        console.warn("[Race] setCarControllerRef received unexpected value:", el);
+        // Optionally clear ref if unexpected value received
+        // carController.value = null; 
+      }
+    }
+    // -----------------------------------------
+
     return {
-      rendererElement, 
-      physicsEngine,
-      track,
-      carController,
-      scene,
+      rendererElement,
       world,
-      carModel, 
+      scene,
+      carModel,
+      speed,
+      showInterface,
       raceStatus,
       countdown,
-      showInterface,
-      speed,
-      currentLapTime,
       bestLapTime,
       totalRaceTime,
       currentLap,
       totalLaps,
+      currentLapTime,
       currentVehicle, 
       isLoadingVehicle, 
       isLoading, 
@@ -705,12 +770,13 @@ export default {
       onSceneReady,
       onCarReady,
       onPositionUpdate,
+      onCameraReady,
       restartRace,
       exitRace,
       formatTime,
       onModelReady,
       isCarControllerReady, 
-      isCameraInitialized,
+      isCameraInitialized: isCameraComposableInitialized,
       currentCameraMode: cameraModeFromComposable,
       cameraParams: cameraParamsFromComposable,
       isSavingCamera,
@@ -720,6 +786,10 @@ export default {
       tuningParams,
       startAutoCameraRotation,
       forceDisableRendererControls,
+      controls,
+      isMobile,
+      cameraControls,
+      setCarControllerRef
     };
   }
 };

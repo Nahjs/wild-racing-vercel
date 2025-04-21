@@ -126,7 +126,7 @@ const isFinished = computed(() => props.raceStatus === 'finished');
 
 .speedometer-container {
   position: absolute;
-  bottom: 30px;
+  top: 20px;
   right: 30px;
   pointer-events: auto;
 }
@@ -136,5 +136,51 @@ const isFinished = computed(() => props.raceStatus === 'finished');
   top: 20px;
   left: 20px;
   pointer-events: auto;
+}
+
+/* 移动端专用样式 */
+@media (max-width: 768px) {
+  .speedometer-container {
+    position: absolute !important;
+    top: 20px !important; /* 增加距离底部的高度，避免被触摸控制遮挡 */
+    right: 50% !important;
+    transform: translateX(50%) !important; /* 水平居中 */
+    z-index: 900 !important;
+    background-color: transparent !important; /* 移除背景 */
+    border-radius: 10px !important;
+    padding: 0 !important;
+  }
+  
+  .lap-timer-container {
+    position: absolute !important;
+    top: 10px !important;
+    left: 10px !important;
+    z-index: 900 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    border-radius: 10px !important;
+    padding: 8px !important;
+  }
+  
+  .countdown {
+    position: fixed !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    font-size: 80px !important;
+    color: white !important;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8) !important;
+    z-index: 1000 !important;
+  }
+  
+  .race-status {
+    position: fixed !important;
+    top: 40% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    font-size: 40px !important;
+    color: white !important;
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.8) !important;
+    z-index: 1000 !important;
+  }
 }
 </style> 

@@ -39,6 +39,16 @@ export default {
     scale: {
       type: Number,
       default: 1.0
+    },
+    controlState: {
+      type: Object,
+      required: true,
+      default: () => ({
+        accelerate: false,
+        brake: false,
+        turnLeft: false,
+        turnRight: false
+      })
     }
   },
   setup(props, { emit }) {
@@ -235,8 +245,23 @@ export default {
     };
     
     const handlePhysicsUpdate = () => {
-      if (isReady.value && vehicle.value && vehicle.value.chassisBody && props.carModel) {
-        const steerValue = (controlState.value.turnLeft ? 1 : 0) - (controlState.value.turnRight ? 1 : 0);
+      // 添加日志确认函数执行
+      console.log("[VehicleController] handlePhysicsUpdate executed");
+
+      // 增强检查：确保核心 props 和 isReady 都有效
+      if (!isReady.value || !props.world || !props.scene || !props.carModel || !vehicle.value || !vehicle.value.chassisBody) {
+        console.log("[VehicleController] handlePhysicsUpdate skipped: Not fully ready or props missing.");
+        return; // 如果未就绪或 props 丢失，则提前返回
+      }
+      
+      // 下面的 if 条件现在可以简化或移除，因为上面已经检查过了
+      // if (isReady.value && vehicle.value && vehicle.value.chassisBody && props.carModel) {
+
+        // 添加调试日志，输出控制状态 (使用 props.controlState)
+        console.log(`[VehicleController] 控制状态: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}`);
+
+        // 使用 props.controlState
+        const steerValue = (props.controlState.turnLeft ? 1 : 0) - (props.controlState.turnRight ? 1 : 0);
         const actualSteer = steerValue * tuningStore.tuningParams.turnStrength;
         // console.log(`[Debug Controls] steerValue: ${steerValue}, actualSteer: ${actualSteer.toFixed(2)}`); // 调试转向
 
@@ -284,7 +309,7 @@ export default {
         }
         // --- 结束检查 ---
         
-        if (controlState.value.accelerate) {
+        if (props.controlState.accelerate) {
             // 使用 brakeWheelIndices 清除所有轮子的刹车
             brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
 
@@ -294,7 +319,7 @@ export default {
                 driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
             } else {
             }
-        } else if (controlState.value.brake) {
+        } else if (props.controlState.brake) {
               if (forwardVelocity < reverseThreshold) {
                   // 使用 brakeWheelIndices 清除所有轮子的刹车
                 brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
@@ -338,7 +363,7 @@ export default {
         }
         
         updateCarModel();
-      }
+      // } // 移除或注释掉这个多余的 '}'
     };
     
     const speed = computed(() => {
@@ -437,6 +462,17 @@ export default {
       handlePhysicsUpdate,
       cleanupPhysics,
     };
+
+    // Explicitly expose necessary methods/refs
+    defineExpose({
+      handlePhysicsUpdate,
+      initializePhysics,
+      resetCar,
+      cleanupPhysics,
+      isReady,
+      speed,
+      vehicle // Expose vehicle for potential debugging
+    });
   }
 };
 </script>
@@ -444,5 +480,7 @@ export default {
 <style scoped>
 .car-controller {
   position: relative;
+  width: 100%;
+  height: 100%;
 }
 </style> 

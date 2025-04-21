@@ -95,10 +95,26 @@ export class TouchController {
     this.touchMoveHandler = this.handleTouchMove.bind(this);
     this.touchEndHandler = this.handleTouchEnd.bind(this);
     this.blurHandler = this.handleBlur.bind(this); // Also reset on blur
+    this.isEnabled = true; // 添加一个标志来控制是否启用自动触摸控制
     this.setupListeners();
   }
   
+  // 添加一个方法来禁用/启用触摸控制
+  setEnabled(enabled) {
+    this.isEnabled = enabled;
+    if (!enabled) {
+      // 如果禁用，重置控制状态
+      this.controls.reset();
+    }
+  }
+  
   handleTouchStart(e) {
+    // 如果禁用了，不处理触摸事件
+    if (!this.isEnabled) return;
+    
+    // 如果触摸来自我们的虚拟按钮，不处理
+    if (e.target.closest('.control-btn')) return;
+    
     const touch = e.touches[0];
     this.touchStartX = touch.clientX;
     this.touchStartY = touch.clientY;
@@ -106,6 +122,12 @@ export class TouchController {
   }
   
   handleTouchMove(e) {
+    // 如果禁用了，不处理触摸事件
+    if (!this.isEnabled) return;
+    
+    // 如果触摸来自我们的虚拟按钮，不处理
+    if (e.target.closest('.control-btn')) return;
+    
     // Prevent default scroll/zoom behavior if needed
     // e.preventDefault(); 
     const touch = e.touches[0];
@@ -122,7 +144,13 @@ export class TouchController {
     else if (deltaY > 30) this.controls.brake = true;
   }
 
-  handleTouchEnd() {
+  handleTouchEnd(e) {
+    // 如果禁用了，不处理触摸事件
+    if (!this.isEnabled) return;
+    
+    // 如果触摸来自我们的虚拟按钮，不处理
+    if (e.target && e.target.closest('.control-btn')) return;
+    
     this.controls.reset();
   }
   

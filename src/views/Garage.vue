@@ -813,9 +813,7 @@ const initializeApp = async () => {
 
                 startAnimationLoop(() => {
                     // Ensure physics updates happen in the animation loop
-                    // Check if the ref is populated AND the function exists before calling
-                    console.log("[Garage Animation Loop] Checking controlState before calling child:", controlState);
-                    
+               
                     if (physicsEngineRef.value && typeof physicsEngineRef.value.stepPhysics === 'function') {
                         physicsEngineRef.value.stepPhysics(); 
                     }

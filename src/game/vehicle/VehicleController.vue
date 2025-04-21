@@ -245,125 +245,112 @@ export default {
     };
     
     const handlePhysicsUpdate = () => {
-      // 添加日志确认函数执行
-      console.log("[VehicleController] handlePhysicsUpdate executed");
-
       // 增强检查：确保核心 props 和 isReady 都有效
       if (!isReady.value || !props.world || !props.scene || !props.carModel || !vehicle.value || !vehicle.value.chassisBody) {
         console.log("[VehicleController] handlePhysicsUpdate skipped: Not fully ready or props missing.");
         return; // 如果未就绪或 props 丢失，则提前返回
       }
       
-      // 下面的 if 条件现在可以简化或移除，因为上面已经检查过了
-      // if (isReady.value && vehicle.value && vehicle.value.chassisBody && props.carModel) {
+      // 使用 props.controlState
+      const steerValue = (props.controlState.turnLeft ? 1 : 0) - (props.controlState.turnRight ? 1 : 0);
+      const actualSteer = steerValue * tuningStore.tuningParams.turnStrength;
 
-        // 添加调试日志，输出控制状态 (使用 props.controlState)
-        console.log(`[VehicleController] 控制状态: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}`);
+      // --- 动态获取转向轮索引 ---
+      const steerLeftIndex = tuningParams.value.wheelIndices?.FL ?? 0;
+      const steerRightIndex = tuningParams.value.wheelIndices?.FR ?? 1;
+      vehicle.value.setSteeringValue(actualSteer, steerLeftIndex);
+      vehicle.value.setSteeringValue(actualSteer, steerRightIndex);
+      // --- 结束 ---
 
-        // 使用 props.controlState
-        const steerValue = (props.controlState.turnLeft ? 1 : 0) - (props.controlState.turnRight ? 1 : 0);
-        const actualSteer = steerValue * tuningStore.tuningParams.turnStrength;
-        // console.log(`[Debug Controls] steerValue: ${steerValue}, actualSteer: ${actualSteer.toFixed(2)}`); // 调试转向
+      const forwardVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
+      const forwardVelocity = forwardVelocityVec ? forwardVelocityVec.z : 0;
+      const reverseThreshold = 0.5;
 
-        // --- 动态获取转向轮索引 ---
-        const steerLeftIndex = tuningParams.value.wheelIndices?.FL ?? 0;
-        const steerRightIndex = tuningParams.value.wheelIndices?.FR ?? 1;
-        // console.log(`[Debug Controls] Steering Indices: Left=${steerLeftIndex}, Right=${steerRightIndex}`);
-        vehicle.value.setSteeringValue(actualSteer, steerLeftIndex);
-        vehicle.value.setSteeringValue(actualSteer, steerRightIndex);
-        // --- 结束 ---
+      // --- 动态获取驱动轮和刹车轮索引 (根据驱动类型) ---
+      const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
+      let driveWheelIndices = [];
+      const allWheelIndices = [wheelIndices.FL, wheelIndices.FR, wheelIndices.BL, wheelIndices.BR];
 
-        const forwardVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
-        const forwardVelocity = forwardVelocityVec ? forwardVelocityVec.z : 0;
-        const reverseThreshold = 0.5;
-        // console.log(`[Debug Controls] forwardVelocity: ${forwardVelocity.toFixed(2)}`); // 调试速度
+      switch (tuningParams.value.driveType) {
+        case 'FWD':
+          driveWheelIndices = [wheelIndices.FL, wheelIndices.FR];
+          break;
+        case 'AWD':
+          driveWheelIndices = allWheelIndices;
+          break;
+        case 'RWD':
+        default:
+          driveWheelIndices = [wheelIndices.BL, wheelIndices.BR];
+          break;
+      }
+      // 刹车通常作用于所有轮子
+      const brakeWheelIndices = allWheelIndices;
+     
+      // --- 重新启用地面接触检查日志 ---
+      let driveWheelsOnGround = true;
+      driveWheelIndices.forEach(index => {
+          if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index] && !vehicle.value.wheelInfos[index].raycastResult.hasHit) {
+              driveWheelsOnGround = false;
+          }
+      });
+      if (!driveWheelsOnGround) {
+      }
+      // --- 结束检查 ---
+      
+      if (props.controlState.accelerate) {
+          // 使用 brakeWheelIndices 清除所有轮子的刹车
+          brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
 
-        // --- 动态获取驱动轮和刹车轮索引 (根据驱动类型) ---
-        const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
-        let driveWheelIndices = [];
-        const allWheelIndices = [wheelIndices.FL, wheelIndices.FR, wheelIndices.BL, wheelIndices.BR];
-
-        switch (tuningParams.value.driveType) {
-          case 'FWD':
-            driveWheelIndices = [wheelIndices.FL, wheelIndices.FR];
-            break;
-          case 'AWD':
-            driveWheelIndices = allWheelIndices;
-            break;
-          case 'RWD':
-          default:
-            driveWheelIndices = [wheelIndices.BL, wheelIndices.BR];
-            break;
-        }
-        // 刹车通常作用于所有轮子
-        const brakeWheelIndices = allWheelIndices;
-       
-        // --- 重新启用地面接触检查日志 ---
-        let driveWheelsOnGround = true;
-        driveWheelIndices.forEach(index => {
-            if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index] && !vehicle.value.wheelInfos[index].raycastResult.hasHit) {
-                driveWheelsOnGround = false;
-            }
-        });
-        if (!driveWheelsOnGround) {
-        }
-        // --- 结束检查 ---
-        
-        if (props.controlState.accelerate) {
+          const force = -tuningStore.tuningParams.enginePower;
+          if (driveWheelsOnGround) {
+              // 使用 driveWheelIndices 施加驱动力
+              driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
+          } else {
+          }
+      } else if (props.controlState.brake) {
+        if (forwardVelocity < reverseThreshold) {
             // 使用 brakeWheelIndices 清除所有轮子的刹车
-            brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
+          brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
 
-            const force = -tuningStore.tuningParams.enginePower;
-            if (driveWheelsOnGround) {
-                // 使用 driveWheelIndices 施加驱动力
-                driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
-            } else {
-            }
-        } else if (props.controlState.brake) {
-              if (forwardVelocity < reverseThreshold) {
-                  // 使用 brakeWheelIndices 清除所有轮子的刹车
-                brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
-
-                const reverseForce = tuningStore.tuningParams.enginePower * 0.5;
-                if (driveWheelsOnGround) {
-                    // 使用 driveWheelIndices 施加倒车力
-                    driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index));
-                } else {
-                }
-            } else {
-                    // 清除引擎力
-                 driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-
-                   // 使用 brakeWheelIndices 施加刹车力
-                 brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.brakePower, index));
-            }
+          const reverseForce = tuningStore.tuningParams.enginePower * 0.5;
+          if (driveWheelsOnGround) {
+              // 使用 driveWheelIndices 施加倒车力
+              driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index));
+          } else {
+          }
         } else {
-                // 清除引擎力
-             driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-             // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
-             brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
-        }
+              // 清除引擎力
+           driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
 
-        if (!justReset && chassisBody.value && chassisBody.value.quaternion) {
-            const vehicleQuaternion = new THREE.Quaternion(
-                chassisBody.value.quaternion.x,
-                chassisBody.value.quaternion.y,
-                chassisBody.value.quaternion.z,
-                chassisBody.value.quaternion.w
-            );
-            worldUp.copy(localUp).applyQuaternion(vehicleQuaternion);
-            if (worldUp.y < resetThreshold) {
-                resetCar();
-                justReset = true;
-                if(resetCooldownTimer) clearTimeout(resetCooldownTimer);
-                resetCooldownTimer = setTimeout(() => {
-                    justReset = false;
-                }, 3000);
-            }
+             // 使用 brakeWheelIndices 施加刹车力
+           brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.brakePower, index));
         }
-        
-        updateCarModel();
-      // } // 移除或注释掉这个多余的 '}'
+      } else {
+            // 清除引擎力
+         driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
+         // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
+         brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
+      }
+
+      if (!justReset && chassisBody.value && chassisBody.value.quaternion) {
+          const vehicleQuaternion = new THREE.Quaternion(
+              chassisBody.value.quaternion.x,
+              chassisBody.value.quaternion.y,
+              chassisBody.value.quaternion.z,
+              chassisBody.value.quaternion.w
+          );
+          worldUp.copy(localUp).applyQuaternion(vehicleQuaternion);
+          if (worldUp.y < resetThreshold) {
+              resetCar();
+              justReset = true;
+              if(resetCooldownTimer) clearTimeout(resetCooldownTimer);
+              resetCooldownTimer = setTimeout(() => {
+                  justReset = false;
+              }, 3000);
+          }
+      }
+      
+      updateCarModel();
     };
     
     const speed = computed(() => {

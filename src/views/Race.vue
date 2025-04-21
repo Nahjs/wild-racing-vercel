@@ -265,11 +265,11 @@ export default {
     // Physics update - Call camera update here
     const onPhysicsUpdate = () => {
       // 添加日志，检查 carController 引用
-      console.log(`[Race] onPhysicsUpdate: isCarControllerReady=${isCarControllerReady.value}, carController=${!!carController.value}`);
+      // console.log(`[Race] onPhysicsUpdate: isCarControllerReady=${isCarControllerReady.value}, carController=${!!carController.value}`); // Removed log
       
       if (isCarControllerReady.value && carController.value) {
         // 添加日志确认调用
-        console.log("[Race] Calling carController.handlePhysicsUpdate"); 
+        // console.log("[Race] Calling carController.handlePhysicsUpdate"); // Removed log
         carController.value.handlePhysicsUpdate();
       } else if (isCarControllerReady.value && !carController.value) {
         // 如果 isReady 但 ref 仍为 null，尝试 nextTick
@@ -727,10 +727,10 @@ export default {
 
     // --- Function Ref for VehicleController ---
     const setCarControllerRef = (el) => {
-      console.log("[Race] setCarControllerRef called with:", el);
+      // console.log("[Race] setCarControllerRef called with:", el); // Removed log
       // Check if el is the expected component instance (usually has a $ property in Vue 3)
       if (el && el.$) {
-        console.log("[Race] Assigning component instance to carController.");
+        // console.log("[Race] Assigning component instance to carController."); // Removed log
         carController.value = el;
       } else if (el === null) {
         console.log("[Race] setCarControllerRef called with null (unmounting?), setting carController to null.");

@@ -345,8 +345,6 @@ export default {
       const carPosition = carModel.value.position;
       const carQuaternion = carModel.value.quaternion;
       
-      controls.value.enabled = (cameraMode.value === 'freeOrbit');
-
       if (cameraMode.value === 'thirdPersonFollow') {
         const cameraOffset = new THREE.Vector3(0, cameraHeight.value, -cameraDistance.value);
         // 确保 applyQuaternion 不会修改原始 offset
@@ -511,11 +509,12 @@ export default {
       nextTick(async () => { 
           console.log("VehicleRenderer: onMounted nextTick - Start");
           if (scene.value && renderer.value) { // Check if scene and renderer from composable are ready
-              // 设置环境组合式函数的场景和渲染器引用
-              // 移除 setScene 和 setRenderer 的调用
-              // setScene(scene.value);
-              // setRenderer(renderer.value);
-              
+              // 禁用useSceneSetup中的controls，让useCamera完全接管相机控制
+              if (controls.value) {
+                controls.value.enabled = false;
+                console.log("VehicleRenderer: Disabled controls from useSceneSetup to let useCamera take over.");
+              }
+
               // 初始化环境(如果启用)
               if (props.enableLighting) {
                 // 调用 initializeEnvironment 并传入 scene 和 renderer
@@ -534,6 +533,10 @@ export default {
               console.log("VehicleRenderer: Model loading initiated. Starting animation loop...");
               // Start the animation loop provided by the composable, passing our updates
               startAnimationLoop(() => {
+                  // 确保controls始终保持禁用状态
+                  if (controls.value && controls.value.enabled) {
+                    controls.value.enabled = false;
+                  }
                   updateCameraPosition();
                   updateWheelRotations();
               }); 

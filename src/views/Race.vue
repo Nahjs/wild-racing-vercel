@@ -111,6 +111,9 @@ export default {
     // 添加相机ref给useCamera使用
     const cameraRef = shallowRef(null);
     
+    // 添加视角演示状态跟踪
+    const isAutoCameraRotationComplete = ref(false);
+    
     // 界面控制
     const showInterface = ref(true);
     const speed = ref(0);
@@ -174,6 +177,8 @@ export default {
     const loadTrack = async () => {
       try {
         isLoadingTrack.value = true;
+        // 确保每次加载新赛道时，重置自动视角旋转状态
+        isAutoCameraRotationComplete.value = false;
         
         if (!scene.value) {
           console.warn('[Race] 场景未准备好，无法加载赛道');
@@ -221,8 +226,8 @@ export default {
         
         isLoadingTrack.value = false;
         
-        // 如果车辆控制器已准备好，但比赛还没开始，现在可以开始倒计时
-        if (isCarControllerReady.value && raceStatus.value === 'waiting') {
+        // 如果车辆控制器已准备好且视角演示已完成，而且比赛还没开始，现在可以开始倒计时
+        if (isCarControllerReady.value && isAutoCameraRotationComplete.value && raceStatus.value === 'waiting') {
           startCountdown();
         }
       } catch (error) {
@@ -262,16 +267,16 @@ export default {
     
     // 车辆控制器准备就绪 (从 VehicleController 发出的 car-ready 事件)
     const onCarReady = () => {
-      isLoading.value = false; // 这个 loading 可能是指整体加载？
+      isLoading.value = false;
       isInitializingPhysics.value = false; 
       
       // 设置标志位，表示 VehicleController 已准备好
       isCarControllerReady.value = true; 
       
-      // 改为仅在赛道加载完成后才开始倒计时
-      if (!isLoadingTrack.value) {
-        startCountdown(); // 开始倒计时
-      } 
+      // 只有在赛道加载完成且视角演示已完成时才开始倒计时
+      if (!isLoadingTrack.value && isAutoCameraRotationComplete.value) {
+        startCountdown();
+      }
     };
     
     // 更新车辆位置
@@ -351,6 +356,145 @@ export default {
       isLoadingVehicle.value = false; 
     });
     
+    // 自动切换相机视角
+    const startAutoCameraRotation = () => {
+      // 确保每次调用时重置状态
+      isAutoCameraRotationComplete.value = false;
+      
+      // 存储定时器ID和watcher清理函数
+      let currentTimer = null;
+      let initWatcherStop = null;
+      let statusWatcherStop = null;
+      
+      // 视角切换次数和目标次数
+      let switchCount = 0;
+      const targetSwitchCount = 5; // 总共切换5次视角
+      
+      // 各模式展示时间（毫秒）
+      const modeDurations = {
+        0: 1000, // FREE_LOOK
+        1: 1000, // FOLLOW
+        3: 1000, // CHASE
+        4: 1000, // TOP_DOWN
+        5: 2500  // CINEMATIC (延长时间)
+      };
+      
+      // 清理函数
+      const cleanup = () => {
+        if (currentTimer) {
+          clearTimeout(currentTimer);
+          currentTimer = null;
+        }
+        
+        if (initWatcherStop) {
+          initWatcherStop();
+          initWatcherStop = null;
+        }
+        
+        if (statusWatcherStop) {
+          statusWatcherStop();
+          statusWatcherStop = null;
+        }
+        
+        // 标记视角演示已完成
+        isAutoCameraRotationComplete.value = true;
+        
+        // 如果车辆控制器已准备好但比赛尚未开始，现在可以开始倒计时
+        if (isCarControllerReady.value && raceStatus.value === 'waiting' && !isLoadingTrack.value) {
+          startCountdown();
+        }
+      };
+      
+      // 递归函数，定期切换视角
+      const scheduleSwitching = () => {
+        // 如果已经切换完所有视角或比赛不再处于等待状态，则停止
+        if (switchCount >= targetSwitchCount || raceStatus.value !== 'waiting') {
+          cleanup();
+          
+          // 如果是正常完成所有视角切换(而非因比赛开始被中断)
+          if (switchCount >= targetSwitchCount && raceStatus.value === 'waiting') {
+            // 如果车辆控制器已准备好，现在可以开始倒计时
+            if (isCarControllerReady.value && !isLoadingTrack.value) {
+              startCountdown();
+            }
+          }
+          return;
+        }
+        
+        // 强制禁用控制器，确保视角切换不受干扰
+        forceDisableRendererControls();
+        
+        // 使用nextMode切换到下一个视角
+        cameraControls.nextMode();
+        
+        // 获取当前模式
+        const currentMode = cameraModeFromComposable.value;
+        
+        // 获取当前模式的展示时间
+        const duration = modeDurations[currentMode] || 1000;
+        
+        // 延迟后切换到下一个视角
+        currentTimer = setTimeout(() => {
+          // 切换前再次检查比赛状态
+          if (raceStatus.value !== 'waiting') {
+            cleanup();
+            return;
+          }
+          
+          // 增加计数并安排下一次切换
+          switchCount++;
+          scheduleSwitching();
+        }, duration);
+      };
+      
+      // 监听比赛状态变化
+      statusWatcherStop = watch(raceStatus, (newStatus) => {
+        if (newStatus !== 'waiting') {
+          cleanup();
+        }
+      });
+      
+      // 如果相机已初始化，立即开始切换
+      if (isCameraInitialized.value) {
+        scheduleSwitching();
+      } else {
+        // 否则等待相机初始化
+        initWatcherStop = watch(isCameraInitialized, (isInit) => {
+          if (isInit) {
+            // 开始视角切换计划
+            scheduleSwitching();
+            
+            // 停止监听初始化状态
+            if (initWatcherStop) {
+              initWatcherStop();
+              initWatcherStop = null;
+            }
+          }
+        });
+        
+        // 设置超时，如果10秒后相机仍未初始化，则放弃
+        currentTimer = setTimeout(() => {
+          if (!isCameraInitialized.value) {
+            cleanup();
+            
+            // 即使超时也标记为已完成，允许游戏继续
+            isAutoCameraRotationComplete.value = true;
+            
+            // 如果车辆控制器已准备好但比赛尚未开始，现在可以开始倒计时
+            if (isCarControllerReady.value && raceStatus.value === 'waiting' && !isLoadingTrack.value) {
+              startCountdown();
+            }
+          }
+        }, 10000);
+      }
+      
+      // 返回清理函数供外部使用
+      return cleanup;
+    };
+    
+    // 存储需要在组件卸载时清理的函数
+    const cleanupFunctions = [];
+    
     // 组件卸载
     const startAnimationLoop = () => { /* ... */ }; 
     
@@ -362,6 +506,13 @@ export default {
     };
 
     onUnmounted(() => {
+      // 执行所有注册的清理函数
+      cleanupFunctions.forEach(cleanup => {
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+      });
+      
       stopAnimationLoop(); 
       if (scene.value) {
         trackManager.unloadCurrentTrack(scene.value);
@@ -402,7 +553,8 @@ export default {
           };
           window.addEventListener('resize', handleResize);
 
-          onUnmounted(() => {
+          // 添加到清理函数列表
+          cleanupFunctions.push(() => {
             window.removeEventListener('resize', handleResize);
           });
           console.log("已创建备用相机");
@@ -410,18 +562,16 @@ export default {
 
         if (camInstance) {
           cameraRef.value = camInstance;
-          console.log("[Race.vue] Camera instance assigned to ref, useCamera should detect this change.");
+          console.log("[Race.vue] Camera instance assigned to ref");
           
-          // 检查 carModel 是否也准备好了，如果是，则强制设置模式
+          // 检查 carModel 是否也准备好了，如果是，则设置模式
           if (carModel.value) {
-            console.log("[Race.vue] Both camera and model ready in onSceneReady. Forcing mode 0.");
+            console.log("[Race.vue] Both camera and model ready in onSceneReady");
             // 使用 nextTick 确保 useCamera 的内部 watch 有机会响应 refs 的变化
             nextTick(() => {
-              const success = cameraControls.setMode(0); 
-              console.log(`[Race.vue] Force setMode(0) result in onSceneReady: ${success}`);
+              // 设置相机模式并启动视角演示
+              startCameraDemo();
             });
-          } else {
-            console.log("[Race.vue] Camera ready, waiting for model before forcing mode.");
           }
         } else {
           console.error("[Race.vue] Failed to obtain or create a camera instance.");
@@ -434,34 +584,62 @@ export default {
     // 当车辆模型准备好时调用
     const onModelReady = (model) => {
       carModel.value = model;
-      console.log("[Race.vue] Model ref set for useCamera.");
+      console.log("[Race.vue] Model ref set for useCamera");
       
-      // 检查 cameraRef 是否也准备好了，如果是，则强制设置模式
+      // 检查 cameraRef 是否也准备好了，如果是，则设置模式
       if (cameraRef.value) {
-        console.log("[Race.vue] Both camera and model ready in onModelReady. Forcing mode 0.");
+        console.log("[Race.vue] Both camera and model ready in onModelReady");
         // 使用 nextTick 确保 useCamera 的内部 watch 有机会响应 refs 的变化
         nextTick(() => {
-          const success = cameraControls.setMode(0);
-          console.log(`[Race.vue] Force setMode(0) result in onModelReady: ${success}`);
+          // 设置相机模式并启动视角演示
+          startCameraDemo();
         });
-      } else {
-        console.log("[Race.vue] Model ready, waiting for camera before forcing mode.");
       }
     };
     
-    // 切换相机模式
-    const toggleCameraMode = () => {
-      if (isCameraInitialized.value) {
-        try {
-          cameraControls.nextMode(); 
-          console.log(`相机模式已切换到: ${cameraModeFromComposable.value}`);
-        } catch (error) {
-          console.error('切换相机模式时出错:', error);
+    // 设置相机模式并启动视角演示
+    const startCameraDemo = () => {
+      // 首先设置FREE_LOOK模式(0)作为起点
+      const success = cameraControls.setMode(0);
+      if (success) {
+        // 启动视角演示
+        const cleanup = startAutoCameraRotation();
+        if (cleanup) {
+          cleanupFunctions.push(cleanup);
         }
-      } else {
-        console.warn('相机控制器未初始化，无法切换模式');
       }
     };
+    
+    // 强制禁用VehicleRenderer中的控制器
+    const forceDisableRendererControls = () => {
+      if (!track.value) return false;
+      
+      // 尝试1: 检查直接导出的controls
+      if (track.value.controls && track.value.controls.enabled !== undefined) {
+        track.value.controls.enabled = false;
+        return true;
+      }
+      
+      // 尝试2: 检查常见的私有属性命名
+      const rendererInstance = track.value;
+      const controlsKeys = ['_controls', '__controls', '$controls', 'sceneControls'];
+      
+      for (const key of controlsKeys) {
+        if (rendererInstance[key] && rendererInstance[key].enabled !== undefined) {
+          rendererInstance[key].enabled = false;
+          return true;
+        }
+      }
+      
+      // 尝试3: 检查$refs中的controls
+      if (track.value.$refs && track.value.$refs.controls) {
+        track.value.$refs.controls.enabled = false;
+        return true;
+      }
+      
+      return false;
+    };
+
     
     watchEffect(() => {
       if (carController.value && world.value && scene.value && carModel.value && !isInitializingPhysics.value && !tuningStore.isLoading) { 
@@ -483,21 +661,16 @@ export default {
       updateCameraParameters({ ...currentParams, lookAtOffset: newOffset });
     };
     
-    // 监听比赛状态变化，在比赛开始时自动切换到下一个相机模式
+    // 监听比赛状态变化，在比赛开始时切换到追逐视角
     watch(raceStatus, (newStatus, oldStatus) => {
-      // console.log('[Race watch] Watcher triggered. Type of nextModeComposable:', typeof nextModeComposable); // Keep commented or remove
       // 确保是从非 racing 状态变为 racing 状态
       if (newStatus === 'racing' && oldStatus !== 'racing') {
-        console.log('[Race] Detected race start via raceStatus watch. Attempting to switch camera mode.');
         if (isCameraInitialized.value) {
           // 使用 nextTick 延迟切换，确保车辆状态更新
           nextTick(() => {
-            // 设置追逐视角 (模式 3)
+            // 设置追逐视角 (模式 3 - CHASE)
             cameraControls.setMode(3);
-            console.log('[Race] Automatically switched to CHASE mode (3) after nextTick.');
           });
-        } else {
-          console.warn('[Race] Camera not initialized when race started, cannot switch mode automatically.');
         }
       }
     });
@@ -545,6 +718,8 @@ export default {
       saveCameraSettings,
       handleCameraLookAtOffsetUpdate,
       tuningParams,
+      startAutoCameraRotation,
+      forceDisableRendererControls,
     };
   }
 };

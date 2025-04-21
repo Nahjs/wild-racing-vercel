@@ -78,13 +78,13 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
         },
         [CameraMode.FOLLOW]: {
             distance: 15,           // 增加距离
-            height: 5,              // 增加高度
+            height: 15,              // 增加高度
             offset: new THREE.Vector3(0, 3, -10), // 调整跟随偏移
-            lookAtOffset: new THREE.Vector3(0, 1, 6), // 看向车辆前方
+            lookAtOffset: new THREE.Vector3(0, 1, 10), // 看向车辆前方
             damping: 0.1,           // 阻尼值，平滑相机移动
         },
         [CameraMode.COCKPIT]: {
-            offset: new THREE.Vector3(0, 1.2, 0.2), // 调整驾驶舱位置
+            offset: new THREE.Vector3(0, 5, 0.2), // 调整驾驶舱位置
             lookAtOffset: new THREE.Vector3(0, 1.0, 15), // 看向前方更远处
             fov: 75,                // 视场角
         },
@@ -165,7 +165,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                     setupKeyListener();
                 }
                 isInitialized.value = true;
-                console.log("useCamera: Initialized successfully (simplified).");
             }).catch(error => {
                 console.error("useCamera: Error loading settings during init:", error);
                 // 加载失败时回退到初始模式
@@ -174,7 +173,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                     setupKeyListener();
                 }
                 isInitialized.value = true; // 即使出错也标记为已初始化
-                console.log("useCamera: Initialized with default settings due to load error (simplified).");
             });
 
         } catch (error) {
@@ -197,8 +195,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
     }, { immediate: true }); // 尝试立即执行，但要小心 Refs 可能尚未就绪
 
     const loadSettings = async () => {
-        // if (!cameraController.value) return; // 暂时移除
-        console.log("useCamera: Loading camera settings...");
         try {
             const settings = await settingsService.getSettings();
             // 确保 settings.camera 存在
@@ -226,9 +222,7 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                 // 加载自动旋转状态
                 autoRotate.value = settings.camera.autoRotate ?? false;
 
-                console.log('useCamera: Loaded camera settings:', settings.camera);
             } else {
-                console.log('useCamera: No saved camera settings found, using defaults.');
                 setMode(initialMode); // 使用默认值
                 autoRotate.value = false; // 默认自动旋转
                 // 使用默认参数
@@ -251,7 +245,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
     const saveSettings = async () => {
         // if (!cameraController.value) return; // 暂时移除
         isSaving.value = true;
-        console.log("useCamera: Saving camera settings...");
         try {
             const settingsToSave = {
                 currentMode: currentCameraMode.value,
@@ -266,7 +259,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
             //     // settingsToSave.modes[modeIndex] = cameraController.value.getParameters(modeIndex);
             // });
             await settingsService.updateSettings({ camera: settingsToSave });
-            console.log('useCamera: Saved camera settings:', settingsToSave);
         } catch (error) {
             console.error('useCamera: Failed to save camera settings:', error);
         } finally {
@@ -315,7 +307,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                     
                     // 更新 controls 状态以反映新位置/目标
                     controls.value.update();
-                    console.log('useCamera: Reset camera position and target for FREE_LOOK mode.');
                 } else {
                      console.warn('useCamera: Cannot reset FREE_LOOK position, target or camera ref missing.');
                 }
@@ -344,7 +335,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
                     const initialLookAtPoint = targetPosition.clone().add(lookAtOffset);
                     cameraRef.value.lookAt(initialLookAtPoint);
                     
-                    console.log('useCamera: Set initial position and lookAt for CHASE mode.');
                 } else {
                      console.warn('useCamera: Cannot set initial CHASE state, target or camera ref missing.');
                 }
@@ -363,8 +353,6 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
         if (!cameraParams.value[modeIndex]) {
             cameraParams.value = {...defaultCameraParams[modeIndex]};
         }
-        
-        console.log(`useCamera: Mode set to ${Object.keys(CameraMode)[modeIndex]}`);
         return true;
     };
 
@@ -593,24 +581,20 @@ export function useCamera(cameraRef, targetRef, rendererElementRef, options = {}
     // --- Keyboard listener ---
     const handleKeyDown = (event) => {
         if (event.key === 'v' || event.key === 'V') {
-            console.log('Camera mode toggle key pressed');
             nextMode();
         }
     };
 
     const setupKeyListener = () => {
-        console.log('Setting up camera key listener');
         window.addEventListener('keydown', handleKeyDown);
     };
 
     const removeKeyListener = () => {
-        console.log('Removing camera key listener');
         window.removeEventListener('keydown', handleKeyDown);
     };
 
     // --- Cleanup --- 
     const cleanup = () => {
-        console.log("useCamera: Cleaning up...");
         removeKeyListener();
         if (controls.value) {
             controls.value.dispose();

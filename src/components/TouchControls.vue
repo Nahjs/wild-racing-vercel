@@ -220,11 +220,27 @@ export default {
 
     // 禁止默认的触摸事件（避免滚动、缩放等）
     const preventDefaultTouchEvents = () => {
+      // 为整个文档添加触摸事件监听
+      document.addEventListener('touchstart', (e) => {
+        if (e.target.closest('.control-btn') || e.target.closest('.camera-btn') || e.target.closest('.fullscreen-btn')) {
+          e.preventDefault();
+        }
+      }, { passive: false });
+      
       document.addEventListener('touchmove', (e) => {
         if (e.target.closest('.control-btn') || e.target.closest('.camera-btn') || e.target.closest('.fullscreen-btn')) {
           e.preventDefault();
         }
       }, { passive: false });
+      
+      // 禁用整个游戏区域的默认触摸行为
+      const gameContainer = document.querySelector('.race-container');
+      if (gameContainer) {
+        gameContainer.addEventListener('touchmove', (e) => {
+          // 在游戏区域内阻止默认滚动行为
+          e.preventDefault();
+        }, { passive: false });
+      }
     };
 
     onMounted(() => {
@@ -253,22 +269,35 @@ export default {
         return;
       }
       
-      switch(control) {
-        case 'left':
-          props.controlState.turnLeft = true;
-          break;
-        case 'right':
-          props.controlState.turnRight = true;
-          break;
-        case 'accelerate':
-          props.controlState.accelerate = true;
-          break;
-        case 'brake':
-          props.controlState.brake = true;
-          break;
-        case 'handbrake': // 添加手刹控制
-          props.controlState.handbrake = true;
-          break;
+      console.log(`[TouchControls] 触摸开始: ${control}`);
+      
+      try {
+        switch(control) {
+          case 'left':
+            props.controlState.turnLeft = true;
+            break;
+          case 'right':
+            props.controlState.turnRight = true;
+            break;
+          case 'accelerate':
+            props.controlState.accelerate = true;
+            break;
+          case 'brake':
+            props.controlState.brake = true;
+            break;
+          case 'handbrake': // 添加手刹控制
+            props.controlState.handbrake = true;
+            break;
+        }
+        console.log(`[TouchControls] 控制状态已更新:`, JSON.stringify({
+          accelerate: props.controlState.accelerate,
+          brake: props.controlState.brake,
+          turnLeft: props.controlState.turnLeft,
+          turnRight: props.controlState.turnRight,
+          handbrake: props.controlState.handbrake
+        }));
+      } catch (error) {
+        console.error('[TouchControls] 设置控制状态时出错:', error);
       }
     };
 
@@ -278,22 +307,35 @@ export default {
         return;
       }
       
-      switch(control) {
-        case 'left':
-          props.controlState.turnLeft = false;
-          break;
-        case 'right':
-          props.controlState.turnRight = false;
-          break;
-        case 'accelerate':
-          props.controlState.accelerate = false;
-          break;
-        case 'brake':
-          props.controlState.brake = false;
-          break;
-        case 'handbrake': // 添加手刹控制
-          props.controlState.handbrake = false;
-          break;
+      console.log(`[TouchControls] 触摸结束: ${control}`);
+      
+      try {
+        switch(control) {
+          case 'left':
+            props.controlState.turnLeft = false;
+            break;
+          case 'right':
+            props.controlState.turnRight = false;
+            break;
+          case 'accelerate':
+            props.controlState.accelerate = false;
+            break;
+          case 'brake':
+            props.controlState.brake = false;
+            break;
+          case 'handbrake': // 添加手刹控制
+            props.controlState.handbrake = false;
+            break;
+        }
+        console.log(`[TouchControls] 控制状态已更新:`, JSON.stringify({
+          accelerate: props.controlState.accelerate,
+          brake: props.controlState.brake,
+          turnLeft: props.controlState.turnLeft,
+          turnRight: props.controlState.turnRight,
+          handbrake: props.controlState.handbrake
+        }));
+      } catch (error) {
+        console.error('[TouchControls] 设置控制状态时出错:', error);
       }
     };
 
@@ -512,30 +554,33 @@ export default {
 }
 
 .control-btn {
-  width: 65px;
-  height: 65px;
+  width: 75px; /* 增大按钮尺寸 */
+  height: 75px; /* 增大按钮尺寸 */
   border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.6);
+  border: 2px solid rgba(255, 255, 255, 0.8); /* 增强边框可见度 */
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.15);
-  touch-action: none;
+  touch-action: none; /* 防止任何默认触摸行为 */
   user-select: none;
   padding: 0;
   overflow: hidden;
   transition: all 0.2s ease;
   backdrop-filter: blur(2px);
+  pointer-events: auto; /* 确保控制按钮可以接受事件 */
+  z-index: 1100; /* 增加按钮的z-index，确保在其他元素之上 */
 }
 
-.control-btn:active {
-  background-color: rgba(0, 0, 0, 0.8);
-  transform: scale(0.92);
-  border-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.2);
+.control-btn:active,
+.control-btn.active {
+  transform: scale(0.9);
+  background-color: rgba(50, 50, 50, 0.9); /* 按下时更暗的背景色 */
+  border-color: rgba(255, 255, 255, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
 }
 
 .left-btn, .right-btn {

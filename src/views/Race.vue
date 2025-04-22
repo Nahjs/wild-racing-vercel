@@ -73,6 +73,31 @@
       :race-status="raceStatus"
       @race-start="onStartRaceFromPrompt"
     />
+    
+    <!-- 添加临时调试模式按钮 -->
+    <div class="debug-controls">
+      <button 
+        @click="toggleDebugMode" 
+        class="debug-mode-btn">
+        {{ debugMode ? '关闭调试模式' : '开启调试模式' }}
+      </button>
+      
+      <button 
+        v-if="debugMode"
+        @click="forceEnableTouchControls" 
+        class="force-touch-btn">
+        强制启用触摸控制
+      </button>
+      
+      <!-- 设备信息显示区域 -->
+      <div v-if="debugMode" class="device-info">
+        <p>设备类型: {{ isMobile.value ? '移动' : '桌面' }}</p>
+        <p>屏幕方向: {{ isLandscape ? '横屏' : '竖屏' }}</p>
+        <p>触控点数: {{ touchPoints }}</p>
+        <p>控制状态:</p>
+        <pre>{{ JSON.stringify(controlDebugInfo, null, 2) }}</pre>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -403,6 +428,26 @@ export default {
       }
 
       isLoadingVehicle.value = false; 
+
+      // 更新触控点数
+      const updateTouchPoints = () => {
+        touchPoints.value = navigator.maxTouchPoints || 0;
+      };
+      
+      // 更新屏幕方向
+      const updateOrientation = () => {
+        isLandscape.value = window.innerWidth > window.innerHeight;
+      };
+      
+      updateTouchPoints();
+      updateOrientation();
+      
+      window.addEventListener('resize', updateOrientation);
+      
+      // 在组件卸载时清理
+      onUnmounted(() => {
+        window.removeEventListener('resize', updateOrientation);
+      });
     });
     
     // 监听 isCarControllerReady 变化
@@ -748,6 +793,59 @@ export default {
       }
     };
 
+    // 添加临时调试模式按钮
+    const debugMode = ref(false);
+    const toggleDebugMode = () => {
+      debugMode.value = !debugMode.value;
+    };
+
+    const forceEnableTouchControls = () => {
+      console.log("强制启用触摸控制...");
+      
+      // 1. 强制设置为移动设备模式
+      if (isMobile && typeof isMobile === 'object' && 'value' in isMobile) {
+        isMobile.value = true;
+        console.log("已强制设置移动设备模式");
+      }
+      
+      // 2. 尝试直接启用TouchControls组件的调试模式
+      const touchControlsComponent = document.querySelector('.touch-controls');
+      if (touchControlsComponent && touchControlsComponent.__vue__) {
+        try {
+          // 访问组件实例并设置debugMode
+          touchControlsComponent.__vue__.debugMode = true;
+          console.log("已强制启用TouchControls调试模式");
+        } catch (e) {
+          console.error("无法直接修改TouchControls组件状态:", e);
+        }
+      } else {
+        console.log("未找到TouchControls组件实例");
+      }
+      
+      // 3. 刷新页面并添加debug参数
+      const url = new URL(window.location.href);
+      url.searchParams.set('debug', 'true');
+      console.log("将在3秒后重定向到调试模式URL:", url.toString());
+      
+      setTimeout(() => {
+        window.location.href = url.toString();
+      }, 3000);
+    };
+
+    // 添加设备信息相关变量
+    const touchPoints = ref(0);
+    const isLandscape = ref(false);
+    const controlDebugInfo = computed(() => {
+      if (!controls) return {};
+      return {
+        accelerate: controls.accelerate,
+        brake: controls.brake,
+        turnLeft: controls.turnLeft,
+        turnRight: controls.turnRight,
+        handbrake: controls.handbrake
+      };
+    });
+
     return {
       rendererElement,
       world,
@@ -797,7 +895,13 @@ export default {
       setCarControllerRef,
       showStartPrompt, // 添加开始提示控制
       onStartRaceFromPrompt, // 添加开始游戏处理函数
-      isLoadingTrack // 添加赛道加载状态
+      isLoadingTrack, // 添加赛道加载状态
+      debugMode,
+      toggleDebugMode,
+      forceEnableTouchControls,
+      touchPoints,
+      isLandscape,
+      controlDebugInfo
     };
   }
 };
@@ -809,5 +913,27 @@ export default {
   height: 100vh;
   position: relative;
   overflow: hidden;
+}
+
+.debug-controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1000;
+}
+
+.debug-mode-btn,
+.force-touch-btn {
+  padding: 5px 10px;
+  margin-bottom: 5px;
+  cursor: pointer;
+}
+
+.device-info {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
 }
 </style> 

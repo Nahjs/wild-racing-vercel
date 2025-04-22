@@ -92,30 +92,31 @@ export default {
     // Pass the canvas ref to the composable
     const { scene, camera, renderer, controls, startAnimationLoop, stopAnimationLoop } = useSceneSetup(canvas);
     
-    // 如果是移动设备，设置较低的渲染质量
+    // 确保所有设备都使用高质量渲染
     onMounted(() => {
       nextTick(() => {
-        if (isMobile.value && renderer.value) {
-          console.log("移动设备检测到，降低渲染质量以提高性能");
-          renderer.value.setPixelRatio(Math.min(window.devicePixelRatio, 1));
+        if (renderer.value) {
+          console.log("使用高品质渲染设置");
+          // 使用设备的原生像素比率，确保最佳画质
+          renderer.value.setPixelRatio(window.devicePixelRatio);
           
-          // 根据设备性能降低阴影质量
+          // 启用高质量阴影
           if (renderer.value.shadowMap) {
-            renderer.value.shadowMap.autoUpdate = false;
+            renderer.value.shadowMap.autoUpdate = true;
             renderer.value.shadowMap.needsUpdate = true;
           }
         }
       });
     });
     
-    // 使用环境设置组合式函数
+    // 使用环境设置组合式函数，不再区分移动设备
     const { 
       initializeEnvironment, 
       cleanupEnvironment 
     } = useEnvironmentSetup({
-      enableContactShadow: props.enableContactShadow && !isMobile.value, // 移动设备禁用接触阴影
+      enableContactShadow: props.enableContactShadow, // 所有设备都启用接触阴影
       enableEnvironmentMap: props.enableEnvironmentMap,
-      enableBigSpotLight: props.enableBigSpotLight && !isMobile.value, // 移动设备禁用大型聚光灯
+      enableBigSpotLight: props.enableBigSpotLight, // 所有设备都启用大型聚光灯
       isMobile
     });
     

@@ -12,10 +12,23 @@ export function useDeviceDetection() {
   };
   
   const checkDevice = () => {
-    isMobile.value = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || 
-                     (navigator.maxTouchPoints && navigator.maxTouchPoints > 2);
+    // 增强设备检测逻辑
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    const mobileRegex = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+    
+    // 同时检查触摸点数量、用户代理和屏幕尺寸
+    isMobile.value = mobileRegex.test(userAgent) || 
+                     (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
+                     window.matchMedia("(max-width: 768px)").matches;
+    
+    // 调试输出
+    console.log(`设备检测 - 用户代理: ${userAgent}`);
+    console.log(`设备检测 - 触摸点数量: ${navigator.maxTouchPoints || 0}`);
+    console.log(`设备检测 - 屏幕宽度: ${window.innerWidth}px`);
+    console.log(`设备检测 - 屏幕高度: ${window.innerHeight}px`);
+    console.log(`设备检测结果: ${isMobile.value ? '移动设备' : '桌面设备'}`);
+    
     checkOrientation();
-    console.log(`设备类型: ${isMobile.value ? '移动设备' : '桌面设备'}`);
   };
   
   // 进入全屏模式

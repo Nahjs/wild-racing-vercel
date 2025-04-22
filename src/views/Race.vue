@@ -102,7 +102,13 @@
         <p>屏幕方向: {{ isLandscape ? '横屏' : '竖屏' }}</p>
         <p>触控点数: {{ touchPoints }}</p>
         <p>控制状态:</p>
-        <pre>{{ JSON.stringify(controlDebugInfo, null, 2) }}</pre>
+        <ul>
+          <li>加速: {{ controls.accelerate }}</li>
+          <li>刹车: {{ controls.brake }}</li>
+          <li>左转: {{ controls.turnLeft }}</li>
+          <li>右转: {{ controls.turnRight }}</li>
+          <li>手刹: {{ controls.handbrake }}</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -428,7 +434,9 @@ export default {
         
         // 只在有活跃控制时输出日志，避免刷屏
         if (controls.accelerate || controls.brake || controls.turnLeft || controls.turnRight || controls.handbrake) {
-          console.log("[Race] 同步按键状态到控制状态:", JSON.stringify(controls));
+          // 不要使用JSON.stringify(controls)，这会导致循环引用错误
+          // 而是只记录我们关心的布尔值属性
+          console.log(`[Race] 同步按键状态: 加速=${controls.accelerate}, 刹车=${controls.brake}, 左转=${controls.turnLeft}, 右转=${controls.turnRight}, 手刹=${controls.handbrake}`);
         }
       }, 16); // 约60fps
     };
@@ -567,11 +575,14 @@ export default {
         });
         
         // 重置所有控制为false
-        controls.accelerate = false;
-        controls.brake = false;
-        controls.turnLeft = false;
-        controls.turnRight = false;
-        controls.handbrake = false;
+        if (controls) { // 添加检查
+          controls.accelerate = false;
+          controls.brake = false;
+          controls.turnLeft = false;
+          controls.turnRight = false;
+          controls.handbrake = false;
+          console.log("[Race] 控制状态已重置");
+        }
       };
       
       const handleFullscreenChange = () => {
@@ -993,7 +1004,7 @@ export default {
     const touchPoints = ref(0);
     const isLandscape = ref(false);
     const controlDebugInfo = computed(() => {
-      if (!controls) return {};
+      // 返回一个普通对象，避免循环引用
       return {
         accelerate: controls.accelerate,
         brake: controls.brake,
@@ -1077,7 +1088,7 @@ export default {
   position: absolute;
   top: 10px;
   right: 10px;
-  z-index: 1000;
+  z-index: 100;
 }
 
 .debug-mode-btn,

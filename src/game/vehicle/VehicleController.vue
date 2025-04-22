@@ -113,18 +113,31 @@ export default {
     // 监视controlState prop的变化
     watch(() => props.controlState, (newControlState, oldControlState) => {
       // 检查是否有实际变化，避免不必要的日志
-      if (JSON.stringify(newControlState) !== JSON.stringify(oldControlState)) {
-        console.log('[VehicleController] controlState prop 变化:', JSON.stringify(newControlState));
+      try {
+        // 不使用JSON.stringify比较整个对象
+        const hasChanged = 
+          newControlState.accelerate !== oldControlState?.accelerate ||
+          newControlState.brake !== oldControlState?.brake ||
+          newControlState.turnLeft !== oldControlState?.turnLeft ||
+          newControlState.turnRight !== oldControlState?.turnRight ||
+          newControlState.handbrake !== oldControlState?.handbrake;
         
-        // 检查加速键是否被按下
-        if (newControlState.accelerate) {
-          console.log('[VehicleController] 检测到加速指令，尝试加速...');
+        if (hasChanged) {
+          // 直接记录关心的属性，避免使用JSON.stringify
+          console.log(`[VehicleController] controlState prop 变化: 加速=${newControlState.accelerate}, 刹车=${newControlState.brake}, 左转=${newControlState.turnLeft}, 右转=${newControlState.turnRight}, 手刹=${newControlState.handbrake}`);
+          
+          // 检查加速键是否被按下
+          if (newControlState.accelerate) {
+            console.log('[VehicleController] 检测到加速指令，尝试加速...');
+          }
+          
+          // 检查其他控制状态
+          if (newControlState.turnLeft || newControlState.turnRight) {
+            console.log('[VehicleController] 检测到转向指令：左=' + newControlState.turnLeft + ', 右=' + newControlState.turnRight);
+          }
         }
-        
-        // 检查其他控制状态
-        if (newControlState.turnLeft || newControlState.turnRight) {
-          console.log('[VehicleController] 检测到转向指令：左=' + newControlState.turnLeft + ', 右=' + newControlState.turnRight);
-        }
+      } catch (error) {
+        console.error('[VehicleController] 处理controlState变化时出错:', error);
       }
     }, { deep: true, immediate: true });
 

@@ -42,21 +42,21 @@
           <button 
             class="control-btn left-btn" 
             @touchstart.prevent="handleTouchStart('left')"
-            @mousedown.prevent="handleTouchStart('left')"
             @touchend.prevent="handleTouchEnd('left')"
+            @touchcancel.prevent="handleTouchEnd('left')"
+            @mousedown.prevent="handleTouchStart('left')"
             @mouseup.prevent="handleTouchEnd('left')"
-            @mouseleave.prevent="handleTouchEnd('left')"
-            @touchcancel.prevent="handleTouchEnd('left')">
+            @mouseleave.prevent="handleTouchEnd('left')">
             <img src="/assets/images/turn-left.svg" alt="左转" class="control-icon" onerror="this.src='/assets/images/turn-left.png';this.onerror=null;">
           </button>
           <button 
             class="control-btn right-btn" 
             @touchstart.prevent="handleTouchStart('right')"
-            @mousedown.prevent="handleTouchStart('right')"
             @touchend.prevent="handleTouchEnd('right')"
+            @touchcancel.prevent="handleTouchEnd('right')"
+            @mousedown.prevent="handleTouchStart('right')"
             @mouseup.prevent="handleTouchEnd('right')"
-            @mouseleave.prevent="handleTouchEnd('right')"
-            @touchcancel.prevent="handleTouchEnd('right')">
+            @mouseleave.prevent="handleTouchEnd('right')">
             <img src="/assets/images/turn-right.svg" alt="右转" class="control-icon" onerror="this.src='/assets/images/turn-right.png';this.onerror=null;">
           </button>
         </div>
@@ -66,20 +66,20 @@
           <button 
             class="control-btn accelerate-btn" 
             @touchstart.prevent="handleTouchStart('accelerate')"
-            @mousedown.prevent="handleTouchStart('accelerate')"
             @touchend.prevent="handleTouchEnd('accelerate')"
+            @touchcancel.prevent="handleTouchEnd('accelerate')"
+            @mousedown.prevent="handleTouchStart('accelerate')"
             @mouseup.prevent="handleTouchEnd('accelerate')"
-            @mouseleave.prevent="handleTouchEnd('accelerate')"
-            @touchcancel.prevent="handleTouchEnd('accelerate')">
+            @mouseleave.prevent="handleTouchEnd('accelerate')">
             <img src="/assets/images/accelerate.svg" alt="加速" class="control-icon" onerror="this.src='/assets/images/accelerate.png';this.onerror=null;">
           </button>
           <button 
             class="control-btn brake-btn" 
             @touchstart.prevent="handleTouchStart('brake')"
-            @mousedown.prevent="handleTouchStart('brake')"
             @touchend.prevent="handleTouchEnd('brake')"
-            @mouseup.prevent="handleTouchEnd('brake')"
-            @touchcancel.prevent="handleTouchEnd('brake')">
+            @touchcancel.prevent="handleTouchEnd('brake')"
+            @mousedown.prevent="handleTouchStart('brake')"
+            @mouseup.prevent="handleTouchEnd('brake')">
             <img src="/assets/images/brake.svg" alt="刹车" class="control-icon" onerror="this.src='/assets/images/brake.png';this.onerror=null;">
           </button>
         </div>
@@ -220,27 +220,57 @@ export default {
 
     // 禁止默认的触摸事件（避免滚动、缩放等）
     const preventDefaultTouchEvents = () => {
-      // 为整个文档添加触摸事件监听
-      document.addEventListener('touchstart', (e) => {
-        if (e.target.closest('.control-btn') || e.target.closest('.camera-btn') || e.target.closest('.fullscreen-btn')) {
-          e.preventDefault();
-        }
-      }, { passive: false });
+      console.log("[TouchControls] 设置触摸事件处理...");
       
-      document.addEventListener('touchmove', (e) => {
-        if (e.target.closest('.control-btn') || e.target.closest('.camera-btn') || e.target.closest('.fullscreen-btn')) {
-          e.preventDefault();
-        }
-      }, { passive: false });
+      // 为所有控制按钮添加触摸事件处理
+      const addTouchHandlers = () => {
+        // 获取所有控制按钮
+        const controlButtons = document.querySelectorAll('.control-btn, .camera-btn, .fullscreen-btn');
+        console.log(`[TouchControls] 找到 ${controlButtons.length} 个控制按钮`);
+        
+        // 为每个按钮添加触摸事件处理器
+        controlButtons.forEach(button => {
+          // 阻止默认行为
+          const preventDefaultHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          };
+          
+          button.addEventListener('touchstart', preventDefaultHandler, { passive: false });
+          button.addEventListener('touchmove', preventDefaultHandler, { passive: false });
+          button.addEventListener('touchend', preventDefaultHandler, { passive: false });
+          button.addEventListener('touchcancel', preventDefaultHandler, { passive: false });
+          
+          // 增加点击区域
+          button.style.touchAction = 'none';
+          button.style.pointerEvents = 'auto';
+          button.style.position = 'relative';
+          
+          console.log(`[TouchControls] 已为按钮添加触摸事件处理: ${button.className}`);
+        });
+      };
       
-      // 禁用整个游戏区域的默认触摸行为
-      const gameContainer = document.querySelector('.race-container');
-      if (gameContainer) {
-        gameContainer.addEventListener('touchmove', (e) => {
-          // 在游戏区域内阻止默认滚动行为
-          e.preventDefault();
-        }, { passive: false });
-      }
+      // 等待DOM完全加载后添加处理器
+      setTimeout(() => {
+        addTouchHandlers();
+      }, 500);
+      
+      // 为游戏容器添加触摸事件处理器
+      document.addEventListener('DOMContentLoaded', () => {
+        const gameContainer = document.querySelector('.race-container');
+        if (gameContainer) {
+          gameContainer.addEventListener('touchmove', (e) => {
+            // 只有当触摸点不在控制按钮上时才阻止默认行为
+            if (!e.target.closest('.control-btn') && !e.target.closest('.camera-btn') && !e.target.closest('.fullscreen-btn')) {
+              e.preventDefault();
+            }
+          }, { passive: false });
+          
+          console.log('[TouchControls] 已为游戏容器添加触摸事件处理');
+        } else {
+          console.warn('[TouchControls] 未找到游戏容器');
+        }
+      });
     };
 
     onMounted(() => {
@@ -255,6 +285,26 @@ export default {
         debugMode.value = true;
         console.log('通过URL参数自动开启触摸控制调试模式');
       }
+      
+      // 增强触摸响应性
+      const buttons = document.querySelectorAll('.control-btn');
+      buttons.forEach(button => {
+        // 增加触摸反馈
+        button.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          button.classList.add('active');
+          
+          // 添加按下时的震动反馈（如果设备支持）
+          if (navigator.vibrate) {
+            navigator.vibrate(20);
+          }
+        }, { passive: false });
+        
+        button.addEventListener('touchend', (e) => {
+          e.preventDefault();
+          button.classList.remove('active');
+        }, { passive: false });
+      });
     });
     
     onUnmounted(() => {
@@ -272,6 +322,12 @@ export default {
       console.log(`[TouchControls] 触摸开始: ${control}`);
       
       try {
+        // 给按钮添加active类
+        const button = document.querySelector(`.${control}-btn`);
+        if (button) {
+          button.classList.add('active');
+        }
+
         switch(control) {
           case 'left':
             props.controlState.turnLeft = true;
@@ -289,13 +345,9 @@ export default {
             props.controlState.handbrake = true;
             break;
         }
-        console.log(`[TouchControls] 控制状态已更新:`, JSON.stringify({
-          accelerate: props.controlState.accelerate,
-          brake: props.controlState.brake,
-          turnLeft: props.controlState.turnLeft,
-          turnRight: props.controlState.turnRight,
-          handbrake: props.controlState.handbrake
-        }));
+        
+        // 输出各控制状态的值，而不是整个对象
+        console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
       } catch (error) {
         console.error('[TouchControls] 设置控制状态时出错:', error);
       }
@@ -310,6 +362,12 @@ export default {
       console.log(`[TouchControls] 触摸结束: ${control}`);
       
       try {
+        // 移除按钮的active类
+        const button = document.querySelector(`.${control}-btn`);
+        if (button) {
+          button.classList.remove('active');
+        }
+        
         switch(control) {
           case 'left':
             props.controlState.turnLeft = false;
@@ -327,13 +385,9 @@ export default {
             props.controlState.handbrake = false;
             break;
         }
-        console.log(`[TouchControls] 控制状态已更新:`, JSON.stringify({
-          accelerate: props.controlState.accelerate,
-          brake: props.controlState.brake,
-          turnLeft: props.controlState.turnLeft,
-          turnRight: props.controlState.turnRight,
-          handbrake: props.controlState.handbrake
-        }));
+        
+        // 输出各控制状态的值，而不是整个对象
+        console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
       } catch (error) {
         console.error('[TouchControls] 设置控制状态时出错:', error);
       }
@@ -361,9 +415,12 @@ export default {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 30vh;
+  height: 40vh; /* 增加控制区域高度 */
   z-index: 1000;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
 }
 
 .orientation-warning {
@@ -510,21 +567,21 @@ export default {
 
 .direction-controls {
   position: absolute;
-  bottom: 130px; /* 进一步提高位置，给速度计留更多空间 */
+  bottom: 80px; /* 降低位置 */
   left: 30px;
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: 30px; /* 增加按钮之间的间距 */
   pointer-events: auto;
 }
 
 .acceleration-controls {
   position: absolute;
-  bottom: 130px; /* 进一步提高位置，给速度计留更多空间 */
+  bottom: 80px; /* 降低位置 */
   right: 30px;
   display: flex;
   flex-direction: row;
-  gap: 20px;
+  gap: 30px; /* 增加按钮之间的间距 */
   pointer-events: auto;
 }
 
@@ -537,8 +594,8 @@ export default {
 }
 
 .handbrake-btn {
-  background-color: rgba(150, 50, 150, 0.6);
-  background-image: linear-gradient(135deg, rgba(150, 50, 150, 0.6) 0%, rgba(180, 70, 180, 0.6) 100%);
+  background-color: rgba(200, 50, 200, 0.7); /* 更鲜明的紫色 */
+  background-image: linear-gradient(135deg, rgba(200, 50, 200, 0.7) 0%, rgba(230, 70, 230, 0.7) 100%);
   position: relative;
 }
 
@@ -554,54 +611,54 @@ export default {
 }
 
 .control-btn {
-  width: 75px; /* 增大按钮尺寸 */
-  height: 75px; /* 增大按钮尺寸 */
+  width: 50px; /* 进一步增大按钮尺寸 */
+  height: 50px; /* 进一步增大按钮尺寸 */
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.8); /* 增强边框可见度 */
+  background-color: rgba(0, 0, 0, 0.7); /* 增加不透明度 */
+  border: 3px solid rgba(255, 255, 255, 0.9); /* 更明显的边框 */
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.15);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
   touch-action: none; /* 防止任何默认触摸行为 */
   user-select: none;
   padding: 0;
   overflow: hidden;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(2px);
+  transition: all 0.15s ease; /* 加快过渡动画 */
+  backdrop-filter: blur(3px);
   pointer-events: auto; /* 确保控制按钮可以接受事件 */
   z-index: 1100; /* 增加按钮的z-index，确保在其他元素之上 */
+  transform: scale(1);
 }
 
 .control-btn:active,
 .control-btn.active {
-  transform: scale(0.9);
-  background-color: rgba(50, 50, 50, 0.9); /* 按下时更暗的背景色 */
-  border-color: rgba(255, 255, 255, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.3);
+  transform: scale(0.85);
+  background-color: rgba(100, 100, 100, 0.9); /* 按下时更亮的背景色 */
+  border-color: rgb(255, 255, 255);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 25px rgba(255, 255, 255, 0.4);
 }
 
 .left-btn, .right-btn {
-  background-color: rgba(30, 30, 150, 0.6);
-  background-image: linear-gradient(135deg, rgba(30, 30, 150, 0.6) 0%, rgba(50, 50, 180, 0.6) 100%);
+  background-color: rgba(30, 30, 200, 0.7); /* 更鲜明的蓝色 */
+  background-image: linear-gradient(135deg, rgba(40, 40, 210, 0.7) 0%, rgba(60, 60, 230, 0.7) 100%);
 }
 
 .accelerate-btn {
-  background-color: rgba(0, 120, 0, 0.6);
-  background-image: linear-gradient(135deg, rgba(0, 120, 0, 0.6) 0%, rgba(0, 150, 30, 0.6) 100%);
+  background-color: rgba(0, 150, 0, 0.7); /* 更鲜明的绿色 */
+  background-image: linear-gradient(135deg, rgba(0, 150, 0, 0.7) 0%, rgba(0, 180, 30, 0.7) 100%);
 }
 
 .brake-btn {
-  background-color: rgba(150, 30, 30, 0.6);
-  background-image: linear-gradient(135deg, rgba(150, 30, 30, 0.6) 0%, rgba(180, 50, 50, 0.6) 100%);
+  background-color: rgba(200, 30, 30, 0.7); /* 更鲜明的红色 */
+  background-image: linear-gradient(135deg, rgba(200, 30, 30, 0.7) 0%, rgba(230, 50, 50, 0.7) 100%);
 }
 
 .handbrake-btn {
-  background-color: rgba(150, 50, 150, 0.6);
-  background-image: linear-gradient(135deg, rgba(150, 50, 150, 0.6) 0%, rgba(180, 70, 180, 0.6) 100%);
-  position: relative;
+  background-color: rgba(200, 50, 200, 0.7); /* 更鲜明的紫色 */
+  background-image: linear-gradient(135deg, rgba(200, 50, 200, 0.7) 0%, rgba(230, 70, 230, 0.7) 100%);
 }
 
 .control-icon {
@@ -736,5 +793,22 @@ export default {
   0% { opacity: 0.7; }
   50% { opacity: 1; }
   100% { opacity: 0.7; }
+}
+
+/* 为指示按钮按下状态添加脉冲动画 */
+@keyframes buttonPulse {
+  0% {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    box-shadow: 0 5px 25px rgba(255, 255, 255, 0.4), inset 0 0 30px rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
+  }
+}
+
+.control-btn.active {
+  animation: buttonPulse 0.5s infinite;
 }
 </style> 

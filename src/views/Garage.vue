@@ -92,6 +92,21 @@
       @update:visualOffsetY="updateTuningParam('visualOffsetY', $event)"
       :connection-points="tuningParams.connectionPoints"
       @update:connectionPoints="updateTuningParam('connectionPoints', $event)"
+      
+      :handbrakePower="tuningParams.handbrakePower"
+      :driftFrictionSlip="tuningParams.driftFrictionSlip"
+      :normalFrictionSlip="tuningParams.normalFrictionSlip"
+      :baseSteeringRadius="tuningParams.baseSteeringRadius"
+      :speedSteeringFactor="tuningParams.speedSteeringFactor" 
+      :wheelBase="tuningParams.wheelBase"
+      :trackWidth="tuningParams.trackWidth"
+      @update:handbrakePower="updateTuningParam('handbrakePower', $event)"
+      @update:driftFrictionSlip="updateTuningParam('driftFrictionSlip', $event)"
+      @update:normalFrictionSlip="updateTuningParam('normalFrictionSlip', $event)"
+      @update:baseSteeringRadius="updateTuningParam('baseSteeringRadius', $event)"
+      @update:speedSteeringFactor="updateTuningParam('speedSteeringFactor', $event)"
+      @update:wheelBase="updateTuningParam('wheelBase', $event)"
+      @update:trackWidth="updateTuningParam('trackWidth', $event)"
     />
     
     <!-- 操作结果提示 -->

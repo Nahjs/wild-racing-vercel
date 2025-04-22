@@ -8,6 +8,21 @@
       </div>
     </div>
     
+    <!-- 全屏切换按钮 - 移到外层容器 -->
+    <div class="fullscreen-control" v-if="isMobile">
+      <button
+        class="fullscreen-btn"
+        @touchstart.prevent="handleFullscreenToggle"
+        @mousedown.prevent="handleFullscreenToggle">
+        <img 
+          :src="isFullscreen ? '/assets/images/fullscreen-exit.svg' : '/assets/images/fullscreen.svg'" 
+          :alt="isFullscreen ? '退出全屏' : '全屏'" 
+          class="control-icon" 
+          onerror="this.src=isFullscreen ? '/assets/images/fullscreen-exit.png' : '/assets/images/fullscreen.png';this.onerror=null;">
+      </button>
+      <span class="fullscreen-tip" v-if="!isFullscreen">点击进入全屏</span>
+    </div>
+    
     <!-- 触摸控制按钮 -->
     <div class="touch-controls" v-if="isMobile || debugMode">
       <!-- 视角切换按钮 -->
@@ -68,6 +83,20 @@
             <img src="/assets/images/brake.svg" alt="刹车" class="control-icon" onerror="this.src='/assets/images/brake.png';this.onerror=null;">
           </button>
         </div>
+        
+        <!-- 新增手刹按钮 -->
+        <div class="handbrake-control">
+          <button 
+            class="control-btn handbrake-btn" 
+            @touchstart.prevent="handleTouchStart('handbrake')"
+            @mousedown.prevent="handleTouchStart('handbrake')"
+            @touchend.prevent="handleTouchEnd('handbrake')"
+            @mouseup.prevent="handleTouchEnd('handbrake')"
+            @touchcancel.prevent="handleTouchEnd('handbrake')">
+            <img src="/assets/images/handbrake.svg" alt="手刹" class="control-icon" onerror="this.src='/assets/images/handbrake.png';this.onerror=null;">
+            <span class="control-label">漂移</span>
+          </button>
+        </div>
       </div>
       
       <!-- 调试模式切换按钮 (仅在非移动设备上显示) -->
@@ -102,7 +131,7 @@ export default {
     }
   },
   setup(props, { emit }) {
-    const { isMobile, isLandscape } = useDeviceDetection();
+    const { isMobile, isLandscape, isFullscreen, enterFullscreen, exitFullscreen, toggleFullscreen } = useDeviceDetection();
     const debugMode = ref(false);
     
     // 视角模式名称映射
@@ -113,6 +142,13 @@ export default {
       3: '追逐视角',
       4: '俯视视角',
       5: '电影视角'
+    };
+
+    // 处理全屏切换，添加错误回调
+    const handleFullscreenToggle = () => {
+      toggleFullscreen((error) => {
+        console.log("全屏切换回调: ", error ? error.message : '成功');
+      });
     };
 
     // 切换调试模式
@@ -148,8 +184,14 @@ export default {
         case 'KeyD': case 'ArrowRight':
           handleTouchStart('right');
           break;
+        case 'Space': // 添加空格键触发手刹
+          handleTouchStart('handbrake');
+          break;
         case 'KeyV': // 按V键切换视角
           switchCamera();
+          break;
+        case 'KeyF': // 按F键切换全屏
+          handleFullscreenToggle();
           break;
       }
     };
@@ -170,13 +212,16 @@ export default {
         case 'KeyD': case 'ArrowRight':
           handleTouchEnd('right');
           break;
+        case 'Space': // 添加空格键释放手刹
+          handleTouchEnd('handbrake');
+          break;
       }
     };
 
     // 禁止默认的触摸事件（避免滚动、缩放等）
     const preventDefaultTouchEvents = () => {
       document.addEventListener('touchmove', (e) => {
-        if (e.target.closest('.control-btn') || e.target.closest('.camera-btn')) {
+        if (e.target.closest('.control-btn') || e.target.closest('.camera-btn') || e.target.closest('.fullscreen-btn')) {
           e.preventDefault();
         }
       }, { passive: false });
@@ -221,6 +266,9 @@ export default {
         case 'brake':
           props.controlState.brake = true;
           break;
+        case 'handbrake': // 添加手刹控制
+          props.controlState.handbrake = true;
+          break;
       }
     };
 
@@ -243,18 +291,23 @@ export default {
         case 'brake':
           props.controlState.brake = false;
           break;
+        case 'handbrake': // 添加手刹控制
+          props.controlState.handbrake = false;
+          break;
       }
     };
 
     return {
       isMobile,
       isLandscape,
+      isFullscreen,
       debugMode,
       cameraModeNames,
       toggleDebugMode,
       handleTouchStart,
       handleTouchEnd,
-      switchCamera
+      switchCamera,
+      handleFullscreenToggle
     };
   }
 };
@@ -334,6 +387,7 @@ export default {
   align-items: center;
   justify-content: center;
   background-color: rgba(0, 0, 0, 0.6);
+  background-image: linear-gradient(135deg, rgba(30, 30, 30, 0.7) 0%, rgba(60, 60, 60, 0.6) 100%);
   color: white;
   border: 2px solid rgba(255, 255, 255, 0.5);
   border-radius: 30px;
@@ -341,19 +395,75 @@ export default {
   font-size: 12px;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(255, 255, 255, 0.1);
   touch-action: none;
   user-select: none;
+  backdrop-filter: blur(2px);
 }
 
 .camera-btn:active {
   background-color: rgba(0, 0, 0, 0.8);
   transform: scale(0.98);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.15);
 }
 
 .camera-mode-name {
   margin-left: 5px;
   font-size: 12px;
+}
+
+/* 全屏控制按钮 */
+.fullscreen-control {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  pointer-events: auto;
+  z-index: 1001;
+}
+
+.fullscreen-btn {
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.7);
+  background-image: linear-gradient(135deg, rgba(60, 60, 60, 0.8) 0%, rgba(30, 30, 30, 0.8) 100%);
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 8px rgba(0, 128, 255, 0.5);
+  touch-action: none;
+  user-select: none;
+  backdrop-filter: blur(3px);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 8px rgba(0, 128, 255, 0.5);
+  }
+  50% {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(255, 255, 255, 0.2), 0 0 15px rgba(0, 128, 255, 0.7);
+  }
+  100% {
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(255, 255, 255, 0.15), 0 0 8px rgba(0, 128, 255, 0.5);
+  }
+}
+
+.fullscreen-btn:active {
+  background-color: rgba(0, 0, 0, 0.9);
+  transform: scale(0.92);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(255, 255, 255, 0.15);
+  animation: none;
+}
+
+.fullscreen-btn img {
+  width: 65%;
+  height: 65%;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
 }
 
 .direction-controls {
@@ -376,41 +486,77 @@ export default {
   pointer-events: auto;
 }
 
+/* 新增手刹按钮样式 */
+.handbrake-control {
+  position: absolute;
+  bottom: 40px;
+  right: 30px;
+  pointer-events: auto;
+}
+
+.handbrake-btn {
+  background-color: rgba(150, 50, 150, 0.6);
+  background-image: linear-gradient(135deg, rgba(150, 50, 150, 0.6) 0%, rgba(180, 70, 180, 0.6) 100%);
+  position: relative;
+}
+
+.control-label {
+  position: absolute;
+  bottom: -20px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: white;
+  font-size: 12px;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
+}
+
 .control-btn {
   width: 65px;
   height: 65px;
   border-radius: 50%;
   background-color: rgba(0, 0, 0, 0.6);
-  border: 2px solid rgba(255, 255, 255, 0.5);
+  border: 2px solid rgba(255, 255, 255, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(255, 255, 255, 0.15);
   touch-action: none;
   user-select: none;
   padding: 0;
   overflow: hidden;
-  transition: all 0.1s ease;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(2px);
 }
 
 .control-btn:active {
   background-color: rgba(0, 0, 0, 0.8);
   transform: scale(0.92);
-  border-color: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.2);
 }
 
 .left-btn, .right-btn {
   background-color: rgba(30, 30, 150, 0.6);
+  background-image: linear-gradient(135deg, rgba(30, 30, 150, 0.6) 0%, rgba(50, 50, 180, 0.6) 100%);
 }
 
 .accelerate-btn {
   background-color: rgba(0, 120, 0, 0.6);
+  background-image: linear-gradient(135deg, rgba(0, 120, 0, 0.6) 0%, rgba(0, 150, 30, 0.6) 100%);
 }
 
 .brake-btn {
   background-color: rgba(150, 30, 30, 0.6);
+  background-image: linear-gradient(135deg, rgba(150, 30, 30, 0.6) 0%, rgba(180, 50, 50, 0.6) 100%);
+}
+
+.handbrake-btn {
+  background-color: rgba(150, 50, 150, 0.6);
+  background-image: linear-gradient(135deg, rgba(150, 50, 150, 0.6) 0%, rgba(180, 70, 180, 0.6) 100%);
+  position: relative;
 }
 
 .control-icon {
@@ -418,6 +564,7 @@ export default {
   height: 60%;
   object-fit: contain;
   filter: invert(1); /* 使图标为白色 */
+  filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
 
 /* 调试模式切换按钮 */
@@ -454,6 +601,11 @@ export default {
     right: 15px;
   }
   
+  .handbrake-control {
+    bottom: 20px;
+    right: 15px;
+  }
+  
   .control-btn {
     width: 50px;
     height: 50px;
@@ -466,6 +618,16 @@ export default {
   .camera-btn {
     padding: 4px 8px;
     font-size: 10px;
+  }
+  
+  .fullscreen-control {
+    top: 10px;
+    right: 10px;
+  }
+  
+  .fullscreen-btn {
+    width: 32px;
+    height: 32px;
   }
 }
 
@@ -497,5 +659,37 @@ export default {
   .acceleration-controls {
     bottom: 150px; /* 增加距离底部的空间，不挡住速度计 */
   }
+  
+  .handbrake-control {
+    bottom: 40px;
+  }
+  
+  .fullscreen-control {
+    top: 15px;
+    right: 15px;
+  }
+}
+
+.fullscreen-tip {
+  position: absolute;
+  white-space: nowrap;
+  left: 60px;
+  top: 50%;
+  transform: translateY(-50%);
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 15px;
+  font-size: 12px;
+  backdrop-filter: blur(3px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  animation: fadeInOut 2.5s infinite;
+  pointer-events: none;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
 }
 </style> 

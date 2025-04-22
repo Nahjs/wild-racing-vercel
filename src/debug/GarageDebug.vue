@@ -121,6 +121,38 @@
         <label>被动减速 ({{ slowDownForce?.toFixed(1) }})</label>
         <input type="range" min="0" max="50" step="0.5" :value="slowDownForce" @input="$emit('update:slowDownForce', Number($event.target.value))">
       </div>
+      
+      <!-- 新增手刹和阿克曼转向相关控制 -->
+      <hr>
+      <h4>漂移和转向系统</h4>
+      <div class="control-group">
+        <label>手刹力度 ({{ handbrakePower }})</label>
+        <input type="range" min="10" max="200" step="5" :value="handbrakePower" @input="$emit('update:handbrakePower', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>漂移摩擦系数 ({{ driftFrictionSlip?.toFixed(1) }})</label>
+        <input type="range" min="1" max="20" step="0.1" :value="driftFrictionSlip" @input="$emit('update:driftFrictionSlip', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>正常摩擦系数 ({{ normalFrictionSlip?.toFixed(1) }})</label>
+        <input type="range" min="5" max="50" step="1" :value="normalFrictionSlip" @input="$emit('update:normalFrictionSlip', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>基础转向半径 ({{ baseSteeringRadius?.toFixed(1) }})</label>
+        <input type="range" min="4" max="20" step="0.5" :value="baseSteeringRadius" @input="$emit('update:baseSteeringRadius', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>速度转向因子 ({{ speedSteeringFactor?.toFixed(2) }})</label>
+        <input type="range" min="0.01" max="0.5" step="0.01" :value="speedSteeringFactor" @input="$emit('update:speedSteeringFactor', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>轴距 ({{ wheelBase?.toFixed(1) }})</label>
+        <input type="range" min="1" max="5" step="0.1" :value="wheelBase" @input="$emit('update:wheelBase', Number($event.target.value))">
+      </div>
+      <div class="control-group">
+        <label>轮距 ({{ trackWidth?.toFixed(1) }})</label>
+        <input type="range" min="0.5" max="3" step="0.1" :value="trackWidth" @input="$emit('update:trackWidth', Number($event.target.value))">
+      </div>
 
       <!-- Suspension & Wheels -->
       <hr>
@@ -278,6 +310,14 @@ const props = defineProps({
   connectionPoints: Array,
   // Saving State (from tuningStore)
   isSavingTuning: Boolean,
+  // 新增手刹和阿克曼转向相关控制
+  handbrakePower: Number,
+  driftFrictionSlip: Number,
+  normalFrictionSlip: Number,
+  baseSteeringRadius: Number,
+  speedSteeringFactor: Number,
+  wheelBase: Number,
+  trackWidth: Number,
 });
 
 // Helper function to update connection points array immutably
@@ -334,7 +374,15 @@ defineEmits([
   'update:wheelIndices',
   'update:connectionPoints',
   // Save Action
-  'save-tuning'
+  'save-tuning',
+  // 新增手刹和阿克曼转向相关控制
+  'update:handbrakePower',
+  'update:driftFrictionSlip',
+  'update:normalFrictionSlip',
+  'update:baseSteeringRadius',
+  'update:speedSteeringFactor',
+  'update:wheelBase',
+  'update:trackWidth',
 ]);
 
 const isOpen = ref(true); // Panel starts open

@@ -1,5 +1,4 @@
 import { ref, onMounted, onUnmounted } from 'vue';
-// Assuming these are correctly located now in @/core/input/
 import { ControlState, KeyboardController, TouchController } from '@/core/input/InputManager';
 import { useDeviceDetection } from '@/composables/useDeviceDetection';
 

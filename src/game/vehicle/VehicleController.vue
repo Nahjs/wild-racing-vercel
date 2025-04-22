@@ -67,6 +67,8 @@ export default {
     const resetThreshold = 0.1;
     let justReset = false;
     let resetCooldownTimer = null;
+    let handbrakeTimer = ref(0); // 新增：跟踪手刹持续时间
+    let previousHandbrakeState = false; // 新增：记录上一帧的手刹状态
     
     const wheelRadius = computed(() => props.selectedVehicle?.wheelRadius ?? 0.34);
     
@@ -251,16 +253,58 @@ export default {
         return; // 如果未就绪或 props 丢失，则提前返回
       }
       
-      // 使用 props.controlState
+      // 获取当前车速（km/h）
+      const currentSpeed = vehicle.value.chassisBody.velocity.length() * 3.6; // 转换为km/h
+      
+      // 根据阿克曼转向原理计算转向角度
+      const wheelBase = tuningParams.value.wheelBase || 2.8; // 轴距
+      const trackWidth = tuningParams.value.trackWidth || 1.7; // 轮距
+      const baseRadius = tuningParams.value.baseSteeringRadius || 8; // 基础转向半径
+      const speedFactor = tuningParams.value.speedSteeringFactor || 0.1; // 速度影响因子
+      
+      // 计算速度相关的动态转向半径
+      const dynamicRadius = baseRadius + Math.abs(currentSpeed) * speedFactor;
+      
+      // 获取转向输入
       const steerValue = (props.controlState.turnLeft ? 1 : 0) - (props.controlState.turnRight ? 1 : 0);
-      const actualSteer = steerValue * tuningStore.tuningParams.turnStrength;
-
+      
       // --- 动态获取转向轮索引 ---
       const steerLeftIndex = tuningParams.value.wheelIndices?.FL ?? 0;
       const steerRightIndex = tuningParams.value.wheelIndices?.FR ?? 1;
-      vehicle.value.setSteeringValue(actualSteer, steerLeftIndex);
-      vehicle.value.setSteeringValue(actualSteer, steerRightIndex);
-      // --- 结束 ---
+      
+      // 应用阿克曼转向原理
+      if (steerValue !== 0) {
+        // 计算转向角度（内侧轮和外侧轮）
+        const innerWheelAngle = Math.atan(wheelBase / (dynamicRadius - trackWidth/2));
+        const outerWheelAngle = Math.atan(wheelBase / (dynamicRadius + trackWidth/2));
+        
+        // 高速漂移时转向感应度调整
+        const isHighSpeed = currentSpeed > 60; // 60km/h以上视为高速
+        const isDrifting = props.controlState.handbrake && handbrakeTimer.value > 0.2; // 手刹持续0.2秒以上视为漂移中
+        
+        // 计算转向强度修正因子 
+        // 高速漂移时提供更精细的转向控制，防止过度转向
+        let steeringFactor = tuningParams.value.turnStrength;
+        if (isHighSpeed && isDrifting) {
+          // 高速漂移时降低转向强度，使玩家可以更精细地控制
+          const driftSteeringReduction = 0.3 + (Math.min(currentSpeed, 120) / 120) * 0.4; // 根据速度减少30%-70%的转向强度
+          steeringFactor *= (1 - driftSteeringReduction);
+        }
+        
+        // 根据转向方向（左/右）确定内侧和外侧轮
+        if (steerValue > 0) { // 左转
+          vehicle.value.setSteeringValue(innerWheelAngle * steeringFactor, steerLeftIndex);  // 左轮
+          vehicle.value.setSteeringValue(outerWheelAngle * steeringFactor, steerRightIndex); // 右轮
+        } else { // 右转
+          vehicle.value.setSteeringValue(-outerWheelAngle * steeringFactor, steerLeftIndex);  // 左轮
+          vehicle.value.setSteeringValue(-innerWheelAngle * steeringFactor, steerRightIndex); // 右轮
+        }
+      } else {
+        // 不转向时重置
+        vehicle.value.setSteeringValue(0, steerLeftIndex);
+        vehicle.value.setSteeringValue(0, steerRightIndex);
+      }
+      // --- 结束转向计算 ---
 
       const forwardVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
       const forwardVelocity = forwardVelocityVec ? forwardVelocityVec.z : 0;
@@ -285,6 +329,8 @@ export default {
       }
       // 刹车通常作用于所有轮子
       const brakeWheelIndices = allWheelIndices;
+      // 后轮索引（用于漂移）
+      const rearWheelIndices = [wheelIndices.BL, wheelIndices.BR];
      
       // --- 重新启用地面接触检查日志 ---
       let driveWheelsOnGround = true;
@@ -297,6 +343,92 @@ export default {
       }
       // --- 结束检查 ---
       
+      // 处理手刹状态
+      if (props.controlState.handbrake) {
+        // 手刹被按下，增加计时器
+        if (!previousHandbrakeState) {
+          handbrakeTimer.value = 0; // 如果是刚刚按下，重置计时器
+        }
+        handbrakeTimer.value += 1/60; // 增加计时器(假设60帧/秒)
+        
+        // 根据车速计算动态摩擦系数
+        // 高速时提供更多抓地力以防止过度旋转
+        const speedFactor = Math.min(Math.max(currentSpeed, 20) / 120, 1); // 将速度映射到0-1之间，20km/h以下视为低速
+        const maxHandbrakeTime = 1.5; // 最大手刹效果时间(秒)
+        const timeFactor = Math.min(handbrakeTimer.value / maxHandbrakeTime, 1); // 手刹时间因子，限制在0-1之间
+        
+        // 计算动态漂移摩擦系数：
+        // - 高速时摩擦系数更高(更多抓地力)
+        // - 手刹时间越长，摩擦系数越低(更容易漂移)
+        const baseDriftFriction = tuningParams.value.driftFrictionSlip || 12.0;
+        const speedAdjustment = speedFactor * 8.0; // 高速时增加抓地力
+        const timeReduction = timeFactor * 5.0;   // 随着时间增加减少抓地力
+        
+        // 最终摩擦系数：基础值 + 速度调整 - 时间降低
+        const dynamicDriftFriction = Math.max(baseDriftFriction + speedAdjustment - timeReduction, 5.0);
+        
+        // 应用到后轮
+        rearWheelIndices.forEach(index => {
+          if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index]) {
+            vehicle.value.wheelInfos[index].frictionSlip = dynamicDriftFriction;
+          }
+        });
+        
+        // 应用手刹制动力 (也随车速调整)
+        const handbrakePower = (tuningParams.value.handbrakePower || 65) * (1 - speedFactor * 0.3);
+        rearWheelIndices.forEach(index => {
+          vehicle.value.setBrake(handbrakePower, index);
+        });
+        
+        // 在手刹状态下，前轮保持正常摩擦力
+        const normalFriction = tuningParams.value.normalFrictionSlip || 30;
+        [wheelIndices.FL, wheelIndices.FR].forEach(index => {
+          if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index]) {
+            vehicle.value.wheelInfos[index].frictionSlip = normalFriction;
+          }
+        });
+      } else {
+        // 手刹释放
+        // 如果刚刚松开手刹，实现平滑过渡
+        if (previousHandbrakeState) {
+          // 随时间逐渐恢复正常摩擦系数
+          const recoveryTime = 0.5; // 完全恢复需要的秒数
+          const normalFriction = tuningParams.value.normalFrictionSlip || 30;
+          const currentDriftFriction = vehicle.value.wheelInfos[rearWheelIndices[0]]?.frictionSlip || normalFriction;
+          
+          // 计算恢复步进
+          const frictionStep = (normalFriction - currentDriftFriction) / (recoveryTime * 60); // 假设60帧/秒
+          
+          // 逐步恢复所有轮子的正常摩擦系数
+          allWheelIndices.forEach(index => {
+            if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index]) {
+              const currentFriction = vehicle.value.wheelInfos[index].frictionSlip;
+              // 如果当前值低于正常值，逐步增加
+              if (currentFriction < normalFriction) {
+                vehicle.value.wheelInfos[index].frictionSlip = Math.min(currentFriction + frictionStep, normalFriction);
+              } else {
+                vehicle.value.wheelInfos[index].frictionSlip = normalFriction;
+              }
+            }
+          });
+          
+          // 重置手刹计时器
+          handbrakeTimer.value = 0;
+        } else {
+          // 如果已经处于正常状态一段时间，直接设置为正常摩擦系数
+          const normalFriction = tuningParams.value.normalFrictionSlip || 30;
+          allWheelIndices.forEach(index => {
+            if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index]) {
+              vehicle.value.wheelInfos[index].frictionSlip = normalFriction;
+            }
+          });
+        }
+      }
+      
+      // 更新上一帧的手刹状态
+      previousHandbrakeState = props.controlState.handbrake;
+      
+      // 处理加速和刹车
       if (props.controlState.accelerate) {
           // 使用 brakeWheelIndices 清除所有轮子的刹车
           brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
@@ -328,8 +460,12 @@ export default {
       } else {
             // 清除引擎力
          driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-         // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
-         brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
+         
+         // 如果不在手刹状态，则应用轻微刹车
+         if (!props.controlState.handbrake) {
+           // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
+           brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
+         }
       }
 
       if (!justReset && chassisBody.value && chassisBody.value.quaternion) {

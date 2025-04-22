@@ -5,9 +5,12 @@ export class ControlState {
     this.brake = false;
     this.turnLeft = false;
     this.turnRight = false;
+    this.handbrake = false; // 新增：手刹状态
+    this.gearUp = false;    // 新增：升档
+    this.gearDown = false;  // 新增：降档
     this.power = 500;      // 加速力度
     this.brakeForce = 300; // 刹车力度
-    this.turnStrength = 6; // 转向强度
+    this.turnStrength = 6; // 转向强度 (这个后面会被新的转向逻辑替代)
   }
   
   reset() {
@@ -15,7 +18,9 @@ export class ControlState {
     this.brake = false;
     this.turnLeft = false;
     this.turnRight = false;
-    console.log("ControlState reset due to blur or touch end."); // Add log for clarity
+    this.handbrake = false; // 重置时也设为 false
+    this.gearUp = false;    // 重置时也设为 false
+    this.gearDown = false;  // 重置时也设为 false
   }
 }
 
@@ -32,14 +37,20 @@ export class KeyboardController {
   handleKeyDown(e) {
     let changed = false;
     switch(e.code) {
-      case 'KeyW': case 'ArrowUp':
+      case 'KeyW': // case 'ArrowUp': // ArrowUp 用于换挡
         if (!this.controls.accelerate) { this.controls.accelerate = true; changed = true; } break;
-      case 'KeyS': case 'ArrowDown':
+      case 'KeyS': // case 'ArrowDown': // ArrowDown 用于换挡
         if (!this.controls.brake) { this.controls.brake = true; changed = true; } break;
       case 'KeyA': case 'ArrowLeft':
         if (!this.controls.turnLeft) { this.controls.turnLeft = true; changed = true; } break;
       case 'KeyD': case 'ArrowRight':
         if (!this.controls.turnRight) { this.controls.turnRight = true; changed = true; } break;
+      case 'Space': // 新增：手刹按下
+        if (!this.controls.handbrake) { this.controls.handbrake = true; changed = true; } break;
+      case 'ArrowUp': // 新增：升档按下
+        if (!this.controls.gearUp) { this.controls.gearUp = true; changed = true; } break;
+      case 'ArrowDown': // 新增：降档按下
+        if (!this.controls.gearDown) { this.controls.gearDown = true; changed = true; } break;
     }
     // if (changed) console.log(`Keydown: ${e.code}`, { ...this.controls }); // Can uncomment if needed
   }
@@ -47,14 +58,20 @@ export class KeyboardController {
   handleKeyUp(e) {
     let changed = false;
     switch(e.code) {
-      case 'KeyW': case 'ArrowUp':
+      case 'KeyW': // case 'ArrowUp':
         if (this.controls.accelerate) { this.controls.accelerate = false; changed = true; } break;
-      case 'KeyS': case 'ArrowDown':
+      case 'KeyS': // case 'ArrowDown':
         if (this.controls.brake) { this.controls.brake = false; changed = true; } break;
       case 'KeyA': case 'ArrowLeft':
         if (this.controls.turnLeft) { this.controls.turnLeft = false; changed = true; } break;
       case 'KeyD': case 'ArrowRight':
         if (this.controls.turnRight) { this.controls.turnRight = false; changed = true; } break;
+      case 'Space': // 新增：手刹松开
+        if (this.controls.handbrake) { this.controls.handbrake = false; changed = true; } break;
+      case 'ArrowUp': // 新增：升档松开
+        if (this.controls.gearUp) { this.controls.gearUp = false; changed = true; } break;
+      case 'ArrowDown': // 新增：降档松开
+        if (this.controls.gearDown) { this.controls.gearDown = false; changed = true; } break;
     }
     // if (changed) console.log(`Keyup: ${e.code}`, { ...this.controls }); // Can uncomment if needed
   }

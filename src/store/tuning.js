@@ -37,6 +37,16 @@ const defaultTuning = {
     { x: -0.85, y: -0.15, z: -1.4 }, // BL
     { x:  0.85, y: -0.15, z: -1.4 }  // BR
   ],
+  // 新增：手刹相关参数
+  handbrakePower: 65,             // 手刹力度 (降低以减小锁死效果)
+  handbrakeSlipFactor: 0.3,       // 手刹状态下的摩擦系数倍率
+  driftFrictionSlip: 12.0,        // 漂移时的轮胎摩擦系数 (增加以减小过度漂移)
+  normalFrictionSlip: 30,         // 正常行驶的轮胎摩擦系数
+  // 阿克曼转向相关参数
+  baseSteeringRadius: 8,          // 基础转向半径
+  speedSteeringFactor: 0.1,       // 车速对转向半径的影响因子
+  wheelBase: 2.8,                 // 轴距值
+  trackWidth: 1.7,                // 轮距值
   // Add other tunable parameters if needed (e.g., customSlidingRotationalSpeed, wheelRadius)
 };
 

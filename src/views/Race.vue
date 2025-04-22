@@ -66,6 +66,13 @@
       :currentCameraMode="currentCameraMode"
       :switchCameraMode="cameraControls.nextMode"
     />
+    
+    <!-- 添加比赛开始提示组件 -->
+    <RaceStartPrompt
+      v-if="showStartPrompt && isCarControllerReady && !isLoadingTrack"
+      :race-status="raceStatus"
+      @race-start="onStartRaceFromPrompt"
+    />
   </div>
 </template>
 
@@ -87,6 +94,7 @@ import { useInputControls } from '@/composables/useInputControls'; // 引入输�
 // 引入UI组件
 import RaceHUD from '@/components/race/RaceHUD.vue';
 import TouchControls from '@/components/TouchControls.vue'; // 引入触摸控制组件
+import RaceStartPrompt from '@/components/race/RaceStartPrompt.vue'; // 引入比赛开始提示组件
 
 // 引入 pinia storeToRefs
 import { storeToRefs } from 'pinia';
@@ -98,7 +106,8 @@ export default {
     VehicleController,
     VehicleRenderer,
     RaceHUD,
-    TouchControls
+    TouchControls,
+    RaceStartPrompt
   },
   setup() {
     const router = useRouter();
@@ -122,7 +131,9 @@ export default {
     const world = ref(null);
     const carModel = shallowRef(null); // Use shallowRef for THREE model
     const rendererElement = ref(null);
-    // const isDebugMode = ref(false);
+    
+    // 添加比赛开始提示控制
+    const showStartPrompt = ref(true);
     
     // 添加相机ref给useCamera使用
     const cameraRef = shallowRef(null);
@@ -166,12 +177,8 @@ export default {
       totalLaps: 3,
       onRaceStart: () => {
         console.log('[Race] 比赛开始!');
-        // 移除相机切换逻辑，放到 watch 中处理
-        // if (isCameraInitialized.value) {
-        //   nextModeComposable();
-        // } else {
-        //   console.warn('[Race] Camera not initialized, cannot switch mode on race start.');
-        // }
+        // 确保隐藏开始提示
+        showStartPrompt.value = false;
       },
       onRaceFinish: (results) => {
         console.log('[Race] 比赛结束!', results);
@@ -245,11 +252,11 @@ export default {
         
         isLoadingTrack.value = false;
         
-        // 如果车辆控制器已准备好且视角演示已完成，而且比赛还没开始，现在可以开始倒计时
-        if (isCarControllerReady.value && isAutoCameraRotationComplete.value && raceStatus.value === 'waiting') {
-          console.log('[Race] 准备开始倒计时，当前控制状态:', controls.value);
-          startCountdown();
-        }
+        // 现在不需要在这里自动开始倒计时了，用户将通过RaceStartPrompt控制
+        // if (isCarControllerReady.value && isAutoCameraRotationComplete.value && raceStatus.value === 'waiting') {
+        //   console.log('[Race] 准备开始倒计时，当前控制状态:', controls.value);
+        //   startCountdown();
+        // }
       } catch (error) {
         console.error('[Race] 加载赛道失败:', error);
         isLoadingTrack.value = false;
@@ -460,14 +467,6 @@ export default {
         // 如果已经切换完所有视角或比赛不再处于等待状态，则停止
         if (switchCount >= targetSwitchCount || raceStatus.value !== 'waiting') {
           cleanup();
-          
-          // 如果是正常完成所有视角切换(而非因比赛开始被中断)
-          if (switchCount >= targetSwitchCount && raceStatus.value === 'waiting') {
-            // 如果车辆控制器已准备好，现在可以开始倒计时
-            if (isCarControllerReady.value && !isLoadingTrack.value) {
-              startCountdown();
-            }
-          }
           return;
         }
         
@@ -530,11 +529,6 @@ export default {
             
             // 即使超时也标记为已完成，允许游戏继续
             isAutoCameraRotationComplete.value = true;
-            
-            // 如果车辆控制器已准备好但比赛尚未开始，现在可以开始倒计时
-            if (isCarControllerReady.value && raceStatus.value === 'waiting' && !isLoadingTrack.value) {
-              startCountdown();
-            }
           }
         }, 10000);
       }
@@ -713,6 +707,8 @@ export default {
     });
 
     // --- 新增 watchEffect 处理倒计时启动 --- 
+    // 注释掉这个watchEffect，因为我们现在使用用户点击开始游戏
+    /*
     watchEffect(() => {
       console.log("[Race WatchEffect Countdown] Checking conditions: demoComplete=", isAutoCameraRotationComplete.value, "carReady=", isCarControllerReady.value, "status=", raceStatus.value);
       if (
@@ -724,6 +720,7 @@ export default {
         startCountdown();
       }
     });
+    */
 
     // --- Function Ref for VehicleController ---
     const setCarControllerRef = (el) => {
@@ -742,6 +739,14 @@ export default {
       }
     }
     // -----------------------------------------
+
+    // 处理从比赛开始提示组件接收到的开始事件
+    const onStartRaceFromPrompt = () => {
+      if (raceStatus.value === 'waiting') {
+        console.log('[Race] 用户点击开始比赛，开始倒计时');
+        startCountdown();
+      }
+    };
 
     return {
       rendererElement,
@@ -789,7 +794,10 @@ export default {
       controls,
       isMobile,
       cameraControls,
-      setCarControllerRef
+      setCarControllerRef,
+      showStartPrompt, // 添加开始提示控制
+      onStartRaceFromPrompt, // 添加开始游戏处理函数
+      isLoadingTrack // 添加赛道加载状态
     };
   }
 };

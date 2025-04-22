@@ -11,14 +11,15 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed, nextTick, shallowRef, markRaw } from 'vue';
 import * as THREE from 'three';
-import { markRaw } from 'vue';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
-import { useSceneSetup } from '@/composables/garage/useSceneSetup'; // Import the scene setup composable
-import { useEnvironmentSetup } from '@/composables/garage/useEnvironmentSetup'; // 引入环境设置组合式函数
-import { useDeviceDetection } from '@/composables/useDeviceDetection'; // 修正导入路径
+import { GLTFLoader } from "@/utils/loaders/GLTFLoader";
+import { DRACOLoader } from "@/utils/loaders/DRACOLoader";
+import { useSceneSetup } from '@/composables/garage/useSceneSetup';
+import { useEnvironmentSetup } from '@/composables/garage/useEnvironmentSetup';
+import { useDeviceDetection } from '@/composables/useDeviceDetection';
+import { useTuningStore } from '@/store/tuning'; // 导入tuningStore
+import { storeToRefs } from 'pinia';
 
 export default {
   name: 'VehicleRenderer', // Renamed component
@@ -300,6 +301,13 @@ export default {
             scene.value.add(carModel.value);
             console.log("VehicleRenderer: Model loaded and added to scene.");
 
+            // 立即应用自定义材质颜色
+            // 从tuningStore获取颜色设置并应用到模型上
+            nextTick(() => {
+              console.log("VehicleRenderer: 应用自定义材质颜色...");
+              customizeModelMaterials();
+            });
+
             // 发送 model-ready 事件，传递正确的模型对象 (THREE.Group)
             emit('model-ready', carModel.value); 
             
@@ -473,6 +481,18 @@ export default {
     const customizeModelMaterials = () => {
       if (!carModel.value) return;
       
+      // 从tuningStore获取颜色设置
+      const tuningStore = useTuningStore();
+      const { tuningParams } = storeToRefs(tuningStore);
+      
+      // 获取保存在tuningStore中的颜色设置
+      // 注意: 在Garage.vue中，颜色存储在customSettings.colors中
+      // 这些已经在Race.vue的onMounted中通过setInitialParams加载到了tuningStore中
+      const bodyColor = tuningParams.value?.colors?.body || "#2f426f"; // 默认车身颜色
+      const wheelColor = tuningParams.value?.colors?.wheel || "#1a1a1a"; // 默认轮毂颜色
+      
+      console.log("[VehicleRenderer] 应用自定义颜色 - 车身:", bodyColor, "轮毂:", wheelColor);
+      
       // 提取模型的材质
       const materials = {};
       carModel.value.traverse((child) => {
@@ -506,22 +526,18 @@ export default {
           material.clearcoat = 0.1;
         }
         else if (lowerName.includes('body') || lowerName.includes('paint') || lowerName.includes('coat')) {
-          // 车身材质
-          if (props.selectedVehicle.colors?.body) {
-            material.color.set(props.selectedVehicle.colors.body);
-          } else {
-            material.color.set("#2f426f"); // 默认车身颜色
-          }
+          // 车身材质 - 使用tuningStore中的颜色
+          material.color.set(bodyColor);
           material.envMapIntensity = 4;
+          material.roughness = 0.2;
+          material.metalness = 0.3;
+          if ('clearcoat' in material) material.clearcoat = 0.5;
+          if ('clearcoatRoughness' in material) material.clearcoatRoughness = 0.1;
         }
         else if ((lowerName.includes('wheel') || lowerName.includes('rim')) && 
-                !lowerName.includes('tire') && !lowerName.includes('rubber')) {
-          // 轮毂材质
-          if (props.selectedVehicle.colors?.wheel) {
-            material.color.set(props.selectedVehicle.colors.wheel);
-          } else {
-            material.color.set("#1a1a1a"); // 默认轮毂颜色
-          }
+                 !lowerName.includes('tire') && !lowerName.includes('rubber')) {
+          // 轮毂材质 - 使用tuningStore中的颜色
+          material.color.set(wheelColor);
           material.roughness = 0.1;
           material.metalness = 0.9;
           material.envMapIntensity = 3;

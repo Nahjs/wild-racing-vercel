@@ -14,90 +14,212 @@ export class ControlState {
   }
   
   reset() {
+    // 确保使用显式的布尔值false，而不是0或其他值
     this.accelerate = false;
     this.brake = false;
     this.turnLeft = false;
     this.turnRight = false;
-    this.handbrake = false; // 重置时也设为 false
-    this.gearUp = false;    // 重置时也设为 false
-    this.gearDown = false;  // 重置时也设为 false
+    this.handbrake = false;
+    this.gearUp = false;
+    this.gearDown = false;
+    // 注意：不重置power、brakeForce和turnStrength等数值属性
   }
 }
 
 // 键盘控制器
 export class KeyboardController {
-  constructor(controlState) {
-    this.controls = controlState || new ControlState();
-    this.keyDownHandler = this.handleKeyDown.bind(this); // Bind 'this'
-    this.keyUpHandler = this.handleKeyUp.bind(this);     // Bind 'this'
-    this.blurHandler = this.handleBlur.bind(this);       // Bind 'this'
-    this.setupListeners();
+  constructor() {
+    this.controlState = new ControlState();
+    this.keyState = {}; // 跟踪按键状态
+    this.hasBindEvents = false; // 标记是否已经绑定了事件
+    
+    // 绑定事件处理器到this
+    this.handleKeyDown = this.handleKeyDown.bind(this);
+    this.handleKeyUp = this.handleKeyUp.bind(this);
+    
+    // 重置按键状态
+    this.resetKeyState();
+    
+    // 添加事件监听器（确保只添加一次）
+    this.addListeners();
+    
+    console.log('KeyboardController 初始化完成');
   }
   
-  handleKeyDown(e) {
-    let changed = false;
-    switch(e.code) {
-      case 'KeyW': // case 'ArrowUp': // ArrowUp 用于换挡
-        if (!this.controls.accelerate) { this.controls.accelerate = true; changed = true; } break;
-      case 'KeyS': // case 'ArrowDown': // ArrowDown 用于换挡
-        if (!this.controls.brake) { this.controls.brake = true; changed = true; } break;
-      case 'KeyA': case 'ArrowLeft':
-        if (!this.controls.turnLeft) { this.controls.turnLeft = true; changed = true; } break;
-      case 'KeyD': case 'ArrowRight':
-        if (!this.controls.turnRight) { this.controls.turnRight = true; changed = true; } break;
-      case 'Space': // 新增：手刹按下
-        if (!this.controls.handbrake) { this.controls.handbrake = true; changed = true; } break;
-      case 'ArrowUp': // 新增：升档按下
-        if (!this.controls.gearUp) { this.controls.gearUp = true; changed = true; } break;
-      case 'ArrowDown': // 新增：降档按下
-        if (!this.controls.gearDown) { this.controls.gearDown = true; changed = true; } break;
+  // 添加重置按键状态的方法
+  resetKeyState() {
+    this.keyState = {};
+    console.log('KeyboardController: 按键状态已重置');
+  }
+  
+  addListeners() {
+    // 避免重复绑定事件
+    if (!this.hasBindEvents) {
+      console.log('KeyboardController: 添加keydown/keyup事件监听器...');
+      
+      // 尝试使用window和document级别的监听，并使用不同的事件选项
+      window.addEventListener('keydown', this.handleKeyDown, { capture: true, passive: false });
+      window.addEventListener('keyup', this.handleKeyUp, { capture: true, passive: false });
+      
+      // 添加document级别的监听作为备份
+      document.addEventListener('keydown', this.handleKeyDown, { capture: true, passive: false });
+      document.addEventListener('keyup', this.handleKeyUp, { capture: true, passive: false });
+      
+      // 尝试监听document.body
+      document.body.addEventListener('keydown', this.handleKeyDown, { capture: true, passive: false });
+      document.body.addEventListener('keyup', this.handleKeyUp, { capture: true, passive: false });
+      
+      this.hasBindEvents = true;
+      console.log('KeyboardController: 事件监听器已添加 (window, document, body)');
+      
+      // 添加测试监听器验证事件捕获
+      const testHandler = (e) => {
+        console.log(`KeyboardController 测试: 捕获到键盘事件 ${e.type} - ${e.key}`);
+      };
+      window.addEventListener('keydown', testHandler, { capture: true, once: true });
     }
-    // if (changed) console.log(`Keydown: ${e.code}`, { ...this.controls }); // Can uncomment if needed
   }
   
-  handleKeyUp(e) {
-    let changed = false;
-    switch(e.code) {
-      case 'KeyW': // case 'ArrowUp':
-        if (this.controls.accelerate) { this.controls.accelerate = false; changed = true; } break;
-      case 'KeyS': // case 'ArrowDown':
-        if (this.controls.brake) { this.controls.brake = false; changed = true; } break;
-      case 'KeyA': case 'ArrowLeft':
-        if (this.controls.turnLeft) { this.controls.turnLeft = false; changed = true; } break;
-      case 'KeyD': case 'ArrowRight':
-        if (this.controls.turnRight) { this.controls.turnRight = false; changed = true; } break;
-      case 'Space': // 新增：手刹松开
-        if (this.controls.handbrake) { this.controls.handbrake = false; changed = true; } break;
-      case 'ArrowUp': // 新增：升档松开
-        if (this.controls.gearUp) { this.controls.gearUp = false; changed = true; } break;
-      case 'ArrowDown': // 新增：降档松开
-        if (this.controls.gearDown) { this.controls.gearDown = false; changed = true; } break;
-    }
-    // if (changed) console.log(`Keyup: ${e.code}`, { ...this.controls }); // Can uncomment if needed
-  }
-  
-  handleBlur() {
-    this.controls.reset();
-  }
-  
-  setupListeners() {
-    document.addEventListener('keydown', this.keyDownHandler);
-    document.addEventListener('keyup', this.keyUpHandler);
-    // --- 添加 blur 事件监听器 ---
-    window.addEventListener('blur', this.blurHandler); 
-  }
-  
-  // --- 添加清理方法 ---
   removeListeners() {
-    document.removeEventListener('keydown', this.keyDownHandler);
-    document.removeEventListener('keyup', this.keyUpHandler);
-    window.removeEventListener('blur', this.blurHandler);
-    console.log("KeyboardController listeners removed.");
+    // 只有在已绑定的情况下才移除
+    if (this.hasBindEvents) {
+      window.removeEventListener('keydown', this.handleKeyDown, { capture: true });
+      window.removeEventListener('keyup', this.handleKeyUp, { capture: true });
+      
+      document.removeEventListener('keydown', this.handleKeyDown, { capture: true });
+      document.removeEventListener('keyup', this.handleKeyUp, { capture: true });
+      
+      document.body.removeEventListener('keydown', this.handleKeyDown, { capture: true });
+      document.body.removeEventListener('keyup', this.handleKeyUp, { capture: true });
+      
+      this.hasBindEvents = false;
+      // 移除监听器时也重置按键状态
+      this.resetKeyState();
+      // 重置控制状态
+      this.controlState.reset();
+      console.log('KeyboardController: 事件监听器已移除，按键和控制状态已重置');
+    }
+  }
+
+  handleKeyDown(event) {
+    // 强制记录每一个按键事件
+    console.log(`KeyboardController 接收到KeyDown事件: key=${event.key}, code=${event.code}, type=${event.type}, target=${event.target.tagName}`);
+    
+    // 只关注我们需要的键
+    const key = event.key.toLowerCase();
+    
+    // 添加调试日志，检查每次按键事件
+    console.log(`键盘按下（处理前）: ${key}, 当前状态: ${this.keyState[key]}`);
+    
+    // 更新按键状态
+    this.keyState[key] = true;
+    
+    console.log(`键盘按下: ${key}`);
+    
+    // 更新控制状态
+    switch (key) {
+      case 'w':
+      case 'arrowup':
+        this.controlState.accelerate = true;
+        // 不立即阻止事件传播，让测试监听器也能捕获
+        break;
+      case 's':
+      case 'arrowdown':
+        this.controlState.brake = true;
+        break;
+      case 'a':
+      case 'arrowleft':
+        this.controlState.turnLeft = true;
+        break;
+      case 'd':
+      case 'arrowright':
+        this.controlState.turnRight = true;
+        break;
+      case ' ': // 空格键
+        this.controlState.handbrake = true;
+        break;
+      case 'e':
+        this.controlState.gearUp = true;
+        break;
+      case 'q':
+        this.controlState.gearDown = true;
+        break;
+    }
+    
+    // 在处理完毕后阻止事件传播和默认行为
+    event.preventDefault();
+    event.stopPropagation();
+    
+    console.log('键盘控制状态更新:', {
+      accelerate: this.controlState.accelerate,
+      brake: this.controlState.brake,
+      turnLeft: this.controlState.turnLeft,
+      turnRight: this.controlState.turnRight,
+      handbrake: this.controlState.handbrake
+    });
   }
   
-  // 获取当前控制状态
+  handleKeyUp(event) {
+    // 添加日志记录keyup事件
+    console.log(`KeyboardController 接收到KeyUp事件: key=${event.key}, code=${event.code}`);
+    
+    const key = event.key.toLowerCase();
+    
+    // 更新按键状态
+    this.keyState[key] = false;
+    
+    console.log(`键盘释放: ${key}`);
+    
+    // 更新控制状态
+    switch (key) {
+      case 'w':
+      case 'arrowup':
+        this.controlState.accelerate = false;
+        break;
+      case 's':
+      case 'arrowdown':
+        this.controlState.brake = false;
+        break;
+      case 'a':
+      case 'arrowleft':
+        this.controlState.turnLeft = false;
+        break;
+      case 'd':
+      case 'arrowright':
+        this.controlState.turnRight = false;
+        break;
+      case ' ': // 空格键
+        this.controlState.handbrake = false;
+        break;
+      case 'e':
+        this.controlState.gearUp = false;
+        break;
+      case 'q':
+        this.controlState.gearDown = false;
+        break;
+    }
+    
+    // 在处理完毕后阻止事件传播和默认行为
+    event.preventDefault();
+    event.stopPropagation();
+    
+    console.log('键盘控制状态更新:', {
+      accelerate: this.controlState.accelerate,
+      brake: this.controlState.brake,
+      turnLeft: this.controlState.turnLeft,
+      turnRight: this.controlState.turnRight,
+      handbrake: this.controlState.handbrake
+    });
+  }
+  
   getControlState() {
-    return this.controls;
+    return this.controlState;
+  }
+  
+  dispose() {
+    // 移除事件监听器
+    this.removeListeners();
+    console.log('KeyboardController 已销毁');
   }
 }
 
@@ -113,6 +235,7 @@ export class TouchController {
     this.touchEndHandler = this.handleTouchEnd.bind(this);
     this.blurHandler = this.handleBlur.bind(this); // Also reset on blur
     this.isEnabled = true; // 添加一个标志来控制是否启用自动触摸控制
+    this.hasBindEvents = false; // 标记是否已绑定事件
     this.setupListeners();
   }
   
@@ -176,20 +299,29 @@ export class TouchController {
   }
 
   setupListeners() {
-    this.touchElement.addEventListener('touchstart', this.touchStartHandler, { passive: false }); // passive: false if preventDefault is needed
-    this.touchElement.addEventListener('touchmove', this.touchMoveHandler, { passive: false }); 
-    this.touchElement.addEventListener('touchend', this.touchEndHandler);
-    this.touchElement.addEventListener('touchcancel', this.touchEndHandler); // Also reset on cancel
-    window.addEventListener('blur', this.blurHandler); // Add blur listener
+    // 避免重复绑定事件
+    if (!this.hasBindEvents) {
+      this.touchElement.addEventListener('touchstart', this.touchStartHandler, { passive: false, capture: true }); // capture: true 确保我们先于其他处理程序捕获事件
+      this.touchElement.addEventListener('touchmove', this.touchMoveHandler, { passive: false, capture: true }); 
+      this.touchElement.addEventListener('touchend', this.touchEndHandler, { capture: true });
+      this.touchElement.addEventListener('touchcancel', this.touchEndHandler, { capture: true }); // Also reset on cancel
+      window.addEventListener('blur', this.blurHandler, { capture: true }); // Add blur listener
+      this.hasBindEvents = true;
+      console.log("TouchController: 事件监听器已添加");
+    }
   }
   
   removeListeners() {
-    this.touchElement.removeEventListener('touchstart', this.touchStartHandler);
-    this.touchElement.removeEventListener('touchmove', this.touchMoveHandler);
-    this.touchElement.removeEventListener('touchend', this.touchEndHandler);
-    this.touchElement.removeEventListener('touchcancel', this.touchEndHandler);
-    window.removeEventListener('blur', this.blurHandler);
-    console.log("TouchController listeners removed.");
+    // 只有在已绑定的情况下才移除
+    if (this.hasBindEvents) {
+      this.touchElement.removeEventListener('touchstart', this.touchStartHandler, { passive: false, capture: true });
+      this.touchElement.removeEventListener('touchmove', this.touchMoveHandler, { passive: false, capture: true });
+      this.touchElement.removeEventListener('touchend', this.touchEndHandler, { capture: true });
+      this.touchElement.removeEventListener('touchcancel', this.touchEndHandler, { capture: true });
+      window.removeEventListener('blur', this.blurHandler, { capture: true });
+      this.hasBindEvents = false;
+      console.log("TouchController: 事件监听器已移除");
+    }
   }
 
   // 获取当前控制状态

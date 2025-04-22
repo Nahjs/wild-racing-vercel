@@ -59,8 +59,6 @@ export default {
     const vehicle = ref(null);
     const isReady = ref(false);
 
-    const { controlState } = useInputControls();
-    
     const localUp = new THREE.Vector3(0, 1, 0);
     
     const worldUp = new THREE.Vector3();
@@ -111,6 +109,24 @@ export default {
       { deep: false } // Not deep, watching individual refs/values
     );
     // --- End dynamic suspension watch ---
+
+    // 监视controlState prop的变化
+    watch(() => props.controlState, (newControlState, oldControlState) => {
+      // 检查是否有实际变化，避免不必要的日志
+      if (JSON.stringify(newControlState) !== JSON.stringify(oldControlState)) {
+        console.log('[VehicleController] controlState prop 变化:', JSON.stringify(newControlState));
+        
+        // 检查加速键是否被按下
+        if (newControlState.accelerate) {
+          console.log('[VehicleController] 检测到加速指令，尝试加速...');
+        }
+        
+        // 检查其他控制状态
+        if (newControlState.turnLeft || newControlState.turnRight) {
+          console.log('[VehicleController] 检测到转向指令：左=' + newControlState.turnLeft + ', 右=' + newControlState.turnRight);
+        }
+      }
+    }, { deep: true, immediate: true });
 
     function initializePhysics() {
       if (isReady.value) return;
@@ -251,6 +267,19 @@ export default {
       if (!isReady.value || !props.world || !props.scene || !props.carModel || !vehicle.value || !vehicle.value.chassisBody) {
         console.log("[VehicleController] handlePhysicsUpdate skipped: Not fully ready or props missing.");
         return; // 如果未就绪或 props 丢失，则提前返回
+      }
+      
+      // 在每次物理更新时记录控制状态
+      if (props.controlState) {
+        const { accelerate, brake, turnLeft, turnRight, handbrake } = props.controlState;
+        
+        // 使用这些控制状态，而不是重复检查它们
+        let hasDrivingInput = accelerate || brake || turnLeft || turnRight || handbrake;
+        
+        // 只在状态变化时输出日志，避免控制台刷屏
+        if (hasDrivingInput) {
+          console.log(`[VehicleController] 物理更新时的控制状态: 加速=${accelerate}, 刹车=${brake}, 左转=${turnLeft}, 右转=${turnRight}, 手刹=${handbrake}`);
+        }
       }
       
       // 获取当前车速（km/h）

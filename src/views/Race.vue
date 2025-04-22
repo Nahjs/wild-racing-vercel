@@ -89,6 +89,13 @@
         强制启用触摸控制
       </button>
       
+      <button 
+        v-if="debugMode"
+        @click="reinitializeInputControls" 
+        class="reinit-input-btn">
+        重新初始化控制
+      </button>
+      
       <!-- 设备信息显示区域 -->
       <div v-if="debugMode" class="device-info">
         <p>设备类型: {{ isMobile.value ? '移动' : '桌面' }}</p>
@@ -141,7 +148,7 @@ export default {
     let renderFrameId = null;
     
     // 获取输入控制
-    const { controlState: controls, isMobile } = useInputControls();
+    const { controlState: controls, isMobile, reinitializeInputControls } = useInputControls();
     
     // Instantiate the store
     const tuningStore = useTuningStore();
@@ -204,6 +211,10 @@ export default {
         console.log('[Race] 比赛开始!');
         // 确保隐藏开始提示
         showStartPrompt.value = false;
+        
+        // 比赛开始时重新初始化输入控制，确保干净的控制状态
+        console.log('[Race] 比赛开始，重新初始化输入控制...');
+        reinitializeInputControls();
       },
       onRaceFinish: (results) => {
         console.log('[Race] 比赛结束!', results);
@@ -367,12 +378,98 @@ export default {
       router.push('/');
     };
     
+    // 在setup函数中添加简单的键盘状态轮询机制
+
+    // 键盘状态对象
+    const keyStates = ref({
+      w: false,
+      s: false,
+      a: false,
+      d: false,
+      ArrowUp: false,
+      ArrowDown: false,
+      ArrowLeft: false,
+      ArrowRight: false,
+      ' ': false // 空格键
+    });
+
+    // 定期检查并更新控制状态
+    let keyStateInterval = null;
+
+    // 添加直接按键检测
+    const setupKeyboardPolling = () => {
+      console.log("[Race] 设置键盘状态轮询...");
+      
+      // 设置按键按下状态
+      window.addEventListener('keydown', (e) => {
+        const key = e.key;
+        if (keyStates.value.hasOwnProperty(key)) {
+          keyStates.value[key] = true;
+          console.log(`[Race] 键盘按下: ${key}`);
+        }
+      });
+      
+      // 设置按键释放状态
+      window.addEventListener('keyup', (e) => {
+        const key = e.key;
+        if (keyStates.value.hasOwnProperty(key)) {
+          keyStates.value[key] = false;
+          console.log(`[Race] 键盘释放: ${key}`);
+        }
+      });
+      
+      // 每隔短时间同步按键状态到控制状态
+      keyStateInterval = setInterval(() => {
+        controls.accelerate = keyStates.value.w || keyStates.value.ArrowUp;
+        controls.brake = keyStates.value.s || keyStates.value.ArrowDown;
+        controls.turnLeft = keyStates.value.a || keyStates.value.ArrowLeft;
+        controls.turnRight = keyStates.value.d || keyStates.value.ArrowRight;
+        controls.handbrake = keyStates.value[' ']; // 空格键
+        
+        // 只在有活跃控制时输出日志，避免刷屏
+        if (controls.accelerate || controls.brake || controls.turnLeft || controls.turnRight || controls.handbrake) {
+          console.log("[Race] 同步按键状态到控制状态:", JSON.stringify(controls));
+        }
+      }, 16); // 约60fps
+    };
+
     // 组件挂载
     onMounted(async () => { // Make onMounted async
       // 添加日志检查 ref 是否在挂载时被赋值
       console.log("[Race] onMounted: Checking carController ref after initial mount...");
       nextTick(() => {
         console.log(`[Race] onMounted (nextTick): carController = ${!!carController.value}`, carController.value);
+      });
+      
+      // 添加全局键盘事件监听器，用于调试
+      const globalKeyDownHandler = (e) => {
+        console.log(`[Race] 全局键盘按下事件捕获: ${e.code}, key=${e.key}, target=${e.target.tagName}`);
+        // 不阻止事件继续传播
+      };
+      
+      const globalKeyUpHandler = (e) => {
+        console.log(`[Race] 全局键盘释放事件捕获: ${e.code}, key=${e.key}`);
+        // 不阻止事件继续传播
+      };
+      
+      window.addEventListener('keydown', globalKeyDownHandler, { capture: false }); // 使用冒泡阶段
+      window.addEventListener('keyup', globalKeyUpHandler, { capture: false });
+      
+      // 记得在卸载时清理
+      cleanupFunctions.push(() => {
+        window.removeEventListener('keydown', globalKeyDownHandler, { capture: false });
+        window.removeEventListener('keyup', globalKeyUpHandler, { capture: false });
+      });
+      
+      // 添加一个测试键盘事件监听器，验证键盘事件捕获
+      const testKeyHandler = (e) => {
+        console.log(`[Race] 测试键盘事件捕获: ${e.code}`);
+      };
+      document.addEventListener('keydown', testKeyHandler);
+      
+      // 记得在卸载时清理
+      cleanupFunctions.push(() => {
+        document.removeEventListener('keydown', testKeyHandler);
       });
       
       isLoadingVehicle.value = true;
@@ -384,7 +481,7 @@ export default {
         if (vehiclesList.some(v => v.id === lastVehicleId)) {
           vehicleIdToLoad = lastVehicleId;
         } else {
-          console.warn(`Stored vehicle ID ${lastVehicleId} not found in vehiclesList, using default.`);
+          console.warn(`[Race] 存储的车辆ID ${lastVehicleId} 在vehiclesList中未找到，使用默认值。`);
           localStorage.removeItem('lastSelectedVehicleId'); 
         }
       }
@@ -396,23 +493,24 @@ export default {
         const vehicleDataFromDB = await vehicleService.getVehicle(vehicleIdToLoad);
 
         if (vehicleDataFromDB) {
+          // 合并来自数据库的车辆数据和基础数据
           loadedVehicleData = {
             ...baseVehicleData, 
             ...vehicleDataFromDB, 
             customSettings: {
               ...(baseVehicleData.customSettings || {}), 
-              ...(vehicleDataFromDB.customSettings || {}), 
+              ...(vehicleDataFromDB.customSettings || {}),
             }
           };
         } else {
-          console.warn(`Vehicle data for ID ${vehicleIdToLoad} not found in DB, using list data.`);
+          console.warn(`[Race] 在数据库中未找到ID为 ${vehicleIdToLoad} 的车辆数据，使用列表数据。`);
           loadedVehicleData = {
             ...baseVehicleData,
             customSettings: baseVehicleData.customSettings || {}
           };
         }
       } catch (error) {
-        console.error("Error loading vehicle data from DB:", error);
+        console.error("[Race] 从数据库加载车辆数据时出错:", error);
         loadedVehicleData = {
           ...baseVehicleData,
           customSettings: baseVehicleData.customSettings || {}
@@ -447,6 +545,65 @@ export default {
       // 在组件卸载时清理
       onUnmounted(() => {
         window.removeEventListener('resize', updateOrientation);
+      });
+
+      // 设置键盘轮询
+      setupKeyboardPolling();
+      
+      // 添加焦点和全屏事件监听
+      const handleFocus = () => {
+        console.log("[Race] 窗口获得焦点，重置键盘状态");
+        // 重置所有按键状态为false
+        Object.keys(keyStates.value).forEach(key => {
+          keyStates.value[key] = false;
+        });
+      };
+      
+      const handleBlur = () => {
+        console.log("[Race] 窗口失去焦点，重置所有控制");
+        // 重置所有按键状态为false
+        Object.keys(keyStates.value).forEach(key => {
+          keyStates.value[key] = false;
+        });
+        
+        // 重置所有控制为false
+        controls.accelerate = false;
+        controls.brake = false;
+        controls.turnLeft = false;
+        controls.turnRight = false;
+        controls.handbrake = false;
+      };
+      
+      const handleFullscreenChange = () => {
+        const isDocFullscreen = document.fullscreenElement || 
+                                document.webkitFullscreenElement || 
+                                document.mozFullScreenElement;
+        console.log(`[Race] 全屏状态变化: ${isDocFullscreen ? '进入全屏' : '退出全屏'}`);
+        
+        // 全屏状态变化后重置键盘状态
+        setTimeout(() => {
+          Object.keys(keyStates.value).forEach(key => {
+            keyStates.value[key] = false;
+          });
+        }, 100);
+      };
+      
+      window.addEventListener('focus', handleFocus);
+      window.addEventListener('blur', handleBlur);
+      window.addEventListener('visibilitychange', handleBlur);
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      
+      // 记得在卸载时清理
+      cleanupFunctions.push(() => {
+        window.removeEventListener('focus', handleFocus);
+        window.removeEventListener('blur', handleBlur);
+        window.removeEventListener('visibilitychange', handleBlur);
+        document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        
+        if (keyStateInterval) {
+          clearInterval(keyStateInterval);
+          keyStateInterval = null;
+        }
       });
     });
     
@@ -901,7 +1058,8 @@ export default {
       forceEnableTouchControls,
       touchPoints,
       isLandscape,
-      controlDebugInfo
+      controlDebugInfo,
+      reinitializeInputControls
     };
   }
 };
@@ -923,7 +1081,8 @@ export default {
 }
 
 .debug-mode-btn,
-.force-touch-btn {
+.force-touch-btn,
+.reinit-input-btn {
   padding: 5px 10px;
   margin-bottom: 5px;
   cursor: pointer;

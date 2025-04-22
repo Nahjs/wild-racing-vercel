@@ -47,7 +47,11 @@ const defaultTuning = {
   speedSteeringFactor: 0.1,       // 车速对转向半径的影响因子
   wheelBase: 2.8,                 // 轴距值
   trackWidth: 1.7,                // 轮距值
-  // Add other tunable parameters if needed (e.g., customSlidingRotationalSpeed, wheelRadius)
+  // 新增：默认颜色设置
+  colors: {
+    body: "#2f426f",  // 默认车身颜色
+    wheel: "#1a1a1a"  // 默认轮毂颜色
+  }
 };
 
 export const useTuningStore = defineStore('tuning', {
@@ -70,8 +74,20 @@ export const useTuningStore = defineStore('tuning', {
       }
       
       if (initialSettings && typeof initialSettings === 'object') {
+        // 处理特殊的嵌套对象，如colors
+        const processedSettings = { ...initialSettings };
+        
+        // 如果提供了colors对象，确保其正确合并
+        if (initialSettings.colors) {
+          processedSettings.colors = {
+            ...defaultTuning.colors,  // 默认颜色
+            ...initialSettings.colors  // 用户定义颜色覆盖默认值
+          };
+          console.log('[TuningStore] 处理颜色设置:', processedSettings.colors);
+        }
+        
         // Ensure all default keys are present, merging initialSettings over defaults
-        this.tuningParams = { ...defaultTuning, ...initialSettings };
+        this.tuningParams = { ...defaultTuning, ...processedSettings };
         console.log(`[TuningStore] Initialized tuningParams for ${vehicleId} with provided settings:`, this.tuningParams);
       } else {
         // Fallback to defaults if initialSettings are invalid

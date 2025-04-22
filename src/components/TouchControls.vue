@@ -521,6 +521,7 @@ export default {
 }
 
 .fullscreen-btn {
+  z-index: 1001;
   width: 52px;
   height: 52px;
   display: flex;
@@ -573,6 +574,7 @@ export default {
   flex-direction: row;
   gap: 30px; /* 增加按钮之间的间距 */
   pointer-events: auto;
+  z-index: 1001;
 }
 
 .acceleration-controls {
@@ -583,6 +585,7 @@ export default {
   flex-direction: row;
   gap: 30px; /* 增加按钮之间的间距 */
   pointer-events: auto;
+  z-index: 1001;
 }
 
 /* 新增手刹按钮样式 */
@@ -591,12 +594,14 @@ export default {
   bottom: 40px;
   right: 30px;
   pointer-events: auto;
+  z-index: 1001;
 }
 
 .handbrake-btn {
   background-color: rgba(200, 50, 200, 0.7); /* 更鲜明的紫色 */
   background-image: linear-gradient(135deg, rgba(200, 50, 200, 0.7) 0%, rgba(230, 70, 230, 0.7) 100%);
   position: relative;
+  z-index: 1001;
 }
 
 .control-label {
@@ -631,6 +636,7 @@ export default {
   pointer-events: auto; /* 确保控制按钮可以接受事件 */
   z-index: 1100; /* 增加按钮的z-index，确保在其他元素之上 */
   transform: scale(1);
+  z-index: 1001;
 }
 
 .control-btn:active,
@@ -686,6 +692,7 @@ export default {
   border-radius: 4px;
   cursor: pointer;
   font-size: 12px;
+  z-index: 1001;
 }
 
 /* 适配不同设备尺寸 */
@@ -711,6 +718,7 @@ export default {
   .control-btn {
     width: 50px;
     height: 50px;
+    z-index: 1001;
   }
   
   .camera-controls {
@@ -720,6 +728,7 @@ export default {
   .camera-btn {
     padding: 4px 8px;
     font-size: 10px;
+    z-index: 1001;
   }
   
   .fullscreen-control {
@@ -730,6 +739,7 @@ export default {
   .fullscreen-btn {
     width: 32px;
     height: 32px;
+    z-index: 1001;
   }
 }
 
@@ -752,6 +762,7 @@ export default {
   .control-btn {
     width: 60px;
     height: 60px;
+    z-index: 1001;
   }
   
   .direction-controls {

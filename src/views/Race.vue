@@ -151,7 +151,7 @@ export default {
     // 赛道信息
     const trackId = ref('karting_club_lider__karting_race_track_early'); // 赛道ID，可从配置或路由参数获取
     const isLoadingTrack = ref(true);
-    const startPosition = ref(new THREE.Vector3(0, 0.2, 8)); // 临时起点位置
+    const startPosition = ref(new THREE.Vector3(0, 0.2, 30)); // 临时起点位置
     
     // 在setup函数中添加currentVehicle引用，初始化为 null
     const currentVehicle = ref(null);
@@ -236,7 +236,7 @@ export default {
           
           if (startMarker) {
             // 使用起点标记的位置，并增加Y轴偏移量
-            startPosition.value = startMarker.position.clone().add(new THREE.Vector3(0, 0.2, 8));
+            startPosition.value = startMarker.position.clone().add(new THREE.Vector3(0, 0.2, 30));
           } else {
             // 尝试使用TrackManager的getStartPosition方法
             const trackStartPosition = trackManager.getStartPosition();

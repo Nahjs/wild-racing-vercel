@@ -29,7 +29,9 @@ export class ControlState {
 // 键盘控制器
 export class KeyboardController {
   constructor() {
-    this.controlState = new ControlState();
+    // **修改：不再直接持有 ControlState 实例，而是接收外部传入的响应式引用**
+    // this.controlState = new ControlState(); 
+    this.controlState = null; // 将在 useInputControls 中设置
     this.keyState = {}; // 跟踪按键状态
     this.hasBindEvents = false; // 标记是否已经绑定了事件
     
@@ -95,13 +97,23 @@ export class KeyboardController {
       this.hasBindEvents = false;
       // 移除监听器时也重置按键状态
       this.resetKeyState();
-      // 重置控制状态
-      this.controlState.reset();
+      // **确保重置外部传入的 controlState (如果存在)**
+      if (this.controlState && typeof this.controlState.reset === 'function') {
+        this.controlState.reset();
+      } else {
+        console.warn("KeyboardController: 无法重置 controlState，可能未正确设置或 reset 方法不存在。");
+      }
       console.log('KeyboardController: 事件监听器已移除，按键和控制状态已重置');
     }
   }
 
   handleKeyDown(event) {
+    // **添加检查：确保 controlState 已被设置**
+    if (!this.controlState) {
+      console.warn("KeyboardController: controlState 未设置，无法处理 keydown 事件。");
+      return;
+    }
+    
     // 强制记录每一个按键事件
     console.log(`KeyboardController 接收到KeyDown事件: key=${event.key}, code=${event.code}, type=${event.type}, target=${event.target.tagName}`);
     
@@ -160,6 +172,12 @@ export class KeyboardController {
   }
   
   handleKeyUp(event) {
+    // **添加检查：确保 controlState 已被设置**
+    if (!this.controlState) {
+      console.warn("KeyboardController: controlState 未设置，无法处理 keyup 事件。");
+      return;
+    }
+    
     // 添加日志记录keyup事件
     console.log(`KeyboardController 接收到KeyUp事件: key=${event.key}, code=${event.code}`);
     
@@ -220,113 +238,6 @@ export class KeyboardController {
     // 移除事件监听器
     this.removeListeners();
     console.log('KeyboardController 已销毁');
-  }
-}
-
-// 触摸屏控制器
-export class TouchController {
-  constructor(controlState, touchElement) {
-    this.controls = controlState || new ControlState();
-    this.touchElement = touchElement || document.body;
-    this.touchStartX = 0;
-    this.touchStartY = 0;
-    this.touchStartHandler = this.handleTouchStart.bind(this);
-    this.touchMoveHandler = this.handleTouchMove.bind(this);
-    this.touchEndHandler = this.handleTouchEnd.bind(this);
-    this.blurHandler = this.handleBlur.bind(this); // Also reset on blur
-    this.isEnabled = true; // 添加一个标志来控制是否启用自动触摸控制
-    this.hasBindEvents = false; // 标记是否已绑定事件
-    this.setupListeners();
-  }
-  
-  // 添加一个方法来禁用/启用触摸控制
-  setEnabled(enabled) {
-    this.isEnabled = enabled;
-    if (!enabled) {
-      // 如果禁用，重置控制状态
-      this.controls.reset();
-    }
-  }
-  
-  handleTouchStart(e) {
-    // 如果禁用了，不处理触摸事件
-    if (!this.isEnabled) return;
-    
-    // 如果触摸来自我们的虚拟按钮，不处理
-    if (e.target.closest('.control-btn')) return;
-    
-    const touch = e.touches[0];
-    this.touchStartX = touch.clientX;
-    this.touchStartY = touch.clientY;
-    // Don't reset here, reset only on move/end
-  }
-  
-  handleTouchMove(e) {
-    // 如果禁用了，不处理触摸事件
-    if (!this.isEnabled) return;
-    
-    // 如果触摸来自我们的虚拟按钮，不处理
-    if (e.target.closest('.control-btn')) return;
-    
-    // Prevent default scroll/zoom behavior if needed
-    // e.preventDefault(); 
-    const touch = e.touches[0];
-    const deltaX = touch.clientX - this.touchStartX;
-    const deltaY = touch.clientY - this.touchStartY;
-    
-    // Reset controls before applying new ones based on move
-    this.controls.reset(); 
-    
-    if (deltaX > 30) this.controls.turnRight = true; // Reduced threshold
-    else if (deltaX < -30) this.controls.turnLeft = true;
-    
-    if (deltaY < -30) this.controls.accelerate = true;
-    else if (deltaY > 30) this.controls.brake = true;
-  }
-
-  handleTouchEnd(e) {
-    // 如果禁用了，不处理触摸事件
-    if (!this.isEnabled) return;
-    
-    // 如果触摸来自我们的虚拟按钮，不处理
-    if (e.target && e.target.closest('.control-btn')) return;
-    
-    this.controls.reset();
-  }
-  
-  handleBlur() {
-    this.controls.reset();
-  }
-
-  setupListeners() {
-    // 避免重复绑定事件
-    if (!this.hasBindEvents) {
-      this.touchElement.addEventListener('touchstart', this.touchStartHandler, { passive: false, capture: true }); // capture: true 确保我们先于其他处理程序捕获事件
-      this.touchElement.addEventListener('touchmove', this.touchMoveHandler, { passive: false, capture: true }); 
-      this.touchElement.addEventListener('touchend', this.touchEndHandler, { capture: true });
-      this.touchElement.addEventListener('touchcancel', this.touchEndHandler, { capture: true }); // Also reset on cancel
-      window.addEventListener('blur', this.blurHandler, { capture: true }); // Add blur listener
-      this.hasBindEvents = true;
-      console.log("TouchController: 事件监听器已添加");
-    }
-  }
-  
-  removeListeners() {
-    // 只有在已绑定的情况下才移除
-    if (this.hasBindEvents) {
-      this.touchElement.removeEventListener('touchstart', this.touchStartHandler, { passive: false, capture: true });
-      this.touchElement.removeEventListener('touchmove', this.touchMoveHandler, { passive: false, capture: true });
-      this.touchElement.removeEventListener('touchend', this.touchEndHandler, { capture: true });
-      this.touchElement.removeEventListener('touchcancel', this.touchEndHandler, { capture: true });
-      window.removeEventListener('blur', this.blurHandler, { capture: true });
-      this.hasBindEvents = false;
-      console.log("TouchController: 事件监听器已移除");
-    }
-  }
-
-  // 获取当前控制状态
-  getControlState() {
-    return this.controls;
   }
 }
 

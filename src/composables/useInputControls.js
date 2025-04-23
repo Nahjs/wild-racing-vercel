@@ -1,10 +1,9 @@
 import { ref, onMounted, onUnmounted, onBeforeMount } from 'vue';
-import { ControlState, KeyboardController, TouchController } from '@/core/input/InputManager';
+import { ControlState, KeyboardController } from '@/core/input/InputManager';
 import { useDeviceDetection } from '@/composables/useDeviceDetection';
 
 // 创建单例控制器实例
 let keyboardControllerInstance = null;
-let touchControllerInstance = null;
 
 export function useInputControls() {
   const controlState = ref(new ControlState());
@@ -118,37 +117,19 @@ export function useInputControls() {
     
     // 如果是移动设备，添加触摸控制
     if (isMobile.value) {
-      console.log("useInputControls: 移动设备检测到，初始化触摸控制器");
-      
-      const touchElement = document.body; // 使用整个页面作为触摸区域
-      
-      if (touchControllerInstance) {
-        console.log("useInputControls: 清理现有触摸控制器");
-        touchControllerInstance.removeListeners();
-        touchControllerInstance = null; // 完全清除旧实例
-      }
-      
-      console.log("useInputControls: 创建新的触摸控制器");
-      touchControllerInstance = new TouchController(controlState.value, touchElement);
-      
-      // 启用自动触摸控制
-      touchControllerInstance.setEnabled(true);
-      console.log("useInputControls: 触摸控制器已启用");
-    } else if (touchControllerInstance) {
-      // 如果不是移动设备但存在触摸控制器，禁用并移除它
-      console.log("useInputControls: 桌面设备，禁用并移除现有触摸控制器");
-      touchControllerInstance.setEnabled(false);
-      touchControllerInstance.removeListeners();
-      touchControllerInstance = null; // 完全清除触摸控制器
+      console.log("useInputControls: 检测到移动设备。触摸输入将由 TouchControls.vue 组件处理。");
+    } else {
+      console.log("useInputControls: 检测到桌面设备。");
     }
     
     controllersInitialized.value = true;
     
     // 为调试增加一个焦点事件监听器
     window.addEventListener('focus', () => {
-      console.log("useInputControls: 窗口获得焦点，检查控制器状态");
+      console.log("useInputControls: 窗口获得焦点，检查并重置键盘控制器状态");
       if (keyboardControllerInstance) {
         keyboardControllerInstance.resetKeyState();
+        controlState.value.reset();
       }
     });
     
@@ -157,7 +138,6 @@ export function useInputControls() {
     
     return { 
       keyboardController: keyboardControllerInstance, 
-      touchController: touchControllerInstance 
     };
   }
 
@@ -171,12 +151,6 @@ export function useInputControls() {
     if (keyboardControllerInstance) {
       keyboardControllerInstance.removeListeners();
       console.log("useInputControls: 键盘控制器监听器已移除");
-    }
-    
-    if (touchControllerInstance) {
-      touchControllerInstance.setEnabled(false);
-      touchControllerInstance.removeListeners();
-      console.log("useInputControls: 触摸控制器监听器已移除");
     }
     
     controllersInitialized.value = false;
@@ -203,13 +177,6 @@ export function useInputControls() {
     if (!controllersInitialized.value) {
       setupInputListeners();
     }
-    
-    // 组件挂载后，发送一个测试键盘事件，检查事件处理是否正常
-    setTimeout(() => {
-      console.log("useInputControls: 发送测试键盘事件...");
-      const testEvent = new KeyboardEvent('keydown', { key: 'w', code: 'KeyW', bubbles: true });
-      window.dispatchEvent(testEvent);
-    }, 1000);
   });
 
   // 在组件卸载时移除监听器

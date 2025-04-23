@@ -169,7 +169,7 @@ export default {
 
     // 检测键盘按下，在调试模式下也启用键盘控制
     const handleKeyDown = (e) => {
-      if (!debugMode.value) return;
+      if (!debugMode.value && isMobile.value) return; 
       
       switch(e.code) {
         case 'KeyW': case 'ArrowUp':
@@ -197,7 +197,7 @@ export default {
     };
     
     const handleKeyUp = (e) => {
-      if (!debugMode.value) return;
+      if (!debugMode.value && isMobile.value) return; 
       
       switch(e.code) {
         case 'KeyW': case 'ArrowUp':
@@ -218,64 +218,7 @@ export default {
       }
     };
 
-    // 禁止默认的触摸事件（避免滚动、缩放等）
-    const preventDefaultTouchEvents = () => {
-      console.log("[TouchControls] 设置触摸事件处理...");
-      
-      // 为所有控制按钮添加触摸事件处理
-      const addTouchHandlers = () => {
-        // 获取所有控制按钮
-        const controlButtons = document.querySelectorAll('.control-btn, .camera-btn, .fullscreen-btn');
-        console.log(`[TouchControls] 找到 ${controlButtons.length} 个控制按钮`);
-        
-        // 为每个按钮添加触摸事件处理器
-        controlButtons.forEach(button => {
-          // 阻止默认行为
-          const preventDefaultHandler = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          };
-          
-          button.addEventListener('touchstart', preventDefaultHandler, { passive: false });
-          button.addEventListener('touchmove', preventDefaultHandler, { passive: false });
-          button.addEventListener('touchend', preventDefaultHandler, { passive: false });
-          button.addEventListener('touchcancel', preventDefaultHandler, { passive: false });
-          
-          // 增加点击区域
-          button.style.touchAction = 'none';
-          button.style.pointerEvents = 'auto';
-          button.style.position = 'relative';
-          
-          console.log(`[TouchControls] 已为按钮添加触摸事件处理: ${button.className}`);
-        });
-      };
-      
-      // 等待DOM完全加载后添加处理器
-      setTimeout(() => {
-        addTouchHandlers();
-      }, 500);
-      
-      // 为游戏容器添加触摸事件处理器
-      document.addEventListener('DOMContentLoaded', () => {
-        const gameContainer = document.querySelector('.race-container');
-        if (gameContainer) {
-          gameContainer.addEventListener('touchmove', (e) => {
-            // 只有当触摸点不在控制按钮上时才阻止默认行为
-            if (!e.target.closest('.control-btn') && !e.target.closest('.camera-btn') && !e.target.closest('.fullscreen-btn')) {
-              e.preventDefault();
-            }
-          }, { passive: false });
-          
-          console.log('[TouchControls] 已为游戏容器添加触摸事件处理');
-        } else {
-          console.warn('[TouchControls] 未找到游戏容器');
-        }
-      });
-    };
-
     onMounted(() => {
-      preventDefaultTouchEvents();
-      
       // 添加键盘事件监听
       window.addEventListener('keydown', handleKeyDown);
       window.addEventListener('keyup', handleKeyUp);
@@ -285,26 +228,6 @@ export default {
         debugMode.value = true;
         console.log('通过URL参数自动开启触摸控制调试模式');
       }
-      
-      // 增强触摸响应性
-      const buttons = document.querySelectorAll('.control-btn');
-      buttons.forEach(button => {
-        // 增加触摸反馈
-        button.addEventListener('touchstart', (e) => {
-          e.preventDefault();
-          button.classList.add('active');
-          
-          // 添加按下时的震动反馈（如果设备支持）
-          if (navigator.vibrate) {
-            navigator.vibrate(20);
-          }
-        }, { passive: false });
-        
-        button.addEventListener('touchend', (e) => {
-          e.preventDefault();
-          button.classList.remove('active');
-        }, { passive: false });
-      });
     });
     
     onUnmounted(() => {
@@ -321,13 +244,11 @@ export default {
       
       console.log(`[TouchControls] 触摸开始: ${control}`);
       
+      if (navigator.vibrate) {
+        navigator.vibrate(20); 
+      }
+      
       try {
-        // 给按钮添加active类
-        const button = document.querySelector(`.${control}-btn`);
-        if (button) {
-          button.classList.add('active');
-        }
-
         switch(control) {
           case 'left':
             props.controlState.turnLeft = true;
@@ -346,7 +267,6 @@ export default {
             break;
         }
         
-        // 输出各控制状态的值，而不是整个对象
         console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
       } catch (error) {
         console.error('[TouchControls] 设置控制状态时出错:', error);
@@ -362,12 +282,6 @@ export default {
       console.log(`[TouchControls] 触摸结束: ${control}`);
       
       try {
-        // 移除按钮的active类
-        const button = document.querySelector(`.${control}-btn`);
-        if (button) {
-          button.classList.remove('active');
-        }
-        
         switch(control) {
           case 'left':
             props.controlState.turnLeft = false;
@@ -386,7 +300,6 @@ export default {
             break;
         }
         
-        // 输出各控制状态的值，而不是整个对象
         console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
       } catch (error) {
         console.error('[TouchControls] 设置控制状态时出错:', error);

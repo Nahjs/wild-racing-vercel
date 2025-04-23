@@ -37,8 +37,8 @@ export default {
       showPrompt.value = false;
       
       // 在用户交互时重新初始化输入控制，确保干净的控制状态
-      console.log('[RaceStartPrompt] 用户点击开始，重新初始化输入控制...');
-      reinitializeInputControls();
+      console.log('[RaceStartPrompt] 用户点击开始');
+      // reinitializeInputControls();
       
       // 如果是移动设备，尝试请求全屏
       if (isMobile.value) {

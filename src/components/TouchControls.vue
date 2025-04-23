@@ -167,62 +167,8 @@ export default {
       }
     };
 
-    // 检测键盘按下，在调试模式下也启用键盘控制
-    const handleKeyDown = (e) => {
-      if (!debugMode.value && isMobile.value) return; 
-      
-      switch(e.code) {
-        case 'KeyW': case 'ArrowUp':
-          handleTouchStart('accelerate');
-          break;
-        case 'KeyS': case 'ArrowDown':
-          handleTouchStart('brake');
-          break;
-        case 'KeyA': case 'ArrowLeft':
-          handleTouchStart('left');
-          break;
-        case 'KeyD': case 'ArrowRight':
-          handleTouchStart('right');
-          break;
-        case 'Space': // 添加空格键触发手刹
-          handleTouchStart('handbrake');
-          break;
-        case 'KeyV': // 按V键切换视角
-          switchCamera();
-          break;
-        case 'KeyF': // 按F键切换全屏
-          handleFullscreenToggle();
-          break;
-      }
-    };
-    
-    const handleKeyUp = (e) => {
-      if (!debugMode.value && isMobile.value) return; 
-      
-      switch(e.code) {
-        case 'KeyW': case 'ArrowUp':
-          handleTouchEnd('accelerate');
-          break;
-        case 'KeyS': case 'ArrowDown':
-          handleTouchEnd('brake');
-          break;
-        case 'KeyA': case 'ArrowLeft':
-          handleTouchEnd('left');
-          break;
-        case 'KeyD': case 'ArrowRight':
-          handleTouchEnd('right');
-          break;
-        case 'Space': // 添加空格键释放手刹
-          handleTouchEnd('handbrake');
-          break;
-      }
-    };
-
     onMounted(() => {
-      // 添加键盘事件监听
-      window.addEventListener('keydown', handleKeyDown);
-      window.addEventListener('keyup', handleKeyUp);
-      
+      console.log("===== [TouchControls.vue] MOUNTED =====");
       // 检查URL参数，如果包含debug=true则自动开启调试模式
       if (window.location.search.includes('debug=true')) {
         debugMode.value = true;
@@ -231,18 +177,19 @@ export default {
     });
     
     onUnmounted(() => {
+      console.log("===== [TouchControls.vue] UNMOUNTED =====");
       // 移除键盘事件监听
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
+      // window.removeEventListener('keydown', handleKeyDown);
+      // window.removeEventListener('keyup', handleKeyUp);
     });
 
     const handleTouchStart = (control) => {
       if (!props.controlState) {
-        console.error('TouchControls: controlState 未定义');
+        console.error('[TouchControls] handleTouchStart: controlState 未定义');
         return;
       }
       
-      console.log(`[TouchControls] 触摸开始: ${control}`);
+      console.log(`[TouchControls] ===== TOUCH START: ${control} =====`); // 添加醒目日志
       
       if (navigator.vibrate) {
         navigator.vibrate(20); 
@@ -267,19 +214,19 @@ export default {
             break;
         }
         
-        console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
+        console.log(`[TouchControls] 控制状态更新后 (Touch Start - ${control}):`, JSON.stringify(props.controlState)); // 详细日志
       } catch (error) {
-        console.error('[TouchControls] 设置控制状态时出错:', error);
+        console.error(`[TouchControls] handleTouchStart (${control}) 设置控制状态时出错:`, error);
       }
     };
 
     const handleTouchEnd = (control) => {
       if (!props.controlState) {
-        console.error('TouchControls: controlState 未定义');
+        console.error('[TouchControls] handleTouchEnd: controlState 未定义');
         return;
       }
       
-      console.log(`[TouchControls] 触摸结束: ${control}`);
+      console.log(`[TouchControls] ===== TOUCH END: ${control} =====`); // 添加醒目日志
       
       try {
         switch(control) {
@@ -300,9 +247,9 @@ export default {
             break;
         }
         
-        console.log(`[TouchControls] 控制状态已更新: 加速=${props.controlState.accelerate}, 刹车=${props.controlState.brake}, 左转=${props.controlState.turnLeft}, 右转=${props.controlState.turnRight}, 手刹=${props.controlState.handbrake}`);
+        console.log(`[TouchControls] 控制状态更新后 (Touch End - ${control}):`, JSON.stringify(props.controlState)); // 详细日志
       } catch (error) {
-        console.error('[TouchControls] 设置控制状态时出错:', error);
+        console.error(`[TouchControls] handleTouchEnd (${control}) 设置控制状态时出错:`, error);
       }
     };
 
@@ -510,13 +457,6 @@ export default {
   z-index: 1001;
 }
 
-.handbrake-btn {
-  background-color: rgba(200, 50, 200, 0.7); /* 更鲜明的紫色 */
-  background-image: linear-gradient(135deg, rgba(200, 50, 200, 0.7) 0%, rgba(230, 70, 230, 0.7) 100%);
-  position: relative;
-  z-index: 1001;
-}
-
 .control-label {
   position: absolute;
   bottom: -20px;
@@ -528,65 +468,66 @@ export default {
   text-shadow: 0 0 3px rgba(0, 0, 0, 0.8);
 }
 
+/* --- 修改控制按钮样式 --- */
 .control-btn {
-  width: 50px; /* 进一步增大按钮尺寸 */
-  height: 50px; /* 进一步增大按钮尺寸 */
+  width: 65px; /* 调整按钮大小 */
+  height: 65px; /* 调整按钮大小 */
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.7); /* 增加不透明度 */
-  border: 3px solid rgba(255, 255, 255, 0.9); /* 更明显的边框 */
+  /* 修改背景为半透明灰色 */
+  background-color: rgba(255, 255, 255, 0.2); 
+  /* 移除边框 */
+  border: none;
+  /* 移除渐变背景 */
+  /* background-image: none; */ 
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(255, 255, 255, 0.2);
-  touch-action: none; /* 防止任何默认触摸行为 */
+  /* 简化阴影 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  touch-action: none;
   user-select: none;
   padding: 0;
   overflow: hidden;
-  transition: all 0.15s ease; /* 加快过渡动画 */
+  transition: background-color 0.15s ease, transform 0.15s ease; /* 简化过渡 */
   backdrop-filter: blur(3px);
-  pointer-events: auto; /* 确保控制按钮可以接受事件 */
-  z-index: 1100; /* 增加按钮的z-index，确保在其他元素之上 */
+  pointer-events: auto;
+  z-index: 1001; /* 保持 z-index */
   transform: scale(1);
-  z-index: 1001;
 }
 
 .control-btn:active,
-.control-btn.active {
-  transform: scale(0.85);
-  background-color: rgba(100, 100, 100, 0.9); /* 按下时更亮的背景色 */
-  border-color: rgb(255, 255, 255);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 25px rgba(255, 255, 255, 0.4);
+.control-btn.active { /* 保留 .active 以防万一，但主要依赖 :active */
+  transform: scale(0.90); /* 调整按下缩放效果 */
+  /* 按下时背景更亮一点 */
+  background-color: rgba(255, 255, 255, 0.4);
+  /* 移除按下时的边框和复杂阴影 */
+  /* border-color: rgb(255, 255, 255); */
+  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 25px rgba(255, 255, 255, 0.4); */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
-.left-btn, .right-btn {
-  background-color: rgba(30, 30, 200, 0.7); /* 更鲜明的蓝色 */
-  background-image: linear-gradient(135deg, rgba(40, 40, 210, 0.7) 0%, rgba(60, 60, 230, 0.7) 100%);
-}
-
-.accelerate-btn {
-  background-color: rgba(0, 150, 0, 0.7); /* 更鲜明的绿色 */
-  background-image: linear-gradient(135deg, rgba(0, 150, 0, 0.7) 0%, rgba(0, 180, 30, 0.7) 100%);
-}
-
-.brake-btn {
-  background-color: rgba(200, 30, 30, 0.7); /* 更鲜明的红色 */
-  background-image: linear-gradient(135deg, rgba(200, 30, 30, 0.7) 0%, rgba(230, 50, 50, 0.7) 100%);
-}
-
+/* 移除特定按钮的背景色和渐变 */
+.left-btn, .right-btn,
+.accelerate-btn,
+.brake-btn,
 .handbrake-btn {
-  background-color: rgba(200, 50, 200, 0.7); /* 更鲜明的紫色 */
-  background-image: linear-gradient(135deg, rgba(200, 50, 200, 0.7) 0%, rgba(230, 70, 230, 0.7) 100%);
+  background-color: rgba(255, 255, 255, 0.2); 
+  background-image: none; 
 }
 
 .control-icon {
   width: 60%;
   height: 60%;
   object-fit: contain;
-  filter: invert(1); /* 使图标为白色 */
+  /* 移除 filter: invert(1) 如果你的图标本身是浅色的 */
+  /* filter: invert(1); */ 
+  /* 如果图标是深色需要变白，保留 filter: invert(1) contrast(0) brightness(2); */
+  filter: invert(1) contrast(0) brightness(2); /* 假设图标是深色，强制变白 */
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
+/* --- 结束修改控制按钮样式 --- */
 
 /* 调试模式切换按钮 */
 .debug-toggle {

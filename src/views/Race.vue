@@ -218,9 +218,13 @@ export default {
         // 确保隐藏开始提示
         showStartPrompt.value = false;
         
-        // 比赛开始时重新初始化输入控制，确保干净的控制状态
-        console.log('[Race] 比赛开始，重新初始化输入控制...');
-        reinitializeInputControls();
+        // 比赛开始时重置控制状态即可，不需要完全重新初始化输入系统
+        console.log('[Race] 比赛开始，重置控制状态...');
+        if (controls.value && typeof controls.value.reset === 'function') {
+          controls.value.reset(); 
+        } else {
+          console.warn('[Race] 无法重置 controlState');
+        }
       },
       onRaceFinish: (results) => {
         console.log('[Race] 比赛结束!', results);
@@ -384,66 +388,9 @@ export default {
       router.push('/');
     };
     
-    // 在setup函数中添加简单的键盘状态轮询机制
-
-    // 键盘状态对象
-    const keyStates = ref({
-      w: false,
-      s: false,
-      a: false,
-      d: false,
-      ArrowUp: false,
-      ArrowDown: false,
-      ArrowLeft: false,
-      ArrowRight: false,
-      ' ': false // 空格键
-    });
-
-    // 定期检查并更新控制状态
-    let keyStateInterval = null;
-
-    // 添加直接按键检测
-    const setupKeyboardPolling = () => {
-      console.log("[Race] 设置键盘状态轮询...");
-      
-      // 设置按键按下状态
-      window.addEventListener('keydown', (e) => {
-        const key = e.key;
-        if (keyStates.value.hasOwnProperty(key)) {
-          keyStates.value[key] = true;
-          console.log(`[Race] 键盘按下: ${key}`);
-        }
-      });
-      
-      // 设置按键释放状态
-      window.addEventListener('keyup', (e) => {
-        const key = e.key;
-        if (keyStates.value.hasOwnProperty(key)) {
-          keyStates.value[key] = false;
-          console.log(`[Race] 键盘释放: ${key}`);
-        }
-      });
-      
-      // 每隔短时间同步按键状态到控制状态
-      keyStateInterval = setInterval(() => {
-        controls.accelerate = keyStates.value.w || keyStates.value.ArrowUp;
-        controls.brake = keyStates.value.s || keyStates.value.ArrowDown;
-        controls.turnLeft = keyStates.value.a || keyStates.value.ArrowLeft;
-        controls.turnRight = keyStates.value.d || keyStates.value.ArrowRight;
-        controls.handbrake = keyStates.value[' ']; // 空格键
-        
-        // 只在有活跃控制时输出日志，避免刷屏
-        if (controls.accelerate || controls.brake || controls.turnLeft || controls.turnRight || controls.handbrake) {
-          // 不要使用JSON.stringify(controls)，这会导致循环引用错误
-          // 而是只记录我们关心的布尔值属性
-          console.log(`[Race] 同步按键状态: 加速=${controls.accelerate}, 刹车=${controls.brake}, 左转=${controls.turnLeft}, 右转=${controls.turnRight}, 手刹=${controls.handbrake}`);
-        }
-      }, 16); // 约60fps
-    };
-
     // 组件挂载
-    onMounted(async () => { // Make onMounted async
-      // 添加日志检查 ref 是否在挂载时被赋值
+    onMounted(async () => { 
+      console.log("===== [Race.vue] MOUNTED ====="); // <--- 添加日志
       console.log("[Race] onMounted: Checking carController ref after initial mount...");
       nextTick(() => {
         console.log(`[Race] onMounted (nextTick): carController = ${!!carController.value}`, carController.value);
@@ -556,33 +503,24 @@ export default {
       });
 
       // 设置键盘轮询
-      setupKeyboardPolling();
+      // setupKeyboardPolling();
       
       // 添加焦点和全屏事件监听
       const handleFocus = () => {
-        console.log("[Race] 窗口获得焦点，重置键盘状态");
-        // 重置所有按键状态为false
-        Object.keys(keyStates.value).forEach(key => {
-          keyStates.value[key] = false;
-        });
+        console.log("[Race] 窗口获得焦点，将由 useInputControls 处理状态重置");
+        // useInputControls 中的 focus 监听器会处理状态重置
       };
       
       const handleBlur = () => {
-        console.log("[Race] 窗口失去焦点，重置所有控制");
-        // 重置所有按键状态为false
-        Object.keys(keyStates.value).forEach(key => {
-          keyStates.value[key] = false;
-        });
-        
-        // 重置所有控制为false
-        if (controls) { // 添加检查
-          controls.accelerate = false;
-          controls.brake = false;
-          controls.turnLeft = false;
-          controls.turnRight = false;
-          controls.handbrake = false;
-          console.log("[Race] 控制状态已重置");
+        console.log("[Race] 窗口失去焦点，将由 useInputControls 处理控制重置");
+        // useInputControls 中的 focus/blur 监听器会处理
+        // 不再需要在这里重复重置
+        /*
+        if (controls && controls.value && typeof controls.value.reset === 'function') {
+          controls.value.reset(); 
+          console.log("[Race] 控制状态已在失焦时重置");
         }
+        */
       };
       
       const handleFullscreenChange = () => {
@@ -593,9 +531,7 @@ export default {
         
         // 全屏状态变化后重置键盘状态
         setTimeout(() => {
-          Object.keys(keyStates.value).forEach(key => {
-            keyStates.value[key] = false;
-          });
+          // useInputControls 中的 focus 监听器会处理状态重置
         }, 100);
       };
       
@@ -610,11 +546,6 @@ export default {
         window.removeEventListener('blur', handleBlur);
         window.removeEventListener('visibilitychange', handleBlur);
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        
-        if (keyStateInterval) {
-          clearInterval(keyStateInterval);
-          keyStateInterval = null;
-        }
       });
     });
     
@@ -764,7 +695,7 @@ export default {
     };
 
     onUnmounted(() => {
-      // 执行所有注册的清理函数
+      console.log("===== [Race.vue] UNMOUNTED ====="); // <--- 添加日志
       cleanupFunctions.forEach(cleanup => {
         if (typeof cleanup === 'function') {
           console.log("[Race] Calling cleanup function on unmount...");
@@ -1097,6 +1028,10 @@ export default {
   padding: 5px 10px;
   margin-bottom: 5px;
   cursor: pointer;
+  user-select: none; /* Prevent text selection */
+  -webkit-user-select: none; /* Safari */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
 }
 
 .device-info {

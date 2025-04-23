@@ -8,9 +8,6 @@ export class ControlState {
     this.handbrake = false; // 新增：手刹状态
     this.gearUp = false;    // 新增：升档
     this.gearDown = false;  // 新增：降档
-    this.power = 500;      // 加速力度
-    this.brakeForce = 300; // 刹车力度
-    this.turnStrength = 6; // 转向强度 (这个后面会被新的转向逻辑替代)
   }
   
   reset() {
@@ -22,7 +19,6 @@ export class ControlState {
     this.handbrake = false;
     this.gearUp = false;
     this.gearDown = false;
-    // 注意：不重置power、brakeForce和turnStrength等数值属性
   }
 }
 
@@ -99,7 +95,7 @@ export class KeyboardController {
       this.resetKeyState();
       // **确保重置外部传入的 controlState (如果存在)**
       if (this.controlState && typeof this.controlState.reset === 'function') {
-        this.controlState.reset();
+      this.controlState.reset();
       } else {
         console.warn("KeyboardController: 无法重置 controlState，可能未正确设置或 reset 方法不存在。");
       }

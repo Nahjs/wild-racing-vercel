@@ -47,7 +47,10 @@ export default {
         accelerate: false,
         brake: false,
         turnLeft: false,
-        turnRight: false
+        turnRight: false,
+        handbrake: false,
+        gearUp: false,
+        gearDown: false
       })
     }
   },
@@ -289,10 +292,8 @@ export default {
         // 使用这些控制状态，而不是重复检查它们
         let hasDrivingInput = accelerate || brake || turnLeft || turnRight || handbrake;
         
-        // 只在状态变化时输出日志，避免控制台刷屏
-        if (hasDrivingInput) {
-          console.log(`[VehicleController] 物理更新时的控制状态: 加速=${accelerate}, 刹车=${brake}, 左转=${turnLeft}, 右转=${turnRight}, 手刹=${handbrake}`);
-        }
+        // 每次更新都记录状态，以便调试
+        console.log(`[VehicleController] Physics Update - Control State: A:${accelerate}, B:${brake}, L:${turnLeft}, R:${turnRight}, H:${handbrake}`);
       }
       
       // 获取当前车速（km/h）
@@ -315,6 +316,8 @@ export default {
       const steerRightIndex = tuningParams.value.wheelIndices?.FR ?? 1;
       
       // 应用阿克曼转向原理
+      let appliedSteerLeft = 0;
+      let appliedSteerRight = 0;
       if (steerValue !== 0) {
         // 计算转向角度（内侧轮和外侧轮）
         const innerWheelAngle = Math.atan(wheelBase / (dynamicRadius - trackWidth/2));
@@ -335,14 +338,15 @@ export default {
         
         // 根据转向方向（左/右）确定内侧和外侧轮
         if (steerValue > 0) { // 左转
-          vehicle.value.setSteeringValue(innerWheelAngle * steeringFactor, steerLeftIndex);  // 左轮
-          vehicle.value.setSteeringValue(outerWheelAngle * steeringFactor, steerRightIndex); // 右轮
+          appliedSteerLeft = innerWheelAngle * steeringFactor;
+          appliedSteerRight = outerWheelAngle * steeringFactor;
         } else { // 右转
-          vehicle.value.setSteeringValue(-outerWheelAngle * steeringFactor, steerLeftIndex);  // 左轮
-          vehicle.value.setSteeringValue(-innerWheelAngle * steeringFactor, steerRightIndex); // 右轮
+          appliedSteerLeft = -outerWheelAngle * steeringFactor;
+          appliedSteerRight = -innerWheelAngle * steeringFactor;
         }
+        vehicle.value.setSteeringValue(appliedSteerLeft, steerLeftIndex);  // 应用计算值
+        vehicle.value.setSteeringValue(appliedSteerRight, steerRightIndex); // 应用计算值
       } else {
-        // 不转向时重置
         vehicle.value.setSteeringValue(0, steerLeftIndex);
         vehicle.value.setSteeringValue(0, steerRightIndex);
       }
@@ -497,7 +501,8 @@ export default {
            driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
 
              // 使用 brakeWheelIndices 施加刹车力
-           brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.brakePower, index));
+           const brakeForce = tuningStore.tuningParams.brakePower;
+           brakeWheelIndices.forEach(index => vehicle.value.setBrake(brakeForce, index));
         }
       } else {
             // 清除引擎力
@@ -506,7 +511,8 @@ export default {
          // 如果不在手刹状态，则应用轻微刹车
          if (!props.controlState.handbrake) {
            // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
-           brakeWheelIndices.forEach(index => vehicle.value.setBrake(tuningStore.tuningParams.slowDownForce, index));
+           const slowDownForce = tuningStore.tuningParams.slowDownForce;
+           brakeWheelIndices.forEach(index => vehicle.value.setBrake(slowDownForce, index));
          }
       }
 

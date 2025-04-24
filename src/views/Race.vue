@@ -169,6 +169,7 @@ export default {
     const world = ref(null);
     const carModel = shallowRef(null); // Use shallowRef for THREE model
     const rendererElement = ref(null);
+    const showPhysicsDebug = ref(false); // 控制物理调试视图的 ref
     
     // 添加比赛开始提示控制
     const showStartPrompt = ref(true);
@@ -384,6 +385,19 @@ export default {
       cleanupFunctions.push(() => {
         window.removeEventListener('keydown', globalKeyDownHandler, { capture: false });
         window.removeEventListener('keyup', globalKeyUpHandler, { capture: false });
+      });
+      
+      // 添加 P 键监听器切换物理调试
+      const handleDebugToggleKey = (e) => {
+        if (e.key === 'p' || e.key === 'P') {
+          showPhysicsDebug.value = !showPhysicsDebug.value; // 切换 ref 的值
+          console.log("Physics debug toggled:", showPhysicsDebug.value);
+        }
+      };
+      window.addEventListener('keydown', handleDebugToggleKey);
+
+      cleanupFunctions.push(() => {
+        window.removeEventListener('keydown', handleDebugToggleKey);
       });
       
       // 添加一个测试键盘事件监听器，验证键盘事件捕获
@@ -951,7 +965,8 @@ export default {
       touchPoints,
       isLandscape,
       controlDebugInfo,
-      reinitializeInputControls
+      reinitializeInputControls,
+      showPhysicsDebug // 返回 ref
     };
   }
 };

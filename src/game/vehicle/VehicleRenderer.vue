@@ -393,7 +393,9 @@ export default {
         const lookAtTarget = carPosition.clone().add(new THREE.Vector3(0, 0.5, 0));
         camera.value.lookAt(lookAtTarget);
         // 同步 OrbitControls 的目标点
-        controls.value.target.lerp(carPosition, 0.1); 
+        if (controls.value && controls.value.enabled) {
+           controls.value.target.lerp(carPosition, 0.1); 
+        }
       } else if (cameraMode.value === 'firstPerson') {
         const firstPersonOffset = new THREE.Vector3(0, 0.8, 0.3); 
         const worldPosition = carModel.value.localToWorld(firstPersonOffset.clone());
@@ -403,7 +405,15 @@ export default {
         camera.value.lookAt(lookAtWorld);
         controls.value.target.copy(carPosition); 
       } else if (cameraMode.value === 'freeOrbit') {
-        controls.value.target.lerp(carPosition, 0.1); 
+        // 在自由轨道模式下，如果 OrbitControls 启用，则让它处理相机
+        // 如果 OrbitControls 被禁用 (例如在 Race 场景)，此模式可能行为不正确
+        if (controls.value && controls.value.enabled) {
+           // Target is updated in the animation loop
+           // controls.value.update(); // Update is also called in the animation loop
+        } else {
+           // 可能需要一个备用的自由相机逻辑?
+           controls.value.target.lerp(carPosition, 0.3); 
+        }
       }
     };
 
@@ -569,15 +579,11 @@ export default {
             retries++;
           }
           
-          if (scene.value && renderer.value) { // Check if scene and renderer from composable are ready
-              // 禁用useSceneSetup中的controls，让useCamera完全接管相机控制
-              if (controls.value) {
-                controls.value.enabled = false;
-              }
+          if (scene.value && renderer.value) { 
 
               // 在相机准备好时发送事件
               if (camera.value) {
-                emit('camera-ready', camera.value);
+                customizeModelMaterials();
               } else {
                 console.warn("VehicleRenderer: 相机尚未初始化，将在创建后发送事件");
                 // 创建一个监听器检查camera.value变化
@@ -606,11 +612,18 @@ export default {
               }
               // Start the animation loop provided by the composable, passing our updates
               startAnimationLoop(() => {
-                  // 确保controls始终保持禁用状态
+
+                  // --- 更新 OrbitControls (如果启用) ---
                   if (controls.value && controls.value.enabled) {
-                    controls.value.enabled = false;
+                      // 确保目标点跟随车辆
+                      if (carModel.value?.position) {
+                          controls.value.target.lerp(carModel.value.position, 0.1);
+                      }
+                      controls.value.update(); // 更新控制器
                   }
-                  updateCameraPosition();
+                  // --- 结束 OrbitControls 更新 ---
+
+                  updateCameraPosition(); // 这个函数内部也需要检查 controls.enabled
                   updateWheelRotations();
               }); 
           } else {

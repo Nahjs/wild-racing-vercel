@@ -21,10 +21,10 @@ const defaultOptions = {
     zoomSpeed: 0.5,
     enablePan: true,
     panSpeed: 0.5,
-    minDistance: 3,
-    maxDistance: 20,
-    minPolarAngle: Math.PI / 4,
-    maxPolarAngle: Math.PI / 2,
+    minDistance: 1,     // 允许更近距离
+    maxDistance: 50,    // 允许更远距离
+    minPolarAngle: 0,     // 允许从正上方观察
+    maxPolarAngle: Math.PI, // 允许从正下方观察
   },
   enableGridHelper: false, // Initially false, controlled by debug panel
   gridSize: 1000,

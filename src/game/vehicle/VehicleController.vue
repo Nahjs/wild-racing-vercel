@@ -275,7 +275,13 @@ export default {
       // Log the incoming control state for this frame
       const { accelerate, brake, turnLeft, turnRight, handbrake } = props.controlState;
     // 获取当前车速（km/h）
-      const currentSpeed = vehicle.value.chassisBody.velocity.length() * 3.6; // 转换为km/h
+      const currentSpeedKmh = vehicle.value.chassisBody.velocity.length() * 3.6; // 转换为km/h
+      // 获取当前车辆局部坐标系下的前进/后退速度
+      const localVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
+      const currentForwardSpeed = localVelocityVec ? localVelocityVec.z : 0;
+      const isEffectivelyStopped = Math.abs(currentForwardSpeed) < 0.5; // 定义一个接近停止的速度阈值
+      const vehicleReverseThreshold = -0.1; // 定义一个轻微后退的速度阈值，用于判断是否在倒车
+      const isReversingOrStopped = currentForwardSpeed <= vehicleReverseThreshold || isEffectivelyStopped; // 是否处于倒车或接近停止状态
       
       // 根据阿克曼转向原理计算转向角度
       const wheelBase = tuningParams.value.wheelBase || 2.8; // 轴距
@@ -284,7 +290,7 @@ export default {
       const speedFactor = tuningParams.value.speedSteeringFactor || 0.1; // 速度影响因子
       
       // 计算速度相关的动态转向半径
-      const dynamicRadius = baseRadius + Math.abs(currentSpeed) * speedFactor;
+      const dynamicRadius = baseRadius + Math.abs(currentSpeedKmh) * speedFactor;
       
       // 获取转向输入
       const steerValue = (props.controlState.turnLeft ? 1 : 0) - (props.controlState.turnRight ? 1 : 0);
@@ -302,7 +308,7 @@ export default {
         const outerWheelAngle = Math.atan(wheelBase / (dynamicRadius + trackWidth/2));
         
         // 高速漂移时转向感应度调整
-        const isHighSpeed = currentSpeed > 60; // 60km/h以上视为高速
+        const isHighSpeed = currentSpeedKmh > 60; // 60km/h以上视为高速
         const isDrifting = props.controlState.handbrake && handbrakeTimer.value > 0.2; // 手刹持续0.2秒以上视为漂移中
         
         // 计算转向强度修正因子 
@@ -310,7 +316,7 @@ export default {
         let steeringFactor = tuningParams.value.turnStrength;
         if (isHighSpeed && isDrifting) {
           // 高速漂移时降低转向强度，使玩家可以更精细地控制
-          const driftSteeringReduction = 0.3 + (Math.min(currentSpeed, 120) / 120) * 0.4; // 根据速度减少30%-70%的转向强度
+          const driftSteeringReduction = 0.3 + (Math.min(currentSpeedKmh, 120) / 120) * 0.4; // 根据速度减少30%-70%的转向强度
           steeringFactor *= (1 - driftSteeringReduction);
         }
         
@@ -329,10 +335,6 @@ export default {
         vehicle.value.setSteeringValue(0, steerRightIndex);
       }
       // --- 结束转向计算 ---
-
-      const forwardVelocityVec = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity);
-      const forwardVelocity = forwardVelocityVec ? forwardVelocityVec.z : 0;
-      const reverseThreshold = 0.5;
 
       // --- 动态获取驱动轮和刹车轮索引 (根据驱动类型) ---
        const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
@@ -378,7 +380,7 @@ export default {
         
         // 根据车速计算动态摩擦系数
         // 高速时提供更多抓地力以防止过度旋转
-        const speedFactor = Math.min(Math.max(currentSpeed, 20) / 120, 1); // 将速度映射到0-1之间，20km/h以下视为低速
+        const speedFactor = Math.min(Math.max(currentSpeedKmh, 20) / 120, 1); // 将速度映射到0-1之间，20km/h以下视为低速
         const maxHandbrakeTime = 1.5; // 最大手刹效果时间(秒)
         const timeFactor = Math.min(handbrakeTimer.value / maxHandbrakeTime, 1); // 手刹时间因子，限制在0-1之间
         
@@ -454,6 +456,12 @@ export default {
       previousHandbrakeState = props.controlState.handbrake;
       
       // --- Acceleration/Braking logic ---
+      // 使用在函数开头计算的速度和状态
+      // const localVelocity = vehicle.value.chassisBody.vectorToLocalFrame(vehicle.value.chassisBody.velocity); // 移除
+      // const currentForwardSpeed = localVelocity ? localVelocity.z : 0; // 移除
+      // const vehicleReverseThreshold = -0.5; // 移除
+      // const isReversingOrStopped = currentForwardSpeed <= vehicleReverseThreshold; // 移除
+
       if (accelerate) {
           brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
           const force = -tuningStore.tuningParams.enginePower;
@@ -466,9 +474,18 @@ export default {
           }
       } else if (brake) {
            // Ensure engine force is 0 when braking
-           driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-           const brakeForce = tuningStore.tuningParams.brakePower;
-           brakeWheelIndices.forEach(index => vehicle.value.setBrake(brakeForce, index));
+           driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index)); 
+           
+           if (isReversingOrStopped) { // 使用函数开头的状态变量
+               // 施加反向力进行倒车
+               brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index)); // 倒车时不施加刹车力
+               const reverseForce = tuningStore.tuningParams.enginePower * 0.6; // 倒车力量可以小一些
+               driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index)); // 注意：正值表示反向力
+           } else {
+               // 正常刹车
+               const brakeForce = tuningStore.tuningParams.brakePower;
+               brakeWheelIndices.forEach(index => vehicle.value.setBrake(brakeForce, index));
+           }
       } else {
            driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
            if (!handbrake) { // Only apply slow down if handbrake is off
@@ -507,6 +524,7 @@ export default {
     
     const speed = computed(() => {
       if (chassisBody.value) {
+        // 返回速度大小 (m/s)
         return chassisBody.value.velocity.length();
       }
       return 0;
@@ -591,6 +609,14 @@ export default {
       { deep: true }
     );
     
+    // 添加getter以访问速度，用于调试或其他目的
+    const getPosition = () => {
+      if (chassisBody.value) {
+        return chassisBody.value.position;
+      }
+      return null;
+    };
+
     return {
       vehicle,
       speed,
@@ -599,6 +625,7 @@ export default {
       resetCar,
       handlePhysicsUpdate,
       cleanupPhysics,
+      getPosition // 暴露getPosition
     };
 
     // Explicitly expose necessary methods/refs
@@ -609,7 +636,8 @@ export default {
       cleanupPhysics,
       isReady,
       speed,
-      vehicle // Expose vehicle for potential debugging
+      vehicle, // Expose vehicle for potential debugging
+      getPosition // 暴露getPosition
     });
   }
 };

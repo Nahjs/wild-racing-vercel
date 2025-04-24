@@ -106,37 +106,47 @@ export class KeyboardController {
     this.keyState[key] = true;
     
     // 更新控制状态
+    let processed = false; // 标记是否是车辆控制按键
     switch (key) {
       case 'w':
       case 'arrowup':
         this.controlState.accelerate = true;
+        processed = true; // 标记为已处理
         break;
       case 's':
       case 'arrowdown':
         this.controlState.brake = true;
+        processed = true; // 标记为已处理
         break;
       case 'a':
       case 'arrowleft':
         this.controlState.turnLeft = true;
+        processed = true; // 标记为已处理
         break;
       case 'd':
       case 'arrowright':
         this.controlState.turnRight = true;
+        processed = true; // 标记为已处理
         break;
       case ' ': // 空格键
         this.controlState.handbrake = true;
+        processed = true; // 标记为已处理
         break;
       case 'e':
         this.controlState.gearUp = true;
+        processed = true; // 标记为已处理
         break;
       case 'q':
         this.controlState.gearDown = true;
+        processed = true; // 标记为已处理
         break;
     }
     
-    // 在处理完毕后阻止事件传播和默认行为
-    event.preventDefault();
-    event.stopPropagation();
+    // 只对车辆控制按键阻止默认行为和传播
+    if (processed) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
   }
   
   handleKeyUp(event) {
@@ -153,37 +163,47 @@ export class KeyboardController {
     this.keyState[key] = false;
     
     // 更新控制状态
+    let processed = false; // 标记是否是车辆控制按键
     switch (key) {
       case 'w':
       case 'arrowup':
         this.controlState.accelerate = false;
+        processed = true; // 标记为已处理
         break;
       case 's':
       case 'arrowdown':
         this.controlState.brake = false;
+        processed = true; // 标记为已处理
         break;
       case 'a':
       case 'arrowleft':
         this.controlState.turnLeft = false;
+        processed = true; // 标记为已处理
         break;
       case 'd':
       case 'arrowright':
         this.controlState.turnRight = false;
+        processed = true; // 标记为已处理
         break;
       case ' ': // 空格键
         this.controlState.handbrake = false;
+        processed = true; // 标记为已处理
         break;
       case 'e':
         this.controlState.gearUp = false;
+        processed = true; // 标记为已处理
         break;
       case 'q':
         this.controlState.gearDown = false;
+        processed = true; // 标记为已处理
         break;
     }
     
-    // 在处理完毕后阻止事件传播和默认行为
-    event.preventDefault();
-    event.stopPropagation();
+    // 只对车辆控制按键阻止默认行为和传播
+    if (processed) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
 
   }
   

@@ -76,14 +76,32 @@ function createInputControls() {
 
   const cleanupListeners = setupInputListenersInternal();
 
+  // 添加 reinitializeInputControls 方法
+  const reinitializeInputControls = () => {
+    console.log('[useInputControls] Reinitializing input controls...');
+    // 清理旧的监听器和实例
+    if (cleanupListeners) {
+      cleanupListeners();
+    }
+    if (keyboardControllerInstance) {
+       keyboardControllerInstance.dispose();
+       keyboardControllerInstance = null;
+    }
+    listenersInitialized = false; // 重置初始化标志
+    // 重新设置监听器
+    setupInputListenersInternal();
+    console.log('[useInputControls] Input controls reinitialized.');
+  };
+
   return {
     controlState,
     isMobile,
+    reinitializeInputControls, // 暴露 reinitialize 方法
     cleanup: () => {
         if (cleanupListeners) {
             cleanupListeners();
         }
-        instance = null;
+        instance = null; // 清除单例引用
     }
   };
 }

@@ -41,22 +41,24 @@
         <div class="direction-controls">
           <button 
             class="control-btn left-btn" 
-            @touchstart.prevent="handleTouchStart('left')"
-            @touchend.prevent="handleTouchEnd('left')"
-            @touchcancel.prevent="handleTouchEnd('left')"
+            @touchstart="handleTouchStart('left')"
+            @touchend="handleTouchEnd('left')"
+            @touchcancel="handleTouchEnd('left')"
             @mousedown.prevent="handleTouchStart('left')"
             @mouseup.prevent="handleTouchEnd('left')"
-            @mouseleave.prevent="handleTouchEnd('left')">
+            @mouseleave.prevent="handleTouchEnd('left')"
+            @contextmenu.prevent>
             <img src="/assets/images/turn-left.svg" alt="左转" class="control-icon" onerror="this.src='/assets/images/turn-left.png';this.onerror=null;">
           </button>
           <button 
             class="control-btn right-btn" 
-            @touchstart.prevent="handleTouchStart('right')"
-            @touchend.prevent="handleTouchEnd('right')"
-            @touchcancel.prevent="handleTouchEnd('right')"
+            @touchstart="handleTouchStart('right')"
+            @touchend="handleTouchEnd('right')"
+            @touchcancel="handleTouchEnd('right')"
             @mousedown.prevent="handleTouchStart('right')"
             @mouseup.prevent="handleTouchEnd('right')"
-            @mouseleave.prevent="handleTouchEnd('right')">
+            @mouseleave.prevent="handleTouchEnd('right')"
+            @contextmenu.prevent>
             <img src="/assets/images/turn-right.svg" alt="右转" class="control-icon" onerror="this.src='/assets/images/turn-right.png';this.onerror=null;">
           </button>
         </div>
@@ -65,21 +67,23 @@
         <div class="acceleration-controls">
           <button 
             class="control-btn accelerate-btn" 
-            @touchstart.prevent="handleTouchStart('accelerate')"
-            @touchend.prevent="handleTouchEnd('accelerate')"
-            @touchcancel.prevent="handleTouchEnd('accelerate')"
+            @touchstart="handleTouchStart('accelerate')"
+            @touchend="handleTouchEnd('accelerate')"
+            @touchcancel="handleTouchEnd('accelerate')"
             @mousedown.prevent="handleTouchStart('accelerate')"
             @mouseup.prevent="handleTouchEnd('accelerate')"
-            @mouseleave.prevent="handleTouchEnd('accelerate')">
+            @mouseleave.prevent="handleTouchEnd('accelerate')"
+            @contextmenu.prevent>
             <img src="/assets/images/accelerate.svg" alt="加速" class="control-icon" onerror="this.src='/assets/images/accelerate.png';this.onerror=null;">
           </button>
           <button 
             class="control-btn brake-btn" 
-            @touchstart.prevent="handleTouchStart('brake')"
-            @touchend.prevent="handleTouchEnd('brake')"
-            @touchcancel.prevent="handleTouchEnd('brake')"
+            @touchstart="handleTouchStart('brake')"
+            @touchend="handleTouchEnd('brake')"
+            @touchcancel="handleTouchEnd('brake')"
             @mousedown.prevent="handleTouchStart('brake')"
-            @mouseup.prevent="handleTouchEnd('brake')">
+            @mouseup.prevent="handleTouchEnd('brake')"
+            @contextmenu.prevent>
             <img src="/assets/images/brake.svg" alt="刹车" class="control-icon" onerror="this.src='/assets/images/brake.png';this.onerror=null;">
           </button>
         </div>
@@ -88,11 +92,12 @@
         <div class="handbrake-control">
           <button 
             class="control-btn handbrake-btn" 
-            @touchstart.prevent="handleTouchStart('handbrake')"
+            @touchstart="handleTouchStart('handbrake')"
             @mousedown.prevent="handleTouchStart('handbrake')"
-            @touchend.prevent="handleTouchEnd('handbrake')"
+            @touchend="handleTouchEnd('handbrake')"
             @mouseup.prevent="handleTouchEnd('handbrake')"
-            @touchcancel.prevent="handleTouchEnd('handbrake')">
+            @touchcancel="handleTouchEnd('handbrake')"
+            @contextmenu.prevent>
             <img src="/assets/images/handbrake.svg" alt="手刹" class="control-icon" onerror="this.src='/assets/images/handbrake.png';this.onerror=null;">
             <span class="control-label">漂移</span>
           </button>
@@ -110,7 +115,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, toRaw } from 'vue';
 import { useDeviceDetection } from '@/composables/useDeviceDetection';
 
 export default {
@@ -147,54 +152,43 @@ export default {
     // 处理全屏切换，添加错误回调
     const handleFullscreenToggle = () => {
       toggleFullscreen((error) => {
-        console.log("全屏切换回调: ", error ? error.message : '成功');
       });
     };
 
     // 切换调试模式
     const toggleDebugMode = () => {
       debugMode.value = !debugMode.value;
-      console.log(`触摸控制调试模式: ${debugMode.value ? '开启' : '关闭'}`);
     };
     
     // 切换相机视角
     const switchCamera = () => {
       if (typeof props.switchCameraMode === 'function') {
         props.switchCameraMode();
-        console.log(`已切换到: ${cameraModeNames[props.currentCameraMode] || '未知视角'}`);
       } else {
         console.warn('相机切换功能未提供');
       }
     };
 
     onMounted(() => {
-      console.log("===== [TouchControls.vue] MOUNTED =====");
       // 检查URL参数，如果包含debug=true则自动开启调试模式
       if (window.location.search.includes('debug=true')) {
         debugMode.value = true;
-        console.log('通过URL参数自动开启触摸控制调试模式');
       }
     });
     
     onUnmounted(() => {
-      console.log("===== [TouchControls.vue] UNMOUNTED =====");
-      // 移除键盘事件监听
-      // window.removeEventListener('keydown', handleKeyDown);
-      // window.removeEventListener('keyup', handleKeyUp);
     });
 
     const handleTouchStart = (control) => {
       if (!props.controlState) {
-        console.error('[TouchControls] handleTouchStart: controlState 未定义');
+        console.error('[TouchControls DEBUG] ERROR: controlState is undefined/null during touch start!');
         return;
       }
-      
-      console.log(`[TouchControls] ===== TOUCH START: ${control} =====`); // 添加醒目日志
-      
+
       if (navigator.vibrate) {
-        navigator.vibrate(20); 
+        navigator.vibrate(20);
       }
-      
+
       try {
         switch(control) {
           case 'left':
@@ -213,21 +207,17 @@ export default {
             props.controlState.handbrake = true;
             break;
         }
-        
-        console.log(`[TouchControls] 控制状态更新后 (Touch Start - ${control}):`, JSON.stringify(props.controlState)); // 详细日志
       } catch (error) {
-        console.error(`[TouchControls] handleTouchStart (${control}) 设置控制状态时出错:`, error);
+        console.error(`[TouchControls DEBUG] ERROR during handleTouchStart (${control}):`, error);
       }
     };
 
     const handleTouchEnd = (control) => {
-      if (!props.controlState) {
-        console.error('[TouchControls] handleTouchEnd: controlState 未定义');
+       if (!props.controlState) {
+        console.error('[TouchControls DEBUG] ERROR: controlState is undefined/null during touch end!');
         return;
       }
-      
-      console.log(`[TouchControls] ===== TOUCH END: ${control} =====`); // 添加醒目日志
-      
+
       try {
         switch(control) {
           case 'left':
@@ -246,10 +236,9 @@ export default {
             props.controlState.handbrake = false;
             break;
         }
-        
-        console.log(`[TouchControls] 控制状态更新后 (Touch End - ${control}):`, JSON.stringify(props.controlState)); // 详细日志
+
       } catch (error) {
-        console.error(`[TouchControls] handleTouchEnd (${control}) 设置控制状态时出错:`, error);
+        console.error(`[TouchControls DEBUG] ERROR during handleTouchEnd (${control}):`, error);
       }
     };
 
@@ -276,8 +265,8 @@ export default {
   left: 0;
   width: 100%;
   height: 40vh; /* 增加控制区域高度 */
-  z-index: 1000;
-  pointer-events: none;
+  z-index: 1001;
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -376,12 +365,13 @@ export default {
   position: fixed;
   bottom: 20px;
   left: 20px;
-  pointer-events: auto;
+  pointer-events: none;
   z-index: 1001;
 }
 
 .fullscreen-btn {
-  z-index: 1001;
+  pointer-events: auto;
+  z-index: 1002;
   width: 52px;
   height: 52px;
   display: flex;
@@ -492,9 +482,15 @@ export default {
   overflow: hidden;
   transition: background-color 0.15s ease, transform 0.15s ease; /* 简化过渡 */
   backdrop-filter: blur(3px);
-  pointer-events: auto;
-  z-index: 1001; /* 保持 z-index */
+  pointer-events: auto !important;
+  z-index: 1003;
   transform: scale(1);
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Old versions of Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
 }
 
 .control-btn:active,

@@ -12,6 +12,7 @@ import { createVehicleChassis } from '@/game/vehicle/VehiclePhysics';
 import { useInputControls } from '@/composables/useInputControls';
 import { useTuningStore } from '@/store/tuning';
 import { storeToRefs } from 'pinia';
+import { toRaw } from 'vue';
 
 export default {
   name: 'VehicleController',
@@ -106,7 +107,6 @@ export default {
             wheelInfo.rollInfluence = rollInfluence;
             wheelInfo.maxSuspensionTravel = (maxTravel ?? 1) * currentScale;
           });
-          console.log("VehicleController: Dynamically updated suspension parameters.");
         }
       },
       { deep: false } // Not deep, watching individual refs/values
@@ -118,29 +118,19 @@ export default {
       // 检查是否有实际变化，避免不必要的日志
       try {
         // 不使用JSON.stringify比较整个对象
-        const hasChanged = 
+        const hasChanged =
           newControlState.accelerate !== oldControlState?.accelerate ||
           newControlState.brake !== oldControlState?.brake ||
           newControlState.turnLeft !== oldControlState?.turnLeft ||
           newControlState.turnRight !== oldControlState?.turnRight ||
           newControlState.handbrake !== oldControlState?.handbrake;
-        
+
         if (hasChanged) {
           // 直接记录关心的属性，避免使用JSON.stringify
-          console.log(`[VehicleController] controlState prop 变化: 加速=${newControlState.accelerate}, 刹车=${newControlState.brake}, 左转=${newControlState.turnLeft}, 右转=${newControlState.turnRight}, 手刹=${newControlState.handbrake}`);
-          
-          // 检查加速键是否被按下
-          if (newControlState.accelerate) {
-            console.log('[VehicleController] 检测到加速指令，尝试加速...');
-          }
-          
-          // 检查其他控制状态
-          if (newControlState.turnLeft || newControlState.turnRight) {
-            console.log('[VehicleController] 检测到转向指令：左=' + newControlState.turnLeft + ', 右=' + newControlState.turnRight);
-          }
+          console.log(`[VehicleController DEBUG] controlState prop 实际变化: 加速=${newControlState.accelerate}, 刹车=${newControlState.brake}, 左转=${newControlState.turnLeft}, 右转=${newControlState.turnRight}, 手刹=${newControlState.handbrake}`);
         }
       } catch (error) {
-        console.error('[VehicleController] 处理controlState变化时出错:', error);
+        console.error('[VehicleController DEBUG] 处理controlState变化时出错:', error);
       }
     }, { deep: true, immediate: true });
 
@@ -281,22 +271,12 @@ export default {
     const handlePhysicsUpdate = () => {
       // 增强检查：确保核心 props 和 isReady 都有效
       if (!isReady.value || !props.world || !props.scene || !props.carModel || !vehicle.value || !vehicle.value.chassisBody) {
-        console.log("[VehicleController] handlePhysicsUpdate skipped: Not fully ready or props missing.");
-        return; // 如果未就绪或 props 丢失，则提前返回
+         return;
       }
       
-      // 在每次物理更新时记录控制状态
-      if (props.controlState) {
-        const { accelerate, brake, turnLeft, turnRight, handbrake } = props.controlState;
-        
-        // 使用这些控制状态，而不是重复检查它们
-        let hasDrivingInput = accelerate || brake || turnLeft || turnRight || handbrake;
-        
-        // 每次更新都记录状态，以便调试
-        console.log(`[VehicleController] Physics Update - Control State: A:${accelerate}, B:${brake}, L:${turnLeft}, R:${turnRight}, H:${handbrake}`);
-      }
-      
-      // 获取当前车速（km/h）
+      // Log the incoming control state for this frame
+      const { accelerate, brake, turnLeft, turnRight, handbrake } = props.controlState;
+    // 获取当前车速（km/h）
       const currentSpeed = vehicle.value.chassisBody.velocity.length() * 3.6; // 转换为km/h
       
       // 根据阿克曼转向原理计算转向角度
@@ -357,37 +337,38 @@ export default {
       const reverseThreshold = 0.5;
 
       // --- 动态获取驱动轮和刹车轮索引 (根据驱动类型) ---
-      const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
-      let driveWheelIndices = [];
-      const allWheelIndices = [wheelIndices.FL, wheelIndices.FR, wheelIndices.BL, wheelIndices.BR];
+       const wheelIndices = tuningParams.value.wheelIndices ?? { FL: 0, FR: 1, BL: 2, BR: 3 };
+       let driveWheelIndices = [];
+       const allWheelIndices = [wheelIndices.FL, wheelIndices.FR, wheelIndices.BL, wheelIndices.BR];
 
-      switch (tuningParams.value.driveType) {
-        case 'FWD':
-          driveWheelIndices = [wheelIndices.FL, wheelIndices.FR];
-          break;
-        case 'AWD':
-          driveWheelIndices = allWheelIndices;
-          break;
-        case 'RWD':
-        default:
-          driveWheelIndices = [wheelIndices.BL, wheelIndices.BR];
-          break;
-      }
-      // 刹车通常作用于所有轮子
-      const brakeWheelIndices = allWheelIndices;
-      // 后轮索引（用于漂移）
-      const rearWheelIndices = [wheelIndices.BL, wheelIndices.BR];
-     
-      // --- 重新启用地面接触检查日志 ---
+       switch (tuningParams.value.driveType) {
+         case 'FWD':
+           driveWheelIndices = [wheelIndices.FL, wheelIndices.FR];
+           break;
+         case 'AWD':
+           driveWheelIndices = allWheelIndices;
+           break;
+         case 'RWD':
+         default:
+           driveWheelIndices = [wheelIndices.BL, wheelIndices.BR];
+           break;
+       }
+       const brakeWheelIndices = allWheelIndices;
+       const rearWheelIndices = [wheelIndices.BL, wheelIndices.BR];
+       // --- End wheel index ---
+
+      // --- Ground contact check ---
       let driveWheelsOnGround = true;
       driveWheelIndices.forEach(index => {
-          if (vehicle.value.wheelInfos && vehicle.value.wheelInfos[index] && !vehicle.value.wheelInfos[index].raycastResult.hasHit) {
+          // Add checks for wheelInfos and raycastResult existence
+          if (vehicle.value.wheelInfos && 
+              vehicle.value.wheelInfos[index] && 
+              vehicle.value.wheelInfos[index].raycastResult && 
+              !vehicle.value.wheelInfos[index].raycastResult.hasHit) 
+          {
               driveWheelsOnGround = false;
           }
       });
-      if (!driveWheelsOnGround) {
-      }
-      // --- 结束检查 ---
       
       // 处理手刹状态
       if (props.controlState.handbrake) {
@@ -474,46 +455,35 @@ export default {
       // 更新上一帧的手刹状态
       previousHandbrakeState = props.controlState.handbrake;
       
-      // 处理加速和刹车
-      if (props.controlState.accelerate) {
-          // 使用 brakeWheelIndices 清除所有轮子的刹车
+      // --- Acceleration/Braking logic ---
+      if (accelerate) {
           brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
-
           const force = -tuningStore.tuningParams.enginePower;
+
           if (driveWheelsOnGround) {
-              // 使用 driveWheelIndices 施加驱动力
               driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(force, index));
           } else {
+              // Ensure force is zeroed if wheels are off ground
+              driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
           }
-      } else if (props.controlState.brake) {
-        if (forwardVelocity < reverseThreshold) {
-            // 使用 brakeWheelIndices 清除所有轮子的刹车
-          brakeWheelIndices.forEach(index => vehicle.value.setBrake(0, index));
-
-          const reverseForce = tuningStore.tuningParams.enginePower * 0.5;
-          if (driveWheelsOnGround) {
-              // 使用 driveWheelIndices 施加倒车力
-              driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(reverseForce, index));
-          } else {
-          }
-        } else {
-              // 清除引擎力
+      } else if (brake) {
+           // Ensure engine force is 0 when braking
            driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-
-             // 使用 brakeWheelIndices 施加刹车力
            const brakeForce = tuningStore.tuningParams.brakePower;
            brakeWheelIndices.forEach(index => vehicle.value.setBrake(brakeForce, index));
-        }
       } else {
-            // 清除引擎力
-         driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
-         
-         // 如果不在手刹状态，则应用轻微刹车
-         if (!props.controlState.handbrake) {
-           // 使用 brakeWheelIndices 施加减速力 (轻微刹车)
-           const slowDownForce = tuningStore.tuningParams.slowDownForce;
-           brakeWheelIndices.forEach(index => vehicle.value.setBrake(slowDownForce, index));
-         }
+           driveWheelIndices.forEach(index => vehicle.value.applyEngineForce(0, index));
+           if (!handbrake) { // Only apply slow down if handbrake is off
+             const slowDownForce = tuningStore.tuningParams.slowDownForce;
+             brakeWheelIndices.forEach(index => vehicle.value.setBrake(slowDownForce, index));
+           } else {
+             // If handbrake IS active, but no accel/brake, ensure normal brakes are off on non-rear wheels
+              brakeWheelIndices.forEach(index => {
+                   if (!rearWheelIndices.includes(index)) {
+                       vehicle.value.setBrake(0, index);
+                   }
+              });
+           }
       }
 
       if (!justReset && chassisBody.value && chassisBody.value.quaternion) {
@@ -615,7 +585,6 @@ export default {
       (newValues, oldValues) => {
         // 仅当物理已就绪且值确实发生变化时才重建
         if (isReady.value && JSON.stringify(newValues) !== JSON.stringify(oldValues)) {
-            console.log("VehicleController: Rebuilding physics due to core parameter change (mass/connectionPoints).");
             cleanupPhysics();
           // 让 watchEffect 来处理重新初始化
           // initializePhysics(); // 不再直接调用

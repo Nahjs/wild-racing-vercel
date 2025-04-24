@@ -243,8 +243,7 @@ export default {
       saveSettings: saveCameraSettings,
       update: updateCamera
     } = cameraControls;
-    // console.log('[Race setup] Type of nextModeComposable after destructuring:', typeof nextModeComposable); // Keep commented or remove
-
+   
     // 加载赛道模型
     const loadTrack = async () => {
       try {
@@ -312,25 +311,18 @@ export default {
     // Physics ready (remains the same)
     const onPhysicsReady = (data) => {
       world.value = data.world;
-      console.log("[Race] Physics ready, world ref set:", !!world.value); // 添加日志
     };
 
     // Physics update - Call camera update here
     const onPhysicsUpdate = () => {
-      // 添加日志，检查 carController 引用
-      // console.log(`[Race] onPhysicsUpdate: isCarControllerReady=${isCarControllerReady.value}, carController=${!!carController.value}`); // Removed log
-      
       if (isCarControllerReady.value && carController.value) {
-        // 添加日志确认调用
-        // console.log("[Race] Calling carController.handlePhysicsUpdate"); // Removed log
+
         carController.value.handlePhysicsUpdate();
       } else if (isCarControllerReady.value && !carController.value) {
         // 如果 isReady 但 ref 仍为 null，尝试 nextTick
         console.warn("[Race] onPhysicsUpdate: carController is null even when ready. Checking in nextTick...");
         nextTick(() => {
-          console.log(`[Race] onPhysicsUpdate (nextTick): carController=${!!carController.value}`);
           if (carController.value) {
-            console.log("[Race] Calling carController.handlePhysicsUpdate (from nextTick)");
             carController.value.handlePhysicsUpdate();
           } else {
             console.error("[Race] FATAL: carController ref is still null in nextTick after onCarReady!");
@@ -361,8 +353,6 @@ export default {
       isLoading.value = false;
       isInitializingPhysics.value = false; 
       
-      // 添加日志确认
-      console.log("[Race] onCarReady triggered. Setting isCarControllerReady to true.");
       
       // 设置标志位，表示 VehicleController 已准备好
       isCarControllerReady.value = true; 
@@ -390,20 +380,15 @@ export default {
     
     // 组件挂载
     onMounted(async () => { 
-      console.log("===== [Race.vue] MOUNTED ====="); // <--- 添加日志
-      console.log("[Race] onMounted: Checking carController ref after initial mount...");
       nextTick(() => {
-        console.log(`[Race] onMounted (nextTick): carController = ${!!carController.value}`, carController.value);
       });
       
       // 添加全局键盘事件监听器，用于调试
       const globalKeyDownHandler = (e) => {
-        console.log(`[Race] 全局键盘按下事件捕获: ${e.code}, key=${e.key}, target=${e.target.tagName}`);
         // 不阻止事件继续传播
       };
       
       const globalKeyUpHandler = (e) => {
-        console.log(`[Race] 全局键盘释放事件捕获: ${e.code}, key=${e.key}`);
         // 不阻止事件继续传播
       };
       
@@ -418,7 +403,6 @@ export default {
       
       // 添加一个测试键盘事件监听器，验证键盘事件捕获
       const testKeyHandler = (e) => {
-        console.log(`[Race] 测试键盘事件捕获: ${e.code}`);
       };
       document.addEventListener('keydown', testKeyHandler);
       
@@ -501,33 +485,18 @@ export default {
       onUnmounted(() => {
         window.removeEventListener('resize', updateOrientation);
       });
-
-      // 设置键盘轮询
-      // setupKeyboardPolling();
       
       // 添加焦点和全屏事件监听
       const handleFocus = () => {
-        console.log("[Race] 窗口获得焦点，将由 useInputControls 处理状态重置");
-        // useInputControls 中的 focus 监听器会处理状态重置
       };
       
       const handleBlur = () => {
-        console.log("[Race] 窗口失去焦点，将由 useInputControls 处理控制重置");
-        // useInputControls 中的 focus/blur 监听器会处理
-        // 不再需要在这里重复重置
-        /*
-        if (controls && controls.value && typeof controls.value.reset === 'function') {
-          controls.value.reset(); 
-          console.log("[Race] 控制状态已在失焦时重置");
-        }
-        */
       };
       
       const handleFullscreenChange = () => {
         const isDocFullscreen = document.fullscreenElement || 
                                 document.webkitFullscreenElement || 
                                 document.mozFullScreenElement;
-        console.log(`[Race] 全屏状态变化: ${isDocFullscreen ? '进入全屏' : '退出全屏'}`);
         
         // 全屏状态变化后重置键盘状态
         setTimeout(() => {
@@ -547,16 +516,49 @@ export default {
         window.removeEventListener('visibilitychange', handleBlur);
         document.removeEventListener('fullscreenchange', handleFullscreenChange);
       });
+
+      // Find the canvas element within the renderer container
+      // Use nextTick to ensure the DOM is updated after VehicleRenderer mounts
+      await nextTick(); 
+      const canvasElement = rendererElement.value?.querySelector('canvas.track-canvas'); // Adjust selector if needed
+
+      if (canvasElement) {
+
+        const stopCanvasTouchPropagation = (event) => {
+          // Check if the event target is one of our control buttons
+          // If it is, DO NOT stop propagation, let the button handle it.
+          if (event.target && event.target.closest('.control-btn')) {
+             return; 
+          }
+
+          event.stopPropagation();
+        };
+
+        // Add touch event listeners to the canvas
+        canvasElement.addEventListener('touchstart', stopCanvasTouchPropagation, { capture: true }); // Use capture phase
+        canvasElement.addEventListener('touchmove', stopCanvasTouchPropagation, { capture: true }); // Use capture phase
+        canvasElement.addEventListener('touchend', stopCanvasTouchPropagation, { capture: true }); // Use capture phase
+        canvasElement.addEventListener('touchcancel', stopCanvasTouchPropagation, { capture: true }); // Use capture phase
+
+        // Add to cleanup functions
+        cleanupFunctions.push(() => {
+          if (canvasElement) {
+            canvasElement.removeEventListener('touchstart', stopCanvasTouchPropagation, { capture: true });
+            canvasElement.removeEventListener('touchmove', stopCanvasTouchPropagation, { capture: true });
+            canvasElement.removeEventListener('touchend', stopCanvasTouchPropagation, { capture: true });
+            canvasElement.removeEventListener('touchcancel', stopCanvasTouchPropagation, { capture: true });
+          }
+        });
+      } else {
+        console.warn("[Race.vue] Could not find canvas element within rendererElement.");
+      }
     });
     
     // 监听 isCarControllerReady 变化
     watch(isCarControllerReady, (newValue) => {
       if (newValue === true) {
-        console.log(`[Race] Watcher triggered: isCarControllerReady is true. Checking carController ref immediately:`);
-        console.log(`[Race] Watcher: carController = ${!!carController.value}`, carController.value);
         // 尝试再次检查 nextTick
         nextTick(() => {
-          console.log(`[Race] Watcher (nextTick): carController = ${!!carController.value}`, carController.value);
         });
       }
     });
@@ -586,7 +588,6 @@ export default {
       
       // 清理函数
       const cleanup = () => {
-        console.log("[Race] Cleaning up auto camera rotation...");
         if (currentTimer) {
           clearTimeout(currentTimer);
           currentTimer = null;
@@ -668,7 +669,6 @@ export default {
         // 设置超时，如果10秒后相机仍未初始化，则放弃
         currentTimer = setTimeout(() => {
           if (!isCameraComposableInitialized.value) {
-            console.log("[Race] Camera initialization timed out during auto rotation.");
             cleanup();
             
             // 即使超时也标记为已完成，允许游戏继续
@@ -695,10 +695,8 @@ export default {
     };
 
     onUnmounted(() => {
-      console.log("===== [Race.vue] UNMOUNTED ====="); // <--- 添加日志
       cleanupFunctions.forEach(cleanup => {
         if (typeof cleanup === 'function') {
-          console.log("[Race] Calling cleanup function on unmount...");
           cleanup();
         }
       });
@@ -712,8 +710,6 @@ export default {
     // 当 Track 组件的场景准备好时调用
     const onSceneReady = async (emittedScene) => { // 使用 async
       scene.value = emittedScene;
-      console.log("[Race.vue] Scene is ready.");
-      console.log("[Race] Scene ref set:", !!scene.value); // 添加日志
 
       await loadTrack();
       await nextTick();
@@ -738,12 +734,9 @@ export default {
           window.removeEventListener('resize', handleResize);
         });
         
-        console.log("[Race.vue] 已创建备用相机");
-        
         // 只有在还没有通过camera-ready事件设置相机时才使用备用相机
         if (!cameraRef.value) {
           cameraRef.value = backupCamera;
-          console.log("[Race.vue] 使用备用相机作为主相机");
         }
       }
     };
@@ -751,7 +744,6 @@ export default {
     // 当车辆模型准备好时调用
     const onModelReady = (model) => {
       carModel.value = model;
-      console.log("[Race.vue] Model ref set for useCamera");
     };
     
     // 强制禁用VehicleRenderer中的控制器
@@ -821,18 +813,15 @@ export default {
     
     // 处理相机准备好事件
     const onCameraReady = (camera) => {
-      console.log("[Race.vue] 收到camera-ready事件，相机实例已准备就绪");
       if (camera) {
         cameraRef.value = camera;
       } else {
-        console.warn("[Race.vue] camera-ready事件提供的相机实例为null");
       }
     };
     
     // --- 新增 watchEffect 处理视角演示启动 --- 
     watchEffect(() => {
-      console.log("[Race WatchEffect Demo] Checking conditions: cameraInit=", isCameraComposableInitialized.value, "model=", !!carModel.value, "scene=", !!scene.value, "!trackLoading=", !isLoadingTrack.value, "status=", raceStatus.value, "demoStarted=", isCameraDemoStarted.value);
-      if (
+     if (
         isCameraComposableInitialized.value && // 确保 useCamera 初始化完成
         carModel.value &&                  // 确保车辆模型加载完成
         scene.value &&                     // 确保场景准备就绪
@@ -840,7 +829,6 @@ export default {
         raceStatus.value === 'waiting' &&  // 确保比赛处于等待状态
         !isCameraDemoStarted.value         // 确保演示尚未开始
       ) {
-        console.log("[Race WatchEffect Demo] Conditions met, starting camera demo.");
         // 直接调用 startAutoCameraRotation，并设置标志位
         isCameraDemoStarted.value = true; 
         const cleanup = startAutoCameraRotation();
@@ -850,31 +838,12 @@ export default {
       }
     });
 
-    // --- 新增 watchEffect 处理倒计时启动 --- 
-    // 注释掉这个watchEffect，因为我们现在使用用户点击开始游戏
-    /*
-    watchEffect(() => {
-      console.log("[Race WatchEffect Countdown] Checking conditions: demoComplete=", isAutoCameraRotationComplete.value, "carReady=", isCarControllerReady.value, "status=", raceStatus.value);
-      if (
-        isAutoCameraRotationComplete.value && // 确保视角演示完成
-        isCarControllerReady.value &&       // 确保车辆控制器准备就绪
-        raceStatus.value === 'waiting'      // 确保比赛处于等待状态
-      ) {
-        console.log("[Race WatchEffect Countdown] Conditions met, starting countdown.");
-        startCountdown();
-      }
-    });
-    */
-
     // --- Function Ref for VehicleController ---
     const setCarControllerRef = (el) => {
-      // console.log("[Race] setCarControllerRef called with:", el); // Removed log
       // Check if el is the expected component instance (usually has a $ property in Vue 3)
       if (el && el.$) {
-        // console.log("[Race] Assigning component instance to carController."); // Removed log
         carController.value = el;
       } else if (el === null) {
-        console.log("[Race] setCarControllerRef called with null (unmounting?), setting carController to null.");
         carController.value = null;
       } else {
         console.warn("[Race] setCarControllerRef received unexpected value:", el);
@@ -899,12 +868,10 @@ export default {
     };
 
     const forceEnableTouchControls = () => {
-      console.log("强制启用触摸控制...");
       
       // 1. 强制设置为移动设备模式
       if (isMobile && typeof isMobile === 'object' && 'value' in isMobile) {
         isMobile.value = true;
-        console.log("已强制设置移动设备模式");
       }
       
       // 2. 尝试直接启用TouchControls组件的调试模式
@@ -913,7 +880,6 @@ export default {
         try {
           // 访问组件实例并设置debugMode
           touchControlsComponent.__vue__.debugMode = true;
-          console.log("已强制启用TouchControls调试模式");
         } catch (e) {
           console.error("无法直接修改TouchControls组件状态:", e);
         }
@@ -924,7 +890,6 @@ export default {
       // 3. 刷新页面并添加debug参数
       const url = new URL(window.location.href);
       url.searchParams.set('debug', 'true');
-      console.log("将在3秒后重定向到调试模式URL:", url.toString());
       
       setTimeout(() => {
         window.location.href = url.toString();
@@ -1013,6 +978,8 @@ export default {
   height: 100vh;
   position: relative;
   overflow: hidden;
+  /* Ensure the container itself doesn't block events meant for its children */
+  /* pointer-events: none; NO - this would block everything */
 }
 
 .debug-controls {

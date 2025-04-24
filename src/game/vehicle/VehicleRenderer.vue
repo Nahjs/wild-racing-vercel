@@ -97,8 +97,6 @@ export default {
     onMounted(() => {
       nextTick(() => {
         if (renderer.value) {
-          console.log("使用高品质渲染设置");
-          // 使用设备的原生像素比率，确保最佳画质
           renderer.value.setPixelRatio(window.devicePixelRatio);
           
           // 启用高质量阴影
@@ -290,8 +288,6 @@ export default {
                 if (potentialWheelNodes.length > 0) {
                     console.warn("VehicleRenderer: Potential wheel nodes found by keyword/pattern (not automatically assigned):", [...new Set(potentialWheelNodes)]);
                 }
-                 // 即使不完整，也记录下已找到的部分
-                 console.log("VehicleRenderer: Partially found wheel nodes:", wheelMeshRefs.value);
             }
             
             // 更新车轮坐标轴可见性
@@ -299,12 +295,10 @@ export default {
             
             carModel.value = markRaw(loadedModel);
             scene.value.add(carModel.value);
-            console.log("VehicleRenderer: Model loaded and added to scene.");
 
             // 立即应用自定义材质颜色
             // 从tuningStore获取颜色设置并应用到模型上
             nextTick(() => {
-              console.log("VehicleRenderer: 应用自定义材质颜色...");
               customizeModelMaterials();
             });
 
@@ -473,7 +467,6 @@ export default {
           }
       } catch (error) {
           console.error("VehicleRenderer: Error applying wheel quaternion:", error);
-          console.log("wheelQuaternions:", props.wheelQuaternions);
       }
     };
 
@@ -491,7 +484,6 @@ export default {
       const bodyColor = tuningParams.value?.colors?.body || "#2f426f"; // 默认车身颜色
       const wheelColor = tuningParams.value?.colors?.wheel || "#1a1a1a"; // 默认轮毂颜色
       
-      console.log("[VehicleRenderer] 应用自定义颜色 - 车身:", bodyColor, "轮毂:", wheelColor);
       
       // 提取模型的材质
       const materials = {};
@@ -568,13 +560,11 @@ export default {
       // We need to wait for the composable to potentially finish its async setup
       // and for the canvas to be ready.
       nextTick(async () => { 
-          console.log("VehicleRenderer: onMounted nextTick - Start");
           
           // 确保先等待渲染器和场景初始化
           let retries = 0;
           const maxRetries = 10;
           while ((!scene.value || !renderer.value) && retries < maxRetries) {
-            console.log(`VehicleRenderer: 等待场景和渲染器初始化，尝试 ${retries + 1}/${maxRetries}`);
             await new Promise(resolve => setTimeout(resolve, 100));
             retries++;
           }
@@ -583,12 +573,10 @@ export default {
               // 禁用useSceneSetup中的controls，让useCamera完全接管相机控制
               if (controls.value) {
                 controls.value.enabled = false;
-                console.log("VehicleRenderer: Disabled controls from useSceneSetup to let useCamera take over.");
               }
 
               // 在相机准备好时发送事件
               if (camera.value) {
-                console.log("VehicleRenderer: 相机已初始化，发送camera-ready事件");
                 emit('camera-ready', camera.value);
               } else {
                 console.warn("VehicleRenderer: 相机尚未初始化，将在创建后发送事件");
@@ -597,7 +585,6 @@ export default {
                   // 检查标志位，防止重复触发
                   if (newCamera && !cameraReadyEmitted.value) {
                     cameraReadyEmitted.value = true;
-                    console.log("VehicleRenderer: 相机已初始化(通过监听)，发送camera-ready事件");
                     emit('camera-ready', newCamera);
                     unwatch(); // 移除监听器
                   }
@@ -611,15 +598,12 @@ export default {
               }
               
               emit('scene-ready', scene.value); // Emit scene from composable
-              console.log("VehicleRenderer: Scene is ready from composable. Loading model...");
               await loadSelectedCarModel(); // Load the model into the scene
               
               // 自定义模型材质
               if (carModel.value) {
                 customizeModelMaterials();
               }
-              
-              console.log("VehicleRenderer: Model loading initiated. Starting animation loop...");
               // Start the animation loop provided by the composable, passing our updates
               startAnimationLoop(() => {
                   // 确保controls始终保持禁用状态
@@ -632,7 +616,6 @@ export default {
           } else {
               console.error("VehicleRenderer: Scene or renderer not initialized by useSceneSetup on mount.");
           }
-          console.log("VehicleRenderer: onMounted nextTick - End");
       });
     });
 
@@ -644,14 +627,12 @@ export default {
         
         // 停止动画循环
         stopAnimationLoop();
-        console.log("VehicleRenderer: Unmounted.");
         // Additional cleanup specific to VehicleRenderer if needed
     });
 
     // Watch for vehicle changes to reload the model
     watch(() => props.selectedVehicle?.id, async (newId, oldId) => {
         if (newId !== oldId && scene.value) { // Check if scene exists
-             console.log(`VehicleRenderer: Vehicle changed to ${newId}. Reloading model.`);
              await loadSelectedCarModel();
              
              // 自定义模型材质
@@ -747,7 +728,6 @@ export default {
           // 如果场景存在，将相机添加到场景中
           if (scene && scene.value) {
             scene.value.add(fallbackCamera);
-            console.log('VehicleRenderer: 备用相机已添加到场景');
           }
           
           return fallbackCamera;

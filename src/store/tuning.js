@@ -83,13 +83,11 @@ export const useTuningStore = defineStore('tuning', {
             ...defaultTuning.colors,  // 默认颜色
             ...initialSettings.colors  // 用户定义颜色覆盖默认值
           };
-          console.log('[TuningStore] 处理颜色设置:', processedSettings.colors);
         }
         
         // Ensure all default keys are present, merging initialSettings over defaults
         this.tuningParams = { ...defaultTuning, ...processedSettings };
-        console.log(`[TuningStore] Initialized tuningParams for ${vehicleId} with provided settings:`, this.tuningParams);
-      } else {
+       } else {
         // Fallback to defaults if initialSettings are invalid
         this.tuningParams = { ...defaultTuning };
         console.warn(`[TuningStore] Invalid initialSettings provided for ${vehicleId}, falling back to defaults.`);
@@ -105,11 +103,9 @@ export const useTuningStore = defineStore('tuning', {
       try {
         const vehicleDataFromDB = await vehicleService.getVehicle(vehicleId);
         if (vehicleDataFromDB?.customSettings) {
-          console.log('Loaded tuning from DB for:', vehicleId);
           // Return the settings found in DB, merged with defaults for safety
           return { ...defaultTuning, ...vehicleDataFromDB.customSettings }; 
         } else {
-          console.log('No custom tuning found in DB for:', vehicleId);
           return null; // Return null if not found
         }
       } catch (error) {

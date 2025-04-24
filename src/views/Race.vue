@@ -214,12 +214,8 @@ export default {
     } = useRaceLogic({
       totalLaps: 3,
       onRaceStart: () => {
-        console.log('[Race] 比赛开始!');
         // 确保隐藏开始提示
         showStartPrompt.value = false;
-        
-        // 比赛开始时重置控制状态即可，不需要完全重新初始化输入系统
-        console.log('[Race] 比赛开始，重置控制状态...');
         if (controls.value && typeof controls.value.reset === 'function') {
           controls.value.reset(); 
         } else {
@@ -227,7 +223,6 @@ export default {
         }
       },
       onRaceFinish: (results) => {
-        console.log('[Race] 比赛结束!', results);
       }
     });
     
@@ -256,14 +251,12 @@ export default {
           return;
         }
         
-        console.log(`[Race] 开始加载赛道：${trackId.value}`);
         
         // 使用TrackManager加载赛道
         const trackModel = await trackManager.loadTrack(trackId.value, scene.value);
         
         // 获取赛道上的检查点
         const checkpointsData = trackManager.getCheckpoints();
-        console.log(`[Race] 获取到检查点数量：${checkpointsData.length}`);
         
         // 设置检查点
         setCheckpoints(checkpointsData);
@@ -293,15 +286,7 @@ export default {
           }
         }
         
-        console.log(`[Race] 赛道起始位置：`, startPosition.value);
-        
         isLoadingTrack.value = false;
-        
-        // 现在不需要在这里自动开始倒计时了，用户将通过RaceStartPrompt控制
-        // if (isCarControllerReady.value && isAutoCameraRotationComplete.value && raceStatus.value === 'waiting') {
-        //   console.log('[Race] 准备开始倒计时，当前控制状态:', controls.value);
-        //   startCountdown();
-        // }
       } catch (error) {
         console.error('[Race] 加载赛道失败:', error);
         isLoadingTrack.value = false;

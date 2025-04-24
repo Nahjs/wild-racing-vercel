@@ -33,8 +33,6 @@ class CheckpointSystem {
     // 创建检查点触发器
     this._createCheckpointTriggers();
     
-    console.log(`[CheckpointSystem] 初始化完成，检查点数量: ${this.checkpoints.length}`);
-    
     return this;
   }
   
@@ -102,8 +100,6 @@ class CheckpointSystem {
       // 更新检查点视觉效果
       this._updateCheckpointVisual(trigger);
     });
-    
-    console.log('[CheckpointSystem] 比赛开始!');
   }
   
   // 停止比赛
@@ -112,8 +108,6 @@ class CheckpointSystem {
     
     // 计算最终成绩
     const totalTime = Date.now() - this.raceStartTime;
-    
-    console.log(`[CheckpointSystem] 比赛结束! 总时间: ${this._formatTime(totalTime)}`);
     
     // 触发比赛结束回调
     if (this.onRaceCompleted) {
@@ -152,8 +146,6 @@ class CheckpointSystem {
     checkpoint.isPassed = true;
     checkpoint.lastPassTime = Date.now();
     
-    console.log(`[CheckpointSystem] 通过检查点 ${index+1}/${this.checkpointTriggers.length}`);
-    
     // 更新检查点视觉效果
     this._updateCheckpointVisual(checkpoint);
     
@@ -187,7 +179,6 @@ class CheckpointSystem {
     }
     
     this.lapCount++;
-    console.log(`[CheckpointSystem] 完成第 ${this.lapCount} 圈! 时间: ${this._formatTime(lapTime)}`);
     
     // 重置检查点状态
     this.checkpointTriggers.forEach(trigger => {

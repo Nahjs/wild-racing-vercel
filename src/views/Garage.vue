@@ -307,7 +307,6 @@ const load3DModel = async () => {
         showNotification('无效的车辆模型路径', 'error');
         return;
     }
-    console.log(`Garage: Loading model: ${currentVehicle.value.model}`);
 
     try {
         const dracoLoader = new DRACOLoader().setDecoderPath("/libs/draco/");
@@ -335,7 +334,6 @@ const load3DModel = async () => {
 
              const baseData = currentVehicle.value;
              let wheelNodeNames = baseData.wheelNodeNames || {};
-             console.log("Garage: Using configured wheel node names:", JSON.stringify(wheelNodeNames));
 
              wheelMeshRefs.value = { FL: null, FR: null, BL: null, BR: null };
              const foundWheels = { fl: false, fr: false, bl: false, br: false };
@@ -408,7 +406,6 @@ const load3DModel = async () => {
              const allWheelsAssigned = wheelMeshRefs.value.FL && wheelMeshRefs.value.FR && wheelMeshRefs.value.BL && wheelMeshRefs.value.BR;
 
              if (allWheelsAssigned) {
-                  console.log("Garage: Successfully found/assigned all wheel nodes:", wheelMeshRefs.value);
              } else {
                  console.error("Garage: Failed to find all required wheel nodes after config and fallback detection.");
                  console.log("   Found Wheels Mapping:", { 

@@ -8,7 +8,6 @@ export function useDeviceDetection() {
   
   const checkOrientation = () => {
     isLandscape.value = window.innerWidth > window.innerHeight;
-    console.log(`屏幕方向: ${isLandscape.value ? '横屏' : '竖屏'}`);
   };
   
   const checkDevice = () => {
@@ -20,13 +19,7 @@ export function useDeviceDetection() {
     isMobile.value = mobileRegex.test(userAgent) || 
                      (navigator.maxTouchPoints && navigator.maxTouchPoints > 2) ||
                      window.matchMedia("(max-width: 768px)").matches;
-    
-    // 调试输出
-    console.log(`设备检测 - 用户代理: ${userAgent}`);
-    console.log(`设备检测 - 触摸点数量: ${navigator.maxTouchPoints || 0}`);
-    console.log(`设备检测 - 屏幕宽度: ${window.innerWidth}px`);
-    console.log(`设备检测 - 屏幕高度: ${window.innerHeight}px`);
-    console.log(`设备检测结果: ${isMobile.value ? '移动设备' : '桌面设备'}`);
+
     
     checkOrientation();
   };
@@ -42,7 +35,6 @@ export function useDeviceDetection() {
         true; // 如果不支持userActivation API，假设允许
       
       if (!isUserActivated) {
-        console.log('提示：全屏模式需要用户交互触发，请点击按钮');
         fullscreenRequested.value = true; // 标记已请求全屏
         if (onErrorCallback && typeof onErrorCallback === 'function') {
           onErrorCallback(new Error('需要用户交互'));
@@ -73,19 +65,15 @@ export function useDeviceDetection() {
       if (screen.orientation && screen.orientation.lock) {
         try {
           await screen.orientation.lock('landscape');
-          console.log('屏幕已锁定为横屏模式');
         } catch (orientationError) {
           // 屏幕方向锁定失败不应该中断全屏流程
           console.warn('无法锁定屏幕方向:', orientationError);
-          console.log('提示：请手动将设备旋转为横屏获得最佳体验');
         }
       } else {
-        console.log('此设备不支持屏幕方向锁定，请手动将设备旋转为横屏');
       }
       
       isFullscreen.value = true;
       fullscreenRequested.value = false; // 重置请求标记
-      console.log('进入全屏模式成功');
       return Promise.resolve();
     } catch (error) {
       console.warn('进入全屏模式失败:', error);
@@ -110,7 +98,6 @@ export function useDeviceDetection() {
       }
       
       isFullscreen.value = false;
-      console.log('退出全屏模式成功');
     } catch (error) {
       console.warn('退出全屏模式失败:', error);
     }

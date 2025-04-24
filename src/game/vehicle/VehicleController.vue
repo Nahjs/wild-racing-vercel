@@ -126,9 +126,7 @@ export default {
           newControlState.handbrake !== oldControlState?.handbrake;
 
         if (hasChanged) {
-          // 直接记录关心的属性，避免使用JSON.stringify
-          console.log(`[VehicleController DEBUG] controlState prop 实际变化: 加速=${newControlState.accelerate}, 刹车=${newControlState.brake}, 左转=${newControlState.turnLeft}, 右转=${newControlState.turnRight}, 手刹=${newControlState.handbrake}`);
-        }
+         }
       } catch (error) {
         console.error('[VehicleController DEBUG] 处理controlState变化时出错:', error);
       }

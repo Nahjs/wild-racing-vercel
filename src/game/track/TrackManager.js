@@ -29,9 +29,7 @@ class TrackManager {
       
       // 2. 获取赛道模型路径
       const trackPath = this._getTrackPath(trackId);
-      
-      // 3. 加载赛道模型
-      console.log(`[TrackManager] 开始加载赛道: ${trackId}, 路径: ${trackPath}`);
+
       const dracoLoader = new DRACOLoader().setDecoderPath('/libs/draco/');
       const gltfLoader = new GLTFLoader().setDRACOLoader(dracoLoader);
       
@@ -47,8 +45,6 @@ class TrackManager {
       // 6. 缓存赛道模型
       this.tracks.set(trackId, trackModel);
       this.currentTrack = trackModel;
-      
-      console.log(`[TrackManager] 赛道加载完成: ${trackId}`);
       this.isLoading = false;
       return trackModel;
     } catch (error) {
@@ -97,8 +93,6 @@ class TrackManager {
       const bIndex = parseInt(b.id.split('_')[1]);
       return aIndex - bIndex;
     });
-    
-    console.log(`[TrackManager] 检查点数量: ${this.checkpoints.length}`);
   }
   
   // 设置赛道到场景中
@@ -124,7 +118,6 @@ class TrackManager {
     let startMarker = null;
     this.currentTrack.traverse(node => {
       if (node.name.toLowerCase().includes('start')) {
-        console.log(`[TrackManager] 找到起点标记: ${node.name}`, node.position);
         startMarker = node;
       }
     });

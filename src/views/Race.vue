@@ -79,29 +79,19 @@
       <button 
         @click="toggleDebugMode" 
         class="debug-mode-btn">
-        {{ debugMode ? '关闭调试模式' : '开启调试模式' }}
+        {{ debugMode ? '关闭' : '调试' }}
       </button>
       
       <button 
         v-if="debugMode"
         @click="forceEnableTouchControls" 
         class="force-touch-btn">
-        强制启用触摸控制
-      </button>
-      
-      <button 
-        v-if="debugMode"
-        @click="reinitializeInputControls" 
-        class="reinit-input-btn">
-        重新初始化控制
+        强制启用
       </button>
       
       <!-- 设备信息显示区域 -->
       <div v-if="debugMode" class="device-info">
         <p>设备类型: {{ isMobile.value ? '移动' : '桌面' }}</p>
-        <p>屏幕方向: {{ isLandscape ? '横屏' : '竖屏' }}</p>
-        <p>触控点数: {{ touchPoints }}</p>
-        <p>控制状态:</p>
         <ul>
           <li>加速: {{ controls.accelerate }}</li>
           <li>刹车: {{ controls.brake }}</li>
@@ -154,7 +144,7 @@ export default {
     let renderFrameId = null;
     
     // 获取输入控制
-    const { controlState: controls, isMobile, reinitializeInputControls } = useInputControls();
+    const { controlState: controls, isMobile} = useInputControls();
     
     // Instantiate the store
     const tuningStore = useTuningStore();
@@ -965,7 +955,6 @@ export default {
       touchPoints,
       isLandscape,
       controlDebugInfo,
-      reinitializeInputControls,
       showPhysicsDebug // 返回 ref
     };
   }
@@ -984,8 +973,8 @@ export default {
 
 .debug-controls {
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 60px;
+  left: 10px;
   z-index: 100;
 }
 

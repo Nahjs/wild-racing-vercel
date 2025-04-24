@@ -6,7 +6,7 @@
     </div>
     
     <!-- 圈速信息 -->
-    <div class="lap-timer-container" v-if="showLapInfo">
+    <!-- <div class="lap-timer-container" v-if="showLapInfo">
       <LapTimer 
         :current-lap="currentLap"
         :total-laps="totalLaps"
@@ -15,7 +15,7 @@
         :total-time="totalTime"
         :format-time="formatTime"
       />
-    </div>
+    </div> -->
     
     <!-- 倒计时 -->
     <RaceCountdown 

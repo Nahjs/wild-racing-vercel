@@ -20,7 +20,6 @@
           class="control-icon" 
           onerror="this.src=isFullscreen ? '/assets/images/fullscreen-exit.png' : '/assets/images/fullscreen.png';this.onerror=null;">
       </button>
-      <span class="fullscreen-tip" v-if="!isFullscreen">点击进入全屏</span>
     </div>
     
     <!-- 触摸控制按钮 -->
@@ -105,11 +104,11 @@
       </div>
       
       <!-- 调试模式切换按钮 (仅在非移动设备上显示) -->
-      <div class="debug-toggle" v-if="!isMobile">
+      <!-- <div class="debug-toggle" v-if="!isMobile">
         <button @click="toggleDebugMode" class="debug-btn">
           {{ debugMode ? '关闭调试模式' : '开启调试模式' }}
         </button>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -460,15 +459,10 @@ export default {
 
 /* --- 修改控制按钮样式 --- */
 .control-btn {
-  width: 65px; /* 调整按钮大小 */
-  height: 65px; /* 调整按钮大小 */
   border-radius: 50%;
   /* 修改背景为半透明灰色 */
   background-color: rgba(255, 255, 255, 0.2); 
-  /* 移除边框 */
   border: none;
-  /* 移除渐变背景 */
-  /* background-image: none; */ 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -498,9 +492,6 @@ export default {
   transform: scale(0.90); /* 调整按下缩放效果 */
   /* 按下时背景更亮一点 */
   background-color: rgba(255, 255, 255, 0.4);
-  /* 移除按下时的边框和复杂阴影 */
-  /* border-color: rgb(255, 255, 255); */
-  /* box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 25px rgba(255, 255, 255, 0.4); */
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
@@ -517,9 +508,6 @@ export default {
   width: 60%;
   height: 60%;
   object-fit: contain;
-  /* 移除 filter: invert(1) 如果你的图标本身是浅色的 */
-  /* filter: invert(1); */ 
-  /* 如果图标是深色需要变白，保留 filter: invert(1) contrast(0) brightness(2); */
   filter: invert(1) contrast(0) brightness(2); /* 假设图标是深色，强制变白 */
   filter: drop-shadow(0 0 2px rgba(0, 0, 0, 0.5));
 }
@@ -531,7 +519,7 @@ export default {
   top: 10px;
   right: 10px;
   pointer-events: auto;
-  z-index: 2100;
+  z-index: 1100;
 }
 
 .debug-btn {
@@ -548,7 +536,9 @@ export default {
 /* 适配不同设备尺寸 */
 @media (max-height: 500px) {
   .direction-controls, .acceleration-controls {
-    bottom: 80px; /* 在低高度设备上调整底部间距 */
+    width: 300px;
+    height: 150px;
+    bottom: 12px; /* 在低高度设备上调整底部间距 */
     gap: 10px;
   }
   
@@ -561,13 +551,13 @@ export default {
   }
   
   .handbrake-control {
-    bottom: 20px;
+    bottom: 155px;
     right: 15px;
   }
   
   .control-btn {
-    width: 50px;
-    height: 50px;
+    width: 120px;
+    height: 120px;
     z-index: 1001;
   }
   
@@ -607,12 +597,6 @@ export default {
   
   .camera-mode-name {
     font-size: 11px;
-  }
-  
-  .control-btn {
-    width: 60px;
-    height: 60px;
-    z-index: 1001;
   }
   
   .direction-controls {

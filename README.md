@@ -46,6 +46,13 @@
 │   │   ├── physics/        # 物理引擎封装和交互
 │   │   │   └── PhysicsWorld.js # 创建物理世界、地面、调试器等辅助函数
 │   │   │   └── PhysicsEngine.vue # 物理引擎组件
+│   │   ├── collision/      # 碰撞检测和管理
+│   │   │   ├── CollisionManager.js  # 统一管理碰撞事件和碰撞回调
+│   │   │   └── CollisionShapes.js   # 管理物体的碰撞体
+│   │   ├── feedback/       # 碰撞反馈管理
+│   │   │   └── CollisionFeedback.js # 处理碰撞的视觉、音效和物理反馈
+│   │   └── utilities/      # 辅助功能
+│   │       └── CollisionUtils.js    # 碰撞体计算、物理状态转换等工具函数
 │   ├── game/               # 核心游戏玩法逻辑
 │   │   ├── race/           # 比赛逻辑 (未来可包含状态管理, 规则)
 │   │   ├── track/          # 赛道相关
@@ -123,7 +130,7 @@
     *   `VehicleController.vue`: 负责车辆的物理模拟控制 (使用 Cannon-es RaycastVehicle)，响应玩家输入，并与 `tuningStore` 交互获取调校参数。
     *   `VehiclePhysics.js`: 辅助函数，用于创建车辆的物理 Chassis Body。
 *   **`game/track/`**:
-    *   `TrackManager.js`: 加载和管理从 `.glb` 文件定义的预设赛道模型，提取检查点。
+    *   `TrackManager.js`: 加载和管理从 `.glb` 文件定义的预设赛道模型，提取检查点，并设置护栏碰撞检测。
     *   `CheckpointSystem.js`: 处理检查点通过逻辑、计时和计圈。
 
 ### `src/core` - 底层核心
@@ -132,6 +139,13 @@
 *   **`core/physics/`**:
     *   `PhysicsWorld.js`: 提供创建 Cannon-es 物理世界、地面和调试渲染器的辅助函数。
     *   `PhysicsEngine.vue`: 封装物理引擎，负责物理世界的创建、更新和清理。
+*   **`core/collision/`**:
+    *   `CollisionManager.js`: 统一管理碰撞事件和碰撞回调，使用事件驱动的方式降低系统耦合度。
+    *   `CollisionShapes.js`: 负责为游戏对象（特别是护栏）创建和管理适当的碰撞体。
+*   **`core/feedback/`**:
+    *   `CollisionFeedback.js`: 处理碰撞的视觉效果（粒子）、音效反馈和物理反馈。
+*   **`core/utilities/`**:
+    *   `CollisionUtils.js`: 提供碰撞检测和物理转换的辅助工具函数，包括八叉树空间分区优化。
 
 ### `src/store` - 状态管理 (Pinia)
 
@@ -197,15 +211,48 @@
    - 使用 `TrackManager` 在比赛界面加载赛道模型，目前使用 `/track/karting_club_lider__karting_race_track_early.glb`。
    - 从赛道模型中获取检查点信息和起点位置。
 
+## 碰撞检测系统
+
+最新添加的碰撞检测系统采用了模块化设计，重点关注护栏（Rails）的碰撞检测，增强了游戏体验：
+
+1. **系统架构**:
+   - 使用分层设计，将碰撞检测、碰撞处理、反馈机制解耦。
+   - 采用事件驱动模式，降低各模块间的依赖。
+   - 提供清晰的API接口，允许不同组件间简单交互。
+
+2. **主要模块功能**:
+   - `CollisionManager.js`: 统一管理碰撞事件分发和回调处理。
+   - `CollisionShapes.js`: 基于Three.js模型几何体自动生成优化的Cannon.js碰撞体。
+   - `CollisionFeedback.js`: 实现碰撞的视觉效果（火花、烟雾粒子）和音效反馈。
+   - `CollisionUtils.js`: 提供工具函数，如空间分区优化、物理状态转换和碰撞可视化。
+
+3. **性能优化**:
+   - 简化碰撞体：为复杂模型创建简化的碰撞体，降低物理计算开销。
+   - 碰撞冷却：防止短时间内重复触发相同的碰撞事件。
+   - 八叉树空间分区：优化碰撞检测性能。
+
+4. **使用方式**:
+   - 在`TrackManager.js`中已集成护栏碰撞检测。
+   - `PhysicsEngine.vue`组件提供了碰撞事件监听API。
+   - 可通过`toggleCollisionVisualizers(true)`方法开启碰撞体可视化，用于调试。
+
+5. **反馈效果**:
+   - 根据碰撞强度生成不同的视觉效果和播放不同的音效。
+   - 护栏碰撞会产生火花效果和金属碰撞声。
+   - 持续接触护栏会产生持续的摩擦音效。
+
 ## 后续开发建议
 
 *   **多赛道支持**: 实现更多赛道的加载与切换，并为每个赛道提供预览和难度信息。
 *   **多车辆支持**: 为不同类型的车辆提供特定的物理参数和视觉效果。
 *   **完善比赛逻辑**: 增加排名、计时榜、AI对手等功能。
 *   **车库功能完善**: 在 `Garage.vue` 中实现更丰富的车辆定制功能，并与 `vehicleService` 和 `tuningStore` 结合。
-*   **TypeScript**: 考虑将项目迁移到 TypeScript 以增强代码健壮性。
-*   **UI/UX 改进**: 优化比赛界面、车库界面等的视觉效果和用户体验。
 *   **性能优化**: 对 3D 渲染和物理模拟进行性能分析和优化。
 *   **网络同步**: 实现多人游戏所需的网络逻辑。
+*   **碰撞系统扩展**: 为更多赛道元素添加碰撞检测，增加游戏物理真实感。
+*   **碰撞反馈增强**: 添加车身变形、碰撞痕迹等视觉效果。
+*   **碰撞音效完善**: 录制或获取更多样化的碰撞音效，提升游戏沉浸感。
+*   **TypeScript**: 考虑将项目迁移到 TypeScript 以增强代码健壮性。
+*   **UI/UX 改进**: 优化比赛界面、车库界面等的视觉效果和用户体验。
 
 ---

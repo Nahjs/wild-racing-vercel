@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '@/utils/loaders/GLTFLoader';
 import { DRACOLoader } from '@/utils/loaders/DRACOLoader';
+import CollisionShapes from '@/core/collision/CollisionShapes';
+import CollisionUtils from '@/core/utilities/CollisionUtils';
+import collisionManagerInstance from '@/core/collision/CollisionManager';
+import CollisionFeedback from '@/core/feedback/CollisionFeedback';
 
 class TrackManager {
   constructor() {
@@ -10,12 +14,20 @@ class TrackManager {
     this.trackObjects = []; // 赛道上的物体
     this.isLoading = false; // 加载状态
     this.defaultTrackPath = '/track/default_track.glb';
+    
+    // 碰撞相关
+    this.railColliders = []; // 护栏碰撞体
+    this.collisionVisualizerGroup = null; // 碰撞体可视化组
+    this.showColliders = false; // 是否显示碰撞体
   }
 
   // 加载赛道模型
-  async loadTrack(trackId, scene) {
+  async loadTrack(trackId, scene, physicsWorld) {
     try {
+      console.log(`[TrackManager] loadTrack called for trackId: ${trackId}. Physics world provided:`, !!physicsWorld);
       this.isLoading = true;
+      this.scene = scene;
+      this.physicsWorld = physicsWorld;
       
       // 1. 检查是否已经加载过该赛道
       if (this.tracks.has(trackId)) {
@@ -23,6 +35,10 @@ class TrackManager {
         const cachedTrack = this.tracks.get(trackId);
         this._setupTrack(cachedTrack, scene);
         this.currentTrack = cachedTrack;
+        
+        // 重新创建碰撞体
+        this._setupColliders(physicsWorld);
+        
         this.isLoading = false;
         return cachedTrack;
       }
@@ -39,12 +55,22 @@ class TrackManager {
       // 4. 处理模型（设置阴影、提取检查点等）
       this._processTrackModel(trackModel);
       
+      // ★★★ 先设置 currentTrack
+      this.currentTrack = trackModel;
+      
       // 5. 将模型添加到场景
       this._setupTrack(trackModel, scene);
       
-      // 6. 缓存赛道模型
+      // 6. 创建赛道的物理碰撞体
+      if (physicsWorld) {
+        this._setupColliders(physicsWorld);
+      }
+      
+      // 7. 初始化碰撞反馈
+      CollisionFeedback.init(scene);
+      
+      // 8. 缓存赛道模型 (currentTrack 已在上面设置)
       this.tracks.set(trackId, trackModel);
-      this.currentTrack = trackModel;
       this.isLoading = false;
       return trackModel;
     } catch (error) {
@@ -108,6 +134,140 @@ class TrackManager {
     scene.add(trackModel);
   }
   
+  /**
+   * 设置赛道碰撞体
+   * @param {CANNON.World} world - 物理世界
+   * @private
+   */
+  _setupColliders(world) {
+    console.log(`[TrackManager] _setupColliders called. Current track loaded:`, !!this.currentTrack);
+    // 1. 清除之前的碰撞体
+    this._clearColliders(world);
+    
+    // 2. 如果没有加载赛道模型，返回
+    if (!this.currentTrack) return;
+    
+    // 3. 初始化碰撞管理器
+    const collisionManager = collisionManagerInstance.init(world);
+    
+    // 4. 创建护栏碰撞体
+    console.log(`[TrackManager] Calling CollisionShapes.createRailsColliders with world:`, !!world, `and currentTrack:`, !!this.currentTrack);
+    this.railColliders = CollisionShapes.createRailsColliders(this.currentTrack, world);
+    
+    // 5. 为所有护栏设置碰撞类型
+    this.railColliders.forEach(railBody => {
+      collisionManager.setAsRail(railBody);
+    });
+    
+    // 6. 注册护栏碰撞处理
+    this._registerCollisionHandlers(collisionManager);
+    
+    // 7. 创建碰撞体可视化 (调试用)
+    if (this.showColliders) {
+      this._createCollisionVisualizers();
+    }
+    
+    console.log(`[TrackManager] 已创建 ${this.railColliders.length} 个护栏碰撞体`);
+  }
+  
+  /**
+   * 注册碰撞处理器
+   * @param {Object} collisionManager - 碰撞管理器
+   * @private
+   */
+  _registerCollisionHandlers(collisionManager) {
+    // 注册车辆与护栏的碰撞处理
+    collisionManager.registerCollisionHandler(
+      collisionManager.collisionTypes.VEHICLE,
+      collisionManager.collisionTypes.RAIL,
+      (event) => {
+        // 处理车辆撞护栏
+        CollisionFeedback.handleRailCollision(event);
+      }
+    );
+  }
+  
+  /**
+   * 创建碰撞体可视化 (调试用)
+   * @private
+   */
+  _createCollisionVisualizers() {
+    // 移除之前的可视化
+    if (this.collisionVisualizerGroup) {
+      this.scene.remove(this.collisionVisualizerGroup);
+    }
+    
+    // 创建新的可视化组
+    this.collisionVisualizerGroup = new THREE.Group();
+    this.collisionVisualizerGroup.name = 'collision_visualizers';
+    
+    // 为每个护栏碰撞体创建可视化
+    this.railColliders.forEach(railBody => {
+      const visualizer = CollisionUtils.createCollisionVisualizer(railBody, {
+        color: 0xff5500,
+        opacity: 0.3,
+        wireframe: true
+      });
+      
+      this.collisionVisualizerGroup.add(visualizer);
+    });
+    
+    // 添加到场景
+    this.scene.add(this.collisionVisualizerGroup);
+  }
+  
+  /**
+   * 更新碰撞体可视化
+   * 在动画循环中调用
+   */
+  updateCollisionVisualizers() {
+    if (!this.collisionVisualizerGroup) return;
+    
+    this.collisionVisualizerGroup.children.forEach(visualizer => {
+      if (visualizer.userData.update) {
+        visualizer.userData.update();
+      }
+    });
+  }
+  
+  /**
+   * 显示/隐藏碰撞体可视化
+   * @param {Boolean} show - 是否显示
+   */
+  toggleCollisionVisualizers(show) {
+    this.showColliders = show;
+    
+    if (show && !this.collisionVisualizerGroup) {
+      this._createCollisionVisualizers();
+    }
+    
+    if (this.collisionVisualizerGroup) {
+      this.collisionVisualizerGroup.visible = show;
+    }
+  }
+  
+  /**
+   * 清除碰撞体
+   * @param {CANNON.World} world - 物理世界
+   * @private
+   */
+  _clearColliders(world) {
+    // 移除护栏碰撞体
+    this.railColliders.forEach(body => {
+      if (world.bodies.includes(body)) {
+        world.removeBody(body);
+      }
+    });
+    
+    this.railColliders = [];
+    
+    // 移除碰撞体可视化
+    if (this.collisionVisualizerGroup) {
+      this.scene.remove(this.collisionVisualizerGroup);
+      this.collisionVisualizerGroup = null;
+    }
+  }
+  
   // 获取起始位置
   getStartPosition() {
     const defaultStart = new THREE.Vector3(0, 0.2, 8);
@@ -145,6 +305,11 @@ class TrackManager {
       scene.remove(this.currentTrack);
       this.currentTrack = null;
     }
+    
+    // 清除碰撞体
+    if (this.physicsWorld) {
+      this._clearColliders(this.physicsWorld);
+    }
   }
   
   // 销毁所有资源
@@ -153,6 +318,36 @@ class TrackManager {
     this.tracks.clear();
     this.checkpoints = [];
     this.trackObjects = [];
+    
+    // 清除碰撞相关资源
+    if (this.physicsWorld) {
+      this._clearColliders(this.physicsWorld);
+    }
+    
+    // 清理碰撞反馈
+    CollisionFeedback.dispose();
+    
+    // 获取碰撞管理器并清理
+    const collisionManager = collisionManagerInstance.getInstance();
+    if (collisionManager) {
+      collisionManager.clearAllListeners();
+    }
+  }
+  
+  /**
+   * 更新方法，在渲染循环中调用
+   * @param {Number} deltaTime - 帧时间间隔
+   */
+  update(deltaTime) {
+    // 更新碰撞体可视化
+    if (this.showColliders && this.collisionVisualizerGroup) {
+      this.updateCollisionVisualizers();
+    }
+    
+    // 更新碰撞反馈系统
+    if (CollisionFeedback.initialized) {
+      CollisionFeedback.update(deltaTime);
+    }
   }
 }
 

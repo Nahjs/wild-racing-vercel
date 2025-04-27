@@ -14,6 +14,8 @@ import {
   updatePhysics, 
   CannonDebugRenderer 
 } from '@/core/physics/PhysicsWorld';
+import collisionManagerInstance from '@/core/collision/CollisionManager';
+import CollisionShapes from '@/core/collision/CollisionShapes';
 
 export default {
   name: 'PhysicsEngine',
@@ -25,12 +27,17 @@ export default {
     debug: {
       type: Boolean,
       default: false
+    },
+    showColliders: {
+      type: Boolean,
+      default: false
     }
   },
   setup(props, { emit }) {
     const world = ref(null);
     const debugRenderer = ref(null);
     const bodies = ref([]);
+    const collisionManager = ref(null);
     let animationFrameId = null;
     
     // 初始化物理世界
@@ -42,10 +49,17 @@ export default {
       const { groundBody } = createGround(world.value);
       bodies.value.push(groundBody);
       
+      // 初始化碰撞管理器
+      collisionManager.value = collisionManagerInstance.init(world.value);
+      
+      // 添加碰撞材质
+      world.value.addContactMaterial(CollisionShapes.railVehicleContactMaterial);
+      
       // 通知父组件物理世界已经初始化
       emit('physics-ready', {
         world: world.value,
-        bodies: bodies.value
+        bodies: bodies.value,
+        collisionManager: collisionManager.value
       });
     };
     
@@ -78,10 +92,16 @@ export default {
     };
     
     // 添加物理体到世界
-    const addBody = (body) => {
+    const addBody = (body, bodyType = null) => {
       if (world.value && body) {
         world.value.addBody(body);
         bodies.value.push(body);
+        
+        // 如果指定了类型，设置碰撞类型
+        if (bodyType && collisionManager.value) {
+          collisionManager.value.setBodyType(body, bodyType);
+        }
+        
         return true;
       }
       return false;
@@ -95,6 +115,25 @@ export default {
         return true;
       }
       return false;
+    };
+    
+    // 添加碰撞监听
+    const addCollisionListener = (bodyA, bodyB, callback) => {
+      if (!collisionManager.value) return null;
+      
+      // 获取物体类型
+      const typeA = bodyA.userData?.type || 'unknown';
+      const typeB = bodyB.userData?.type || 'unknown';
+      
+      // 注册碰撞处理器
+      return collisionManager.value.registerCollisionHandler(typeA, typeB, callback);
+    };
+    
+    // 为特定物体添加碰撞监听
+    const addBodyCollisionListener = (body, callback) => {
+      if (!collisionManager.value) return null;
+      
+      return collisionManager.value.addBodyCollisionListener(body, callback);
     };
     
     // 组件挂载时初始化
@@ -116,6 +155,11 @@ export default {
         });
         bodies.value = [];
       }
+      
+      // 清理碰撞管理器的监听器
+      if (collisionManager.value) {
+        collisionManager.value.clearAllListeners();
+      }
     });
     
     // 监听 debug prop 的变化来创建/销毁调试渲染器
@@ -136,9 +180,12 @@ export default {
     return {
       world,
       bodies,
+      collisionManager,
       addBody,
       removeBody,
-      updateWorld
+      updateWorld,
+      addCollisionListener,
+      addBodyCollisionListener
     };
   }
 };

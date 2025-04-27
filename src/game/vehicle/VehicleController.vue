@@ -13,6 +13,7 @@ import { useInputControls } from '@/composables/useInputControls';
 import { useTuningStore } from '@/store/tuning';
 import { storeToRefs } from 'pinia';
 import { toRaw } from 'vue';
+import collisionManagerInstance from '@/core/collision/CollisionManager'; // 导入碰撞管理器
 
 export default {
   name: 'VehicleController',
@@ -161,6 +162,15 @@ export default {
       
       chassisBody.value = createdChassisBody;
       
+      // ---> 新增：设置车辆碰撞类型 <-----
+      const collisionManager = collisionManagerInstance.getInstance();
+      if (collisionManager && chassisBody.value) {
+        collisionManager.setBodyType(chassisBody.value, collisionManager.collisionTypes.VEHICLE);
+        console.log(`[VehicleController] Set chassisBody (ID: ${chassisBody.value.id}) type to 'vehicle'. UserData:`, JSON.stringify(chassisBody.value.userData));
+      } else {
+        console.warn('[VehicleController] CollisionManager 未初始化或 chassisBody 未创建，无法设置碰撞类型。');
+      }
+      
       vehicle.value = new CANNON.RaycastVehicle({
         chassisBody: chassisBody.value,
         indexRightAxis: 0,
@@ -308,8 +318,8 @@ export default {
         const outerWheelAngle = Math.atan(wheelBase / (dynamicRadius + trackWidth/2));
         
         // 高速漂移时转向感应度调整
-        const isHighSpeed = currentSpeedKmh > 60; // 60km/h以上视为高速
-        const isDrifting = props.controlState.handbrake && handbrakeTimer.value > 0.2; // 手刹持续0.2秒以上视为漂移中
+        const isHighSpeed = currentSpeedKmh > 130; // 130km/h以上视为高速
+        const isDrifting = props.controlState.handbrake && handbrakeTimer.value > 0.8; // 手刹持续0.8秒以上视为漂移中
         
         // 计算转向强度修正因子 
         // 高速漂移时提供更精细的转向控制，防止过度转向

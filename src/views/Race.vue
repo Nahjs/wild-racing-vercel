@@ -5,6 +5,7 @@
       ref="physicsEngine"
       :scene="scene"
       :debug="true"
+      :showColliders="showPhysicsDebug"
       @physics-ready="onPhysicsReady"
       @physics-update="onPhysicsUpdate"
     />
@@ -179,8 +180,9 @@ export default {
     
     // 赛道信息
     const trackId = ref('karting_club_lider__karting_race_track_early'); // 赛道ID，可从配置或路由参数获取
-    const isLoadingTrack = ref(true);
-    const startPosition = ref(new THREE.Vector3(0, 0.2, 30)); // 临时起点位置
+    const isLoadingTrack = ref(false);
+    const startPosition = ref(new THREE.Vector3(0, 0.2, 30));
+    const isTrackLoaded = ref(false); // 新增：防止重复加载的标志
     
     // 在setup函数中添加currentVehicle引用，初始化为 null
     const currentVehicle = ref(null);
@@ -232,29 +234,17 @@ export default {
    
     // 加载赛道模型
     const loadTrack = async () => {
+      if (!scene.value || !world.value) {
+        console.warn('[Race] loadTrack called, but scene or world is not ready yet.');
+        return;
+      }
+      console.log("[Race] loadTrack execution started.");
       try {
-        isLoadingTrack.value = true;
-        // 确保每次加载新赛道时，重置自动视角旋转状态
         isAutoCameraRotationComplete.value = false;
-        
-        if (!scene.value) {
-          console.warn('[Race] 场景未准备好，无法加载赛道');
-          return;
-        }
-        
-        
-        // 使用TrackManager加载赛道
-        const trackModel = await trackManager.loadTrack(trackId.value, scene.value);
-        
-        // 获取赛道上的检查点
+        const trackModel = await trackManager.loadTrack(trackId.value, scene.value, world.value);
         const checkpointsData = trackManager.getCheckpoints();
-        
-        // 设置检查点
         setCheckpoints(checkpointsData);
-        
-        // 获取准确的起点位置
         if (trackModel) {
-          // 标记起点位置对象
           let startMarker = null;
           trackModel.traverse(node => {
             if (node.name === 'object_200' || node.name.toLowerCase().includes('start')) {
@@ -262,30 +252,26 @@ export default {
               startMarker = node;
             }
           });
-          
           if (startMarker) {
-            // 使用起点标记的位置，并增加Y轴偏移量
             startPosition.value = startMarker.position.clone().add(new THREE.Vector3(0, 0.2, 30));
           } else {
-            // 尝试使用TrackManager的getStartPosition方法
             const trackStartPosition = trackManager.getStartPosition();
             if (trackStartPosition) {
-              // TrackManager返回的位置已经包含了Y轴偏移量
               startPosition.value = trackStartPosition; 
             }
-            // 否则保持当前位置 (可能需要一个更健壮的回退逻辑)
           }
         }
-        
-        isLoadingTrack.value = false;
+        console.log("[Race] loadTrack execution finished.");
       } catch (error) {
         console.error('[Race] 加载赛道失败:', error);
-        isLoadingTrack.value = false;
+      } finally {
+        isLoadingTrack.value = false; // 保留 finally，以防万一
       }
     };
 
     // Physics ready (remains the same)
     const onPhysicsReady = (data) => {
+      console.log("[Race] onPhysicsReady called.");
       world.value = data.world;
     };
 
@@ -697,14 +683,11 @@ export default {
     });
     
     // 当 Track 组件的场景准备好时调用
-    const onSceneReady = async (emittedScene) => { // 使用 async
+    const onSceneReady = (emittedScene) => {
+      console.log("[Race] onSceneReady called.");
       scene.value = emittedScene;
 
-      await loadTrack();
-      await nextTick();
-
-      // 注释：在这里我们只创建备用相机，但通常会优先使用camera-ready事件接收到的相机
-      // 备用相机只在VehicleRenderer组件未能正确发送camera-ready事件时使用
+      // 保留备用相机逻辑 (如果需要)
       if (!cameraRef.value && scene.value) {
         const backupCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         backupCamera.position.set(0, 5, 10);
@@ -898,6 +881,24 @@ export default {
         handbrake: controls.handbrake
       };
     });
+
+    // 监听 showPhysicsDebug 的变化来切换碰撞体可视化
+    watch(showPhysicsDebug, (newValue) => {
+      trackManager.toggleCollisionVisualizers(newValue);
+    });
+
+    // 新增 watch: 精确监听 scene 和 world
+    watch([scene, world], async ([newScene, newWorld]) => {
+      console.log(`[Race] watch triggered. scene: ${!!newScene}, world: ${!!newWorld}, isTrackLoaded: ${isTrackLoaded.value}`);
+      // 确保 scene 和 world 都有值，并且赛道尚未加载
+      if (newScene && newWorld && !isTrackLoaded.value) {
+        console.log("[Race] watch condition met. Calling loadTrack.");
+        isTrackLoaded.value = true; // ★★★ 设置标志，防止再次执行
+        isLoadingTrack.value = true; // ★★★ 设置加载状态
+        await loadTrack();
+        // isLoadingTrack.value = false; // ★★★ loadTrack 内部的 finally 会处理
+      }
+    }, { immediate: true }); // immediate: true 可以在初始值满足时立即触发一次
 
     return {
       rendererElement,

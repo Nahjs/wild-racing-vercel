@@ -1,6 +1,15 @@
 import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 
+// 定义碰撞组 (与 VehiclePhysics.js 保持一致)
+const GROUPS = {
+  GROUND: 1,
+  VEHICLE: 2,
+  RAIL: 4,
+  CHECKPOINT: 8,
+  ALL: -1
+};
+
 // 物理世界初始化
 export const createPhysicsWorld = () => {
   const world = new CANNON.World();
@@ -17,7 +26,9 @@ export const createGround = (world) => {
   const groundShape = new CANNON.Plane();
   const groundBody = new CANNON.Body({
     mass: 0, // 质量为0表示静态物体
-    material: groundMaterial
+    material: groundMaterial,
+    collisionFilterGroup: GROUPS.GROUND, // 设置地面碰撞组
+    collisionFilterMask: GROUPS.VEHICLE | GROUPS.RAIL // 设置地面碰撞掩码 (与车辆、护栏碰撞)
   });
   groundBody.addShape(groundShape);
   groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2); // 使地面水平

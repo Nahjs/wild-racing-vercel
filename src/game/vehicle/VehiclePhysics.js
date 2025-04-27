@@ -1,5 +1,14 @@
 import * as CANNON from 'cannon-es';
 
+// 定义碰撞组
+const GROUPS = {
+  GROUND: 1,
+  VEHICLE: 2,
+  RAIL: 4,
+  CHECKPOINT: 8,
+  ALL: -1
+};
+
 // 创建车辆主体
 export const createVehicleChassis = (world, options = {}) => {
   const defaultOptions = {
@@ -24,7 +33,9 @@ export const createVehicleChassis = (world, options = {}) => {
     material: chassisMaterial,
     linearDamping: config.linearDamping, // Use linearDamping from config
     angularDamping: config.angularDamping, // Use angularDamping from config
-    quaternion: config.quaternion || new CANNON.Quaternion() // Apply initial quaternion
+    quaternion: config.quaternion || new CANNON.Quaternion(), // Apply initial quaternion
+    collisionFilterGroup: GROUPS.VEHICLE, // 设置车辆碰撞组
+    collisionFilterMask: GROUPS.GROUND | GROUPS.RAIL | GROUPS.CHECKPOINT // 设置车辆碰撞掩码 (与地面、护栏、检查点碰撞)
   });
   chassisBody.addShape(chassisShape);
   world.addBody(chassisBody);

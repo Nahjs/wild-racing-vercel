@@ -25,10 +25,10 @@ class CollisionShapes {
       this.railMaterial,
       this.defaultMaterial,
       {
-        friction: 0.2,      // 较低的摩擦力
-        restitution: 0.4,   // 中等反弹力
-        contactEquationStiffness: 1e8,  // 较高的刚度
-        contactEquationRelaxation: 3    // 中等松弛度
+        friction: 0.1,      // 保持较低摩擦力
+        restitution: 0.1,   // 保持较低反弹力
+        contactEquationStiffness: 5e9,  // 大幅增加刚度
+        contactEquationRelaxation: 2    // 再次减少松弛度
       }
     );
   }
@@ -134,66 +134,173 @@ class CollisionShapes {
   }
   
   /**
-   * 通过边界盒创建护栏碰撞体
+   * 通过边界盒创建护栏碰撞体 (现在使用 Trimesh)
    * 适用于单个护栏对象
    * 
-   * @param {THREE.Object3D} railObject - 护栏对象
-   * @param {CANNON.Vec3} position - 位置
-   * @param {CANNON.Quaternion} quaternion - 旋转
-   * @param {Object} options - 配置选项
+   * @param {THREE.Mesh} railObject - 护栏对象 (必须是 Mesh)
+   * @param {Object} options - 配置选项 (目前未使用)
    * @returns {CANNON.Body} 创建的物理body
    * @private
    */
-  _createRailFromBoundingBox(railObject, position, quaternion, options) {
-    console.log(`[CollisionShapes] _createRailFromBoundingBox called for ${railObject.name}`);
-    const bbox = new THREE.Box3().setFromObject(railObject);
-    const size = bbox.getSize(new THREE.Vector3());
-    
-    // ★★★ 增加默认碰撞体尺寸 ★★★
-    const railHeight = 1.5;
-    const railWidth = 0.3;
-    const railDepth = 0.4;
-    const minSize = 0.1; // 保持最小尺寸
-    
-    // ★★★ 使用更大的半尺寸 ★★★
-    const halfWidth = Math.max(size.x * 0.5, railWidth * 0.5, minSize);
-    const halfHeight = Math.max(size.y * 0.5, railHeight * 0.5, minSize); // 使用 railHeight
-    const halfDepth = Math.max(size.z * 0.5, railDepth * 0.5, minSize);
-    
-    const shape = new CANNON.Box(new CANNON.Vec3(
-      halfWidth, halfHeight, halfDepth
-    ));
-    
-    // ★★★ 获取网格的世界坐标作为 Body 的位置 ★★★
+  _createRailFromBoundingBox(railObject, options = {}) {
+    console.log(`[CollisionShapes] _createRailFromBoundingBox (using Trimesh) called for ${railObject.name}`);
+
+    if (!railObject.isMesh) {
+      console.warn(`[CollisionShapes] Rail object ${railObject.name} is not a Mesh. Cannot create Trimesh.`);
+      return null; 
+    }
+
+    const geometry = railObject.geometry;
+    if (!geometry || !geometry.isBufferGeometry) {
+      console.warn(`[CollisionShapes] Rail object ${railObject.name} has no valid BufferGeometry. Cannot create Trimesh.`);
+      return null;
+    }
+
+    // 获取世界坐标和旋转，用于 Body
     const worldPositionTHREE = new THREE.Vector3();
     railObject.getWorldPosition(worldPositionTHREE);
     const bodyPosition = new CANNON.Vec3(worldPositionTHREE.x, worldPositionTHREE.y, worldPositionTHREE.z);
-    console.log(`[CollisionShapes] Setting rail body position for ${railObject.name} to mesh world position:`, bodyPosition);
 
-    // 获取网格的世界旋转
     const worldQuaternionTHREE = new THREE.Quaternion();
     railObject.getWorldQuaternion(worldQuaternionTHREE);
     const bodyQuaternion = new CANNON.Quaternion(worldQuaternionTHREE.x, worldQuaternionTHREE.y, worldQuaternionTHREE.z, worldQuaternionTHREE.w);
-    
+
+    let shape = null;
+    try {
+      // 提取顶点 (已经是局部坐标，相对于 Mesh 的原点)
+      const positions = geometry.getAttribute('position').array; // 获取 Float32Array
+      const vertices = [];
+      // Cannon-es Trimesh 需要普通的 number 数组或 Float32Array
+      // 直接传递 Float32Array 通常效率更高
+      // for (let i = 0; i < positions.length; i += 3) {
+      //   vertices.push(positions[i], positions[i+1], positions[i+2]);
+      // }
+      
+      // 提取索引
+      let indices;
+      if (geometry.index) {
+        indices = geometry.index.array; // 获取 Uint16Array or Uint32Array
+        // Cannon-es Trimesh 也需要普通的 number 数组或相应的 TypedArray
+        // 直接传递 TypedArray 效率更高
+      } else {
+         // 如果没有索引，需要根据顶点顺序生成 (假设是 non-indexed triangles)
+         indices = [];
+         for (let i = 0; i < positions.length / 3; i++) {
+             indices.push(i);
+         }
+         console.warn(`[CollisionShapes] Geometry for ${railObject.name} has no indices. Generating indices assuming non-indexed triangles. This might be slow or incorrect.`);
+      }
+
+      if (!positions || positions.length === 0 || !indices || indices.length === 0) {
+         console.warn(`[CollisionShapes] Invalid vertices or indices for ${railObject.name}. Falling back to Box.`);
+         const bbox = new THREE.Box3().setFromObject(railObject);
+         const size = bbox.getSize(new THREE.Vector3());
+         const minSize = 0.1;
+         shape = new CANNON.Box(new CANNON.Vec3(
+           Math.max(size.x * 0.5, minSize), 
+           Math.max(size.y * 0.5, minSize), 
+           Math.max(size.z * 0.5, minSize)
+         ));
+      } else {
+         // 创建 Trimesh 形状
+         shape = new CANNON.Trimesh(positions, indices); // 直接传递 TypedArrays
+         console.log(`[CollisionShapes] Created Trimesh for ${railObject.name} with ${positions.length / 3} vertices and ${indices.length / 3} triangles.`);
+      }
+    } catch (error) {
+      console.error(`[CollisionShapes] Error creating Trimesh for ${railObject.name}:`, error);
+      // 出现错误时回退到 Bounding Box
+      const bbox = new THREE.Box3().setFromObject(railObject);
+      const size = bbox.getSize(new THREE.Vector3());
+      const minSize = 0.1;
+      shape = new CANNON.Box(new CANNON.Vec3(
+         Math.max(size.x * 0.5, minSize), 
+         Math.max(size.y * 0.5, minSize), 
+         Math.max(size.z * 0.5, minSize)
+      ));
+      console.warn(`[CollisionShapes] Falling back to Box shape for ${railObject.name} due to Trimesh error.`);
+    }
+
+    if (!shape) {
+      console.error(`[CollisionShapes] Failed to create any shape for ${railObject.name}.`);
+      return null;
+    }
+
+    // ★★★ 应用特定物体的偏移补偿 ★★★
+    let finalBodyPosition = bodyPosition;
+    let finalBodyQuaternion = bodyQuaternion;
+    let finalShape = shape; // 默认使用原始 shape
+
+    const compensationOffsets = {
+      'Object_488': { x: 90.329, y: 13.03, z: 0.83155 },
+      'Object_485': { x: 22.339, y: 43.556, z: 0.83481 },
+      'Object_486': { x: -30.068, y: 116.13, z: 0.80514 }
+    };
+
+    if (compensationOffsets[railObject.name] && shape instanceof CANNON.Trimesh) {
+      console.log(`[CollisionShapes] Applying position and vertex compensation for ${railObject.name}`);
+      const offsetData = compensationOffsets[railObject.name];
+      const localOffsetTHREE = new THREE.Vector3(offsetData.x, offsetData.y, offsetData.z);
+
+      // 1. 计算几何中心的世界坐标
+      const worldPositionTHREE = new THREE.Vector3();
+      railObject.getWorldPosition(worldPositionTHREE); // 原点世界坐标
+      const worldQuaternionTHREE = new THREE.Quaternion();
+      railObject.getWorldQuaternion(worldQuaternionTHREE);
+
+      const worldOffsetTHREE = localOffsetTHREE.clone().applyQuaternion(worldQuaternionTHREE);
+      const centerWorldPosTHREE = worldPositionTHREE.clone().add(worldOffsetTHREE);
+
+      // 更新 Body 的目标位置和旋转
+      finalBodyPosition = new CANNON.Vec3(centerWorldPosTHREE.x, centerWorldPosTHREE.y, centerWorldPosTHREE.z);
+      finalBodyQuaternion = new CANNON.Quaternion(worldQuaternionTHREE.x, worldQuaternionTHREE.y, worldQuaternionTHREE.z, worldQuaternionTHREE.w); // 旋转不变
+      
+      // ★★★ 添加详细日志 ★★★
+      console.log(`[CollisionShapes] Compensating ${railObject.name}:`);
+      console.log(`  - Local Offset:`, localOffsetTHREE);
+      console.log(`  - Original World Pos (Origin):`, worldPositionTHREE);
+      console.log(`  - Calculated Center World Pos:`, centerWorldPosTHREE);
+      console.log(`  - Final Body Pos Set To:`, finalBodyPosition);
+      // ★★★ 日志结束 ★★★
+
+      // 2. 调整顶点坐标 (使其相对于几何中心)
+      // 注意：shape.vertices 是原始的 Float32Array 引用
+      const originalVertices = shape.vertices; // Float32Array [x0, y0, z0, x1, y1, z1, ...]
+      const compensatedVertices = new Float32Array(originalVertices.length);
+
+      for (let i = 0; i < originalVertices.length; i += 3) {
+        compensatedVertices[i] = originalVertices[i] - localOffsetTHREE.x;
+        compensatedVertices[i + 1] = originalVertices[i + 1] - localOffsetTHREE.y;
+        compensatedVertices[i + 2] = originalVertices[i + 2] - localOffsetTHREE.z;
+      }
+      
+      // 3. 创建使用补偿后顶点的新 Trimesh
+      // 注意: shape.indices 保持不变
+      finalShape = new CANNON.Trimesh(compensatedVertices, shape.indices);
+      console.log(`[CollisionShapes] Compensated Trimesh created for ${railObject.name}`);
+    }
+    // ★★★ 补偿结束 ★★★
+
     const body = new CANNON.Body({
       mass: 0,
-      position: bodyPosition, // ★★★ 使用网格的世界坐标 ★★★
-      quaternion: bodyQuaternion, // ★★★ 使用网格的世界旋转 ★★★
+      position: finalBodyPosition,    // 使用最终确定的位置 (可能是补偿后的中心位置)
+      quaternion: finalBodyQuaternion, // 使用最终确定的旋转
       material: this.railMaterial,
       collisionFilterGroup: GROUPS.RAIL,
       collisionFilterMask: GROUPS.VEHICLE,
       type: CANNON.Body.STATIC
     });
-    
-    body.addShape(shape);
-    
-    body.userData = { 
-      type: 'rail', 
+
+    // 添加形状到 Body (使用最终确定的 shape)
+    // 这个 shape 的顶点现在是相对于 finalBodyPosition 定义的
+    body.addShape(finalShape); // 不再需要 shape 偏移量
+
+    body.userData = {
+      type: 'rail',
       objectId: railObject.id,
       name: railObject.name
     };
     console.log(`[CollisionShapes] Set rail body (ID: ${body.id}, Name: ${railObject.name}) type to 'rail'. UserData:`, JSON.stringify(body.userData));
-    
+
     return body;
   }
   

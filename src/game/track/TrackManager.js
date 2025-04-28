@@ -128,7 +128,7 @@ class TrackManager {
     }
     
     // 在这里放大赛道模型
-    const scaleFactor = 1.2; // 放大系数
+    const scaleFactor = 1.0; // 放大系数
     trackModel.scale.set(scaleFactor, scaleFactor, scaleFactor);
 
     scene.add(trackModel);

@@ -45,6 +45,9 @@ export default {
       // 创建物理世界
       world.value = createPhysicsWorld();
       
+      // ★★★ 恢复较低的求解器迭代次数以测试性能 ★★★
+      //world.value.solver.iterations = 20;
+      
       // 创建地面
       const { groundBody } = createGround(world.value);
       bodies.value.push(groundBody);
@@ -63,11 +66,12 @@ export default {
       });
     };
     
-    // 更新物理世界
-    const updateWorld = (deltaTime) => {
+    // 更新物理世界 (恢复简单更新)
+    const updateWorld = (/* deltaTime */) => { // REVERT: Remove deltaTime parameter
       if (world.value) {
-        // 更新物理模拟
-        updatePhysics(world.value, deltaTime);
+        // ★★★ 恢复简单的 updatePhysics 调用 ★★★
+        // world.value.step(fixedTimeStep, deltaTime, maxSubSteps);
+        updatePhysics(world.value, 1 / 60); // 使用固定的 1/60 步长
         
         // 更新调试渲染器
         if (props.debug && debugRenderer.value) {
@@ -80,15 +84,22 @@ export default {
         emit('physics-update', {
           world: world.value,
           bodies: bodies.value,
-          deltaTime
+          deltaTime: 1 / 60 // REVERT: Send fixed step for event
         });
       }
     };
     
     // 动画循环
-    const animate = () => {
+    const animate = (/* time */) => { // REVERT: Remove time parameter
       animationFrameId = requestAnimationFrame(animate);
-      updateWorld(1/60);
+      
+      // REVERT: Remove deltaTime calculation
+      // const currentTime = time / 1000; 
+      // const deltaTime = currentTime - (lastTime || currentTime); 
+      // lastTime = currentTime;
+      
+      // ★★★ 恢复简单的 updateWorld 调用 ★★★
+      updateWorld(/* deltaTime */);
     };
     
     // 添加物理体到世界

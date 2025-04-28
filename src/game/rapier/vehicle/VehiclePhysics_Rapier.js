@@ -84,6 +84,17 @@ export class VehiclePhysicsRapier {
     this.steering = 0;
     this.throttle = 0;
     this.brake = 0;
+    this.handbrake = 0; // 添加手刹控制支持
+    
+    // 全局车辆状态
+    this.isVehicleReversing = false; // 全局跟踪车辆是否在倒车
+    
+    // 漂移系统相关状态
+    this.handbrakeTimer = 0;        // 跟踪手刹持续时间
+    this.previousHandbrake = false; // 上一帧的手刹状态
+    this.isDrifting = false;        // 是否正在漂移
+    this.driftRecoveryTimer = 0;    // 漂移恢复计时器
+    this.normalFrictionValues = []; // 存储每个轮子的正常摩擦系数
     
     // 初始化车辆物理
     this._initialize();
@@ -293,6 +304,7 @@ export class VehiclePhysicsRapier {
       this.steering = 0;
       this.throttle = 0;
       this.brake = 0;
+      this.handbrake = 0; // 重置手刹状态
       console.log("[VehiclePhysicsRapier] 初始控制状态已重置为0");
       
       // 4. 配置车轮
@@ -475,12 +487,13 @@ export class VehiclePhysicsRapier {
   
   /**
    * 更新车辆控制状态
-   * @param {object} controls - 控制输入 { steering, throttle, brake }
+   * @param {object} controls - 控制输入 { steering, throttle, brake, handbrake }
    */
   updateControls(controls) {
     this.steering = controls.steering || 0;
     this.throttle = controls.throttle || 0;
     this.brake = controls.brake || 0;
+    this.handbrake = controls.handbrake || 0; // 添加手刹控制支持
   }
   
   /**
@@ -491,56 +504,107 @@ export class VehiclePhysicsRapier {
     if (!this.rigidBody || !this.controller) return;
     
     try {
+      // 获取车辆当前速度
+      const velocity = this.rigidBody.linvel();
+      const currentSpeed = Math.sqrt(velocity.x**2 + velocity.y**2 + velocity.z**2);
+      const currentSpeedKmh = currentSpeed * 3.6; // 转换为km/h
+      
+      // 计算车辆局部坐标系下的速度（判断前进/后退方向）
+      const bodyRotation = this.rigidBody.rotation();
+      const bodyQuat = new THREE.Quaternion(
+        bodyRotation.x, bodyRotation.y, bodyRotation.z, bodyRotation.w
+      );
+      const localVel = new THREE.Vector3(velocity.x, velocity.y, velocity.z)
+        .applyQuaternion(new THREE.Quaternion().copy(bodyQuat).invert());
+      
+      // 判断车辆是否几乎停止（可以切换到倒车模式）
+      const isEffectivelyStopped = Math.abs(localVel.z) < 1.0; // 小于1m/s视为几乎停止
+      const isMovingForward = localVel.z < -0.5; // 局部Z轴负方向为前进
+      
+      // --- 漂移系统处理 ---
+      this._handleDriftSystem(deltaTime, currentSpeedKmh);
+      
       // 将控制输入应用到车辆控制器
       this.wheelsInfo.forEach((wheel) => {
         try {
             // ★★★ 确保只对有效索引的轮子操作 ★★★
             if (wheel.index === undefined) {
-                // console.warn(`[PhysicsUpdate] Skipping wheel with undefined index.`); // Optional log
                 return; // 跳过这个无效的轮子
             }
 
+            // 应用漂移转向调整因子
+            const adjustedSteering = this.steering * (this._driftSteeringFactor || 1.0);
             // 设置转向 (仅前轮)
             if (wheel.isFrontWheel && typeof this.controller.setWheelSteering === 'function') {
-                // ★★★ 反转转向角度的符号 ★★★
-                const steeringAngle = -this.steering * this.params.maxSteeringAngle;   
-              this.controller.setWheelSteering(wheel.index, steeringAngle);
+                // 反转转向角度的符号
+                const steeringAngle = -adjustedSteering * this.params.maxSteeringAngle;   
+                this.controller.setWheelSteering(wheel.index, steeringAngle);
             }
             
-            // 设置驱动力 (处理正负油门)
+            // 设置驱动力 (处理正负油门和刹车自动倒车)
             if (typeof this.controller.setWheelEngineForce === 'function') {
-                if (this.throttle !== 0) {
-                    const driveType = this.params.driveType || 'RWD';
-                    let applyForce = false;
-                    if (driveType === 'RWD' && !wheel.isFrontWheel) applyForce = true;
-                    else if (driveType === 'FWD' && wheel.isFrontWheel) applyForce = true;
-                    else if (driveType === 'AWD') applyForce = true;
+                const driveType = this.params.driveType || 'RWD';
+                let applyForce = false;
+                if (driveType === 'RWD' && !wheel.isFrontWheel) applyForce = true;
+                else if (driveType === 'FWD' && wheel.isFrontWheel) applyForce = true;
+                else if (driveType === 'AWD') applyForce = true;
 
-                    if (applyForce) {
-                        const wheelCount = driveType === 'AWD' ? 4 : 2;
-                        // 修复后退问题：确保throttle正负值正确应用
-                        // 正throttle（前进）应用负力，负throttle（后退）应用正力
-                        const calculatedForce = -this.throttle * this.params.engineForce / wheelCount; 
-                        this.controller.setWheelEngineForce(wheel.index, calculatedForce);
+                if (applyForce) {
+                    const wheelCount = driveType === 'AWD' ? 4 : 2;
+                    let calculatedForce = 0;
+                    
+                    // *** 低速刹车自动倒车逻辑 ***
+                    // 如果车辆几乎停止且刹车被按下，应用反向引擎力
+                    if (this.brake > 0.5 && !this.handbrake && (isEffectivelyStopped || !isMovingForward)) {
+                        // 显著增加倒车力度，确保能达到高速
+                        const reverseForce = this.params.engineForce * 2.5 / wheelCount; // 增加到250%的前进力
+                        calculatedForce = reverseForce; 
                         
-                        // 记录应用的驱动力方向用于调试
-                        if (Math.abs(calculatedForce) > 1.0) {
-                            wheel.lastAppliedForce = calculatedForce;
+                        // 标记为倒车状态
+                        this.isVehicleReversing = true;
+                        
+                        // 应用倒车力时，确保不施加刹车
+                        if (typeof this.controller.setWheelBrake === 'function') {
+                            this.controller.setWheelBrake(wheel.index, 0);
+                        }
+                    } 
+                    // 正常油门控制
+                    else if (this.throttle !== 0) {
+                        // 当使用负油门时（按下S键倒车）
+                        if (this.throttle < 0) {
+                            // 负油门倒车，同样显著增加力度
+                            const reverseMultiplier = 2.5; // 250%的力度确保高速倒车
+                            calculatedForce = -this.throttle * this.params.engineForce * reverseMultiplier / wheelCount;
+                            
+                            // 负油门时标记为倒车状态
+                            this.isVehicleReversing = true;
+                        } else {
+                            // 正常前进
+                            calculatedForce = -this.throttle * this.params.engineForce / wheelCount;
+                            this.isVehicleReversing = false;
                         }
                     } else {
-                        this.controller.setWheelEngineForce(wheel.index, 0);
+                        // 无油门输入时，保持现有倒车状态不变
+                    }
+                    
+                    // 应用计算的力
+                    this.controller.setWheelEngineForce(wheel.index, calculatedForce);
+                    
+                    // 记录力度用于调试
+                    if (Math.abs(calculatedForce) > 1.0) {
+                        wheel.lastAppliedForce = calculatedForce;
                     }
                 } else {
                     this.controller.setWheelEngineForce(wheel.index, 0);
                 }
             }
             
-            // 设置刹车力 (基于刹车输入)
+            // 设置刹车力 (基于刹车输入，但不在自动倒车时应用)
             if (typeof this.controller.setWheelBrake === 'function') {
-                 const brakeForceValue = this.brake * this.params.brakeForce;
-                 // ★★★ 移除刹车力测试日志或减少频率 ★★★
-                 // if (brakeForceValue > 0) { console.log(...) }
-                 this.controller.setWheelBrake(wheel.index, brakeForceValue);
+                // 只有当不是在低速刹车倒车状态时才应用刹车力
+                const shouldApplyBrake = !(this.brake > 0.5 && !this.handbrake && (isEffectivelyStopped || !isMovingForward));
+                const brakeForceValue = shouldApplyBrake ? this.brake * this.params.brakeForce : 0;
+                this.controller.setWheelBrake(wheel.index, brakeForceValue);
             }
         } catch (error) {
             console.warn(`[VehiclePhysicsRapier] 设置轮子参数失败 (index ${wheel.index}):`, error);
@@ -549,8 +613,6 @@ export class VehiclePhysicsRapier {
       
       // 更新车辆控制器 (内部执行射线检测、计算悬挂和轮胎力等)
       this.controller.updateVehicle(deltaTime);
-      // ★★★ 添加日志确认 updateVehicle 执行 ★★★
-      // console.log("[VehiclePhysicsRapier] controller.updateVehicle executed."); 
       
       // 检查和记录每个车轮的悬挂状态
       this.wheelsInfo.forEach((wheel, index) => {
@@ -699,10 +761,7 @@ export class VehiclePhysicsRapier {
         if (isGrounded) {
           // 接地时：
           // a. 计算基于车辆前进速度的理想旋转速度
-          // 注意符号：localVel.z 为正表示向后移动，为负表示向前移动
-          // 当向前移动时，轮子应该向前滚动(正旋转)
-          // 当向后移动时，轮子应该向后滚动(负旋转)
-          const idealRotationSpeed = localVel.z / wheelRadius; // 修正符号，确保方向正确
+          const idealRotationSpeed = localVel.z / wheelRadius; // 保持符号正确
           
           // b. 计算基于角速度的附加旋转
           const angularContribution = angVelContribution.x;
@@ -717,7 +776,6 @@ export class VehiclePhysicsRapier {
           
           // e. 结合所有因素计算最终旋转速度
           rotationSpeed = idealRotationSpeed * (1.0 - slipFactor) + angularContribution;
-
         } else {
           // 空中时：
           // 如果车轮离地，仅考虑发动机力的影响，缓慢减速
@@ -726,15 +784,38 @@ export class VehiclePhysicsRapier {
             rotationSpeed = wheel.rotationSpeed * 0.98;
           } else if (this.throttle !== 0) {
             // 油门踩下且车轮离地时，模拟发动机影响
-            // 修改：确保方向与油门保持一致
-            rotationSpeed = this.throttle * 5.0; // 修正符号
+            rotationSpeed = this.throttle * 5.0;
+          }
+        }
+
+        // 特殊处理：强制车轮旋转动画匹配车辆状态
+        if (this.isVehicleReversing) {
+          // 倒车状态时，强制车轮旋转显示正确方向
+          // 如果当前旋转速度方向不正确，修正它
+          if (rotationSpeed > 0) {
+            rotationSpeed = -rotationSpeed; // 倒车时车轮应该反向旋转（负值）
+          }
+          
+          // 确保有最小的旋转速度，即使计算值很小也能看到动画
+          if (Math.abs(rotationSpeed) < 2.0 && (Math.abs(this.throttle) > 0.1 || this.brake > 0.5)) {
+            rotationSpeed = -2.0; // 修改：倒车用负值
+          }
+        } else {
+          // 前进状态，确保车轮旋转方向正确
+          if (rotationSpeed < 0) {
+            rotationSpeed = -rotationSpeed; // 前进时车轮应该正向旋转（正值）
+          }
+          
+          // 确保有最小的旋转速度
+          if (Math.abs(rotationSpeed) < 2.0 && Math.abs(this.throttle) > 0.1) {
+            rotationSpeed = 2.0; // 修改：前进用正值
           }
         }
 
         // 8. 存储当前旋转速度用于下次参考
         wheel.rotationSpeed = rotationSpeed;
 
-        // 9. 累积角度增量 (添加平滑因子)
+        // 9. 累积角度增量
         if (!wheel.rotationAngle) wheel.rotationAngle = 0;
         wheel.rotationAngle += rotationSpeed * deltaTime;
 
@@ -858,5 +939,152 @@ export class VehiclePhysicsRapier {
     }
     
     this.wheelsInfo = [];
+  }
+
+  /**
+   * 处理漂移系统
+   * @private
+   * @param {number} deltaTime - 时间步长
+   * @param {number} currentSpeedKmh - 当前速度(km/h)
+   */
+  _handleDriftSystem(deltaTime, currentSpeedKmh) {
+    // 判断是否是手刹状态
+    const isHandbrakeActive = this.handbrake > 0.8; // 使用handbrake而不是brake
+    
+    // 第一次初始化轮子正常摩擦系数
+    if (this.normalFrictionValues.length === 0 && this.wheelsInfo.length > 0) {
+      this.wheelsInfo.forEach((wheel, index) => {
+        // 存储默认的摩擦系数
+        this.normalFrictionValues[index] = this.params.frictionSlip;
+      });
+    }
+    
+    // 获取前后轮索引
+    const frontWheelIndices = this.wheelsInfo
+      .filter(wheel => wheel.isFrontWheel)
+      .map(wheel => wheel.index);
+    
+    const rearWheelIndices = this.wheelsInfo
+      .filter(wheel => !wheel.isFrontWheel)
+      .map(wheel => wheel.index);
+    
+    // 手刹状态下的处理
+    if (isHandbrakeActive) {
+      // 如果刚刚开始按下手刹
+      if (!this.previousHandbrake) {
+        this.handbrakeTimer = 0;
+      }
+      
+      // 增加手刹计时器
+      this.handbrakeTimer += deltaTime;
+      
+      // 计算动态漂移摩擦系数
+      // 高速时提供更多抓地力以防止过度旋转
+      const speedFactor = Math.min(Math.max(currentSpeedKmh, 20) / 120, 1); 
+      const maxHandbrakeTime = 1.5; // 最大手刹效果时间(秒)
+      const timeFactor = Math.min(this.handbrakeTimer / maxHandbrakeTime, 1);
+      
+      // 基于时间和速度调整摩擦系数
+      const baseDriftFriction = tuningStore.tuningParams.driftFrictionSlip || 12.0;
+      const speedAdjustment = speedFactor * 8.0; // 高速时增加抓地力
+      const timeReduction = timeFactor * 5.0;   // 随着时间增加减少抓地力
+      
+      // 最终摩擦系数：基础值 + 速度调整 - 时间降低
+      const dynamicDriftFriction = Math.max(baseDriftFriction + speedAdjustment - timeReduction, 5.0);
+      
+      // 应用到后轮
+      rearWheelIndices.forEach(index => {
+        if (typeof this.controller.setWheelFrictionSlip === 'function') {
+          this.controller.setWheelFrictionSlip(index, dynamicDriftFriction);
+        }
+      });
+      
+      // 前轮保持正常摩擦力
+      const normalFriction = tuningStore.tuningParams.normalFrictionSlip || 30.0;
+      frontWheelIndices.forEach(index => {
+        if (typeof this.controller.setWheelFrictionSlip === 'function') {
+          this.controller.setWheelFrictionSlip(index, normalFriction);
+        }
+      });
+      
+      // 标记为漂移状态
+      this.isDrifting = this.handbrakeTimer > 0.3 && currentSpeedKmh > 50;
+      
+      // 重置恢复计时器
+      this.driftRecoveryTimer = 0;
+    } else {
+      // 手刹释放状态
+      
+      // 如果刚刚松开手刹，实现平滑过渡
+      if (this.previousHandbrake && this.handbrakeTimer > 0.3) {
+        // 重置漂移恢复计时器
+        this.driftRecoveryTimer = 0;
+      }
+      
+      // 逐渐恢复正常摩擦系数
+      if (this.isDrifting || this.driftRecoveryTimer < 0.5) {
+        // 应用恢复
+        this.driftRecoveryTimer += deltaTime;
+        const recoveryProgress = Math.min(this.driftRecoveryTimer / 0.5, 1.0); // 0.5秒完全恢复
+        
+        // 获取目标摩擦系数
+        const normalFriction = tuningStore.tuningParams.normalFrictionSlip || 30.0;
+        
+        // 应用平滑过渡到所有轮子
+        for (let i = 0; i < this.wheelsInfo.length; i++) {
+          const wheel = this.wheelsInfo[i];
+          if (wheel && wheel.index !== undefined) {
+            // 获取当前摩擦系数
+            let currentFriction = 0;
+            if (typeof this.controller.wheelFrictionSlip === 'function') {
+              currentFriction = this.controller.wheelFrictionSlip(wheel.index);
+            } else {
+              // 如果无法获取当前值，使用估计值
+              currentFriction = rearWheelIndices.includes(wheel.index) ? 5.0 : normalFriction;
+            }
+            
+            // 计算线性插值的新摩擦系数
+            const targetFriction = normalFriction;
+            const newFriction = currentFriction + (targetFriction - currentFriction) * recoveryProgress;
+            
+            // 应用新的摩擦系数
+            if (typeof this.controller.setWheelFrictionSlip === 'function') {
+              this.controller.setWheelFrictionSlip(wheel.index, newFriction);
+            }
+          }
+        }
+        
+        // 当恢复完成时，重置漂移状态
+        if (recoveryProgress >= 1.0) {
+          this.isDrifting = false;
+        }
+      } else {
+        // 已经完全恢复，确保所有轮子都是正常摩擦系数
+        const normalFriction = tuningStore.tuningParams.normalFrictionSlip || 30.0;
+        for (let i = 0; i < this.wheelsInfo.length; i++) {
+          const wheel = this.wheelsInfo[i];
+          if (wheel && wheel.index !== undefined && typeof this.controller.setWheelFrictionSlip === 'function') {
+            this.controller.setWheelFrictionSlip(wheel.index, normalFriction);
+          }
+        }
+      }
+      
+      // 重置手刹计时器
+      this.handbrakeTimer = 0;
+    }
+    
+    // 保存当前帧的手刹状态，用于下一帧比较
+    this.previousHandbrake = isHandbrakeActive;
+    
+    // 漂移时的转向调整
+    if (this.isDrifting && currentSpeedKmh > 80) {
+      // 高速漂移时提供更精细的转向控制，防止过度转向
+      const driftSteeringReduction = 0.3 + (Math.min(currentSpeedKmh, 120) / 120) * 0.4;
+      // 将减少的转向因子应用到实际转向中
+      // 注意：这里不直接修改this.steering，而是在应用转向时临时调整
+      this._driftSteeringFactor = 1.0 - driftSteeringReduction;
+    } else {
+      this._driftSteeringFactor = 1.0;
+    }
   }
 } 

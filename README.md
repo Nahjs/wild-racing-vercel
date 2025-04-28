@@ -1,6 +1,6 @@
-# Wild Racing Vercel (Vue 3 + Three.js + Cannon-es)
+# Wild Racing Vercel (Vue 3 + Three.js + Rapier)
 
-这是一个基于 Vue 3、Three.js 和 Cannon-es 的 3D 赛车游戏项目原型。
+这是一个基于 Vue 3、Three.js 和 Rapier 的 3D 赛车游戏项目原型。
 
 ## 项目目标
 
@@ -10,7 +10,7 @@
 
 *   **前端框架**: [Vue 3](https://vuejs.org/) (使用 Composition API 和 `<script setup>`)
 *   **3D 渲染**: [Three.js](https://threejs.org/)
-*   **物理引擎**: [Cannon-es](https://pmndrs.github.io/cannon-es/) (一个 Cannon.js 的维护分支)
+*   **物理引擎**: [Rapier](https://rapier.rs/) (@dimforge/rapier3d-compat) (高性能Rust物理引擎)
 *   **状态管理**: [Pinia](https://pinia.vuejs.org/)
 *   **路由**: [Vue Router](https://router.vuejs.org/)
 *   **构建工具**: [Vite](https://vitejs.dev/)
@@ -37,18 +37,25 @@
 │   │   ├── useCamera.js         # 相机控制逻辑
 │   │   ├── useInputControls.js  # 封装键盘/触摸输入逻辑
 │   │   ├── useRaceLogic.js      # 封装比赛逻辑 (计时、检查点、比赛状态)
-│   │   └── useSceneSetup.js     # 封装 Three.js 场景基础设置
+│   │   ├── useSceneSetup.js     # 封装 Three.js 场景基础设置
+│   │   └── useRapierPhysics.js  # 封装 Rapier 物理世界管理
 │   ├── config/             # 项目配置
 │   │   └── vehicles.js     # 车辆基础数据列表
 │   ├── core/               # 游戏核心底层逻辑
 │   │   ├── input/          # 输入管理
 │   │   │   └── InputManager.js # 定义 ControlState, Keyboard/TouchController
 │   │   ├── physics/        # 物理引擎封装和交互
-│   │   │   └── PhysicsWorld.js # 创建物理世界、地面、调试器等辅助函数
-│   │   │   └── PhysicsEngine.vue # 物理引擎组件
+│   │   │   ├── rapier/     # Rapier物理引擎相关实现
+│   │   │   │   ├── shapes/           # 碰撞形状生成器
+│   │   │   │   ├── RapierAdapter.js  # 适配器，简化迁移
+│   │   │   │   ├── RapierRigidBodyFactory.js  # 刚体和碰撞体创建工厂
+│   │   │   │   └── RapierWorld.js    # Rapier世界管理类
 │   │   ├── collision/      # 碰撞检测和管理
 │   │   │   ├── CollisionManager.js  # 统一管理碰撞事件和碰撞回调
-│   │   │   └── CollisionShapes.js   # 管理物体的碰撞体
+│   │   │   ├── CollisionShapes.js   # 管理物体的碰撞体
+│   │   │   └── rapier/     # Rapier专用碰撞系统
+│   │   │       ├── RapierCollisionManager.js  # Rapier碰撞管理器
+│   │   │       └── feedback/         # 碰撞反馈系统
 │   │   ├── feedback/       # 碰撞反馈管理
 │   │   │   └── CollisionFeedback.js # 处理碰撞的视觉、音效和物理反馈
 │   │   └── utilities/      # 辅助功能
@@ -61,10 +68,15 @@
 │   │   │   ├── TrackGenerator.js   # 程序化生成赛道逻辑
 │   │   │   ├── TrackManager.js     # 加载和管理预设赛道模型
 │   │   │   └── TrackObjects.js     # 管理赛道上的物体 (障碍物、道具)
-│   │   └── vehicle/        # 车辆相关
-│   │       ├── VehicleController.vue # 车辆物理控制和输入响应
-│   │       ├── VehiclePhysics.js   # 创建车辆物理 Body (chassis)
-│   │       └── VehicleRenderer.vue # 车辆模型加载和视觉更新
+│   │   ├── vehicle/        # 旧版Cannon.js车辆系统 (已弃用)
+│   │   │   ├── VehicleController.vue # 车辆物理控制和输入响应
+│   │   │   ├── VehiclePhysics.js   # 创建车辆物理 Body (chassis)
+│   │   │   └── VehicleRenderer.vue # 车辆模型加载和视觉更新
+│   │   └── rapier/         # Rapier物理引擎车辆系统
+│   │       └── vehicle/
+│   │           ├── VehicleController_Rapier.vue # 基于Rapier的车辆控制器
+│   │           ├── VehiclePhysics_Rapier.js    # 基于Rapier的车辆物理实现
+│   │           └── VehicleDebugUI.vue         # 车辆物理调试UI
 │   ├── debug/          # 调试工具模块
 │           ├── RaceDebug.vue       # 比赛调试面板
 │           └── GarageDebug.vue    # 车库调试面板
@@ -121,31 +133,33 @@
 *   **`useRaceLogic.js`**: 封装比赛核心逻辑，包括计时、圈数计算、检查点逻辑和比赛状态管理。
 *   **`useInputControls.js`**: 封装输入监听器的设置和清理，提供响应式的 `controlState`。
 *   **`useCamera.js`**: 封装相机控制逻辑，提供多种相机视角模式和切换功能。
-*   **`useSceneSetup.js`**: 封装 Three.js 场景的基本设置（相机、渲染器、灯光、地面、网格），简化视图组件中的场景初始化代码。
+*   **`useSceneSetup.js`**: 封装 Three.js 场景的基本设置（相机、渲染器、灯光、地面、网格）。
+*   **`useRapierPhysics.js`**: 管理 Rapier 物理世界的生命周期（初始化、更新、销毁）。
 
 ### `src/game` - 游戏核心逻辑
 
-*   **`game/vehicle/`**:
-    *   `VehicleRenderer.vue`: 负责加载和显示车辆 3D 模型，并根据物理状态更新视觉。
-    *   `VehicleController.vue`: 负责车辆的物理模拟控制 (使用 Cannon-es RaycastVehicle)，响应玩家输入，并与 `tuningStore` 交互获取调校参数。
-    *   `VehiclePhysics.js`: 辅助函数，用于创建车辆的物理 Chassis Body。
+*   **`game/rapier/vehicle/`**:
+    *   `VehicleController_Rapier.vue`: 负责基于 Rapier 的车辆控制，处理用户输入并更新车辆状态。
+    *   `VehiclePhysics_Rapier.js`: 实现基于 Rapier 的车辆物理系统，包括悬挂、转向、驱动力和刹车。
+    *   `VehicleDebugUI.vue`: 提供实时调整车辆物理参数的界面，方便调试和优化。
 *   **`game/track/`**:
     *   `TrackManager.js`: 加载和管理从 `.glb` 文件定义的预设赛道模型，提取检查点，并设置护栏碰撞检测。
     *   `CheckpointSystem.js`: 处理检查点通过逻辑、计时和计圈。
 
 ### `src/core` - 底层核心
 
-*   **`core/input/InputManager.js`**: 定义键盘和触摸（待实现）输入的控制器类和状态。
-*   **`core/physics/`**:
-    *   `PhysicsWorld.js`: 提供创建 Cannon-es 物理世界、地面和调试渲染器的辅助函数。
-    *   `PhysicsEngine.vue`: 封装物理引擎，负责物理世界的创建、更新和清理。
+*   **`core/physics/rapier/`**:
+    *   `RapierWorld.js`: 管理 Rapier 物理世界的生命周期（初始化、更新、事件处理、调试绘制）。
+    *   `RapierAdapter.js`: 提供兼容层，封装 Rapier 常用操作，简化从 Cannon.es 的迁移。
+    *   `RapierRigidBodyFactory.js`: 创建各种类型的 Rapier 刚体和碰撞体。
 *   **`core/collision/`**:
     *   `CollisionManager.js`: 统一管理碰撞事件和碰撞回调，使用事件驱动的方式降低系统耦合度。
-    *   `CollisionShapes.js`: 负责为游戏对象（特别是护栏）创建和管理适当的碰撞体。
+    *   `CollisionShapes.js`: 负责为游戏对象创建和管理适当的碰撞体。
+    *   `rapier/`: 基于 Rapier 的新碰撞系统实现。
 *   **`core/feedback/`**:
     *   `CollisionFeedback.js`: 处理碰撞的视觉效果（粒子）、音效反馈和物理反馈。
 *   **`core/utilities/`**:
-    *   `CollisionUtils.js`: 提供碰撞检测和物理转换的辅助工具函数，包括八叉树空间分区优化。
+    *   `CollisionUtils.js`: 提供碰撞检测和物理转换的辅助工具函数。
 
 ### `src/store` - 状态管理 (Pinia)
 
@@ -211,47 +225,60 @@
    - 使用 `TrackManager` 在比赛界面加载赛道模型，目前使用 `/track/karting_club_lider__karting_race_track_early.glb`。
    - 从赛道模型中获取检查点信息和起点位置。
 
-## 碰撞检测系统
+## Rapier 物理引擎升级
 
-最新添加的碰撞检测系统采用了模块化设计，重点关注护栏（Rails）的碰撞检测，增强了游戏体验：
+项目已从 Cannon-es 迁移到 Rapier 物理引擎，带来以下优势：
+
+1. **性能提升**:
+   - Rapier 使用 Rust 编写并通过 WebAssembly 编译，性能显著优于纯 JavaScript 实现。
+   - 支持多线程物理计算（WebWorkers），避免主线程阻塞。
+   - 高效的碰撞检测算法，可处理更复杂的场景。
+
+2. **精确碰撞检测**:
+   - 支持凸包（Convex Hull）和三角网格（Trimesh）碰撞体，能更精确地模拟不规则物体。
+   - 提供连续碰撞检测（CCD），避免高速物体穿模问题。
+   - 实现了更精确的护栏和地形碰撞检测。
+
+3. **高级车辆物理**:
+   - 新实现的 `VehiclePhysics_Rapier` 提供更真实的悬挂系统模拟。
+   - 改进的转向模型，包括阿克曼转向几何和速度相关转向阻尼。
+   - 更精确的轮胎物理，包括抓地力、侧滑和漂移机制。
+
+4. **调试工具**:
+   - `VehicleDebugUI.vue` 提供实时调整物理参数的界面。
+   - 内置的碰撞形状可视化工具，方便调试碰撞问题。
+
+## 新的碰撞检测系统（规划中）
+
+基于 Rapier 引擎，项目正在规划实现更加先进的碰撞检测和反馈系统：
 
 1. **系统架构**:
-   - 使用分层设计，将碰撞检测、碰撞处理、反馈机制解耦。
-   - 采用事件驱动模式，降低各模块间的依赖。
-   - 提供清晰的API接口，允许不同组件间简单交互。
+   - 分层设计，将碰撞检测、碰撞处理和反馈机制解耦。
+   - 基于事件的碰撞处理，支持不同系统（如UI、音效）响应碰撞事件。
 
-2. **主要模块功能**:
-   - `CollisionManager.js`: 统一管理碰撞事件分发和回调处理。
-   - `CollisionShapes.js`: 基于Three.js模型几何体自动生成优化的Cannon.js碰撞体。
-   - `CollisionFeedback.js`: 实现碰撞的视觉效果（火花、烟雾粒子）和音效反馈。
-   - `CollisionUtils.js`: 提供工具函数，如空间分区优化、物理状态转换和碰撞可视化。
+2. **计划功能**:
+   - **复合碰撞体**: 使用多个基本形状组合成更精确的碰撞体。
+   - **材质系统**: 为不同表面定义物理属性（摩擦、反弹等）。
+   - **车身变形**: 根据碰撞力度和方向实现临时或永久变形。
+   - **丰富的视觉反馈**: 根据碰撞类型生成火花、碎片等效果。
+   - **动态音效**: 基于材质和力度混合不同的碰撞音效。
 
 3. **性能优化**:
-   - 简化碰撞体：为复杂模型创建简化的碰撞体，降低物理计算开销。
-   - 碰撞冷却：防止短时间内重复触发相同的碰撞事件。
-   - 八叉树空间分区：优化碰撞检测性能。
-
-4. **使用方式**:
-   - 在`TrackManager.js`中已集成护栏碰撞检测。
-   - `PhysicsEngine.vue`组件提供了碰撞事件监听API。
-   - 可通过`toggleCollisionVisualizers(true)`方法开启碰撞体可视化，用于调试。
-
-5. **反馈效果**:
-   - 根据碰撞强度生成不同的视觉效果和播放不同的音效。
-   - 护栏碰撞会产生火花效果和金属碰撞声。
-   - 持续接触护栏会产生持续的摩擦音效。
+   - 碰撞分组和掩码系统控制碰撞检测范围。
+   - 空间分区技术（八叉树）优化宽相碰撞检测。
+   - 动态细节级别调整碰撞体精度。
 
 ## 后续开发建议
 
+*   **完善 Rapier 碰撞系统**: 实现规划中的高级碰撞检测和反馈系统，提升游戏真实感。
 *   **多赛道支持**: 实现更多赛道的加载与切换，并为每个赛道提供预览和难度信息。
 *   **多车辆支持**: 为不同类型的车辆提供特定的物理参数和视觉效果。
 *   **完善比赛逻辑**: 增加排名、计时榜、AI对手等功能。
 *   **车库功能完善**: 在 `Garage.vue` 中实现更丰富的车辆定制功能，并与 `vehicleService` 和 `tuningStore` 结合。
-*   **性能优化**: 对 3D 渲染和物理模拟进行性能分析和优化。
-*   **网络同步**: 实现多人游戏所需的网络逻辑。
-*   **碰撞系统扩展**: 为更多赛道元素添加碰撞检测，增加游戏物理真实感。
-*   **碰撞反馈增强**: 添加车身变形、碰撞痕迹等视觉效果。
-*   **碰撞音效完善**: 录制或获取更多样化的碰撞音效，提升游戏沉浸感。
+*   **性能优化**: 进一步优化复杂场景下的渲染和物理性能。
+*   **网络同步**: 实现多人游戏所需的网络逻辑，考虑使用确定性物理进行状态同步。
+*   **环境影响**: 实现不同路面材质（如沥青、泥地、冰面）对车辆操控的影响。
+*   **天气系统**: 添加天气变化（雨、雪等）及其对赛道条件的影响。
 *   **TypeScript**: 考虑将项目迁移到 TypeScript 以增强代码健壮性。
 *   **UI/UX 改进**: 优化比赛界面、车库界面等的视觉效果和用户体验。
 

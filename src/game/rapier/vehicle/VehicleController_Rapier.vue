@@ -62,11 +62,12 @@ console.log("[VehicleController_Rapier] 初始模型变换:", {
 const handlePhysicsUpdate = (deltaTime) => { 
   if (vehiclePhysics.value) {
     
-    // 1. 使用计算好的轴值和原始刹车状态
+    // 1. 使用计算好的轴值和原始刹车状态，添加手刹支持
     const controls = {
       steering: horizontalAxis.value, 
       throttle: verticalAxis.value, // 直接使用 verticalAxis，允许负值表示倒车意图
-      brake: rawControlState.value.brake ? 1 : 0 
+      brake: rawControlState.value.brake ? 1 : 0,
+      handbrake: rawControlState.value.handbrake ? 1 : 0 // 添加手刹控制
     };
     
     

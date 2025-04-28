@@ -518,9 +518,15 @@ export class VehiclePhysicsRapier {
 
                     if (applyForce) {
                         const wheelCount = driveType === 'AWD' ? 4 : 2;
-                        // ★★★ 反转力的符号 ★★★
+                        // 修复后退问题：确保throttle正负值正确应用
+                        // 正throttle（前进）应用负力，负throttle（后退）应用正力
                         const calculatedForce = -this.throttle * this.params.engineForce / wheelCount; 
                         this.controller.setWheelEngineForce(wheel.index, calculatedForce);
+                        
+                        // 记录应用的驱动力方向用于调试
+                        if (Math.abs(calculatedForce) > 1.0) {
+                            wheel.lastAppliedForce = calculatedForce;
+                        }
                     } else {
                         this.controller.setWheelEngineForce(wheel.index, 0);
                     }
@@ -568,7 +574,7 @@ export class VehiclePhysicsRapier {
       });
       
       // 更新轮子的世界位置和旋转
-      this._updateWheelsTransform();
+      this._updateWheelsTransform(deltaTime);
       
       // 应用下压力 (防止高速飞行)
       this._applyDownforce();
@@ -580,8 +586,9 @@ export class VehiclePhysicsRapier {
   /**
    * 更新轮子的世界变换
    * @private
+   * @param {number} deltaTime - 时间步长
    */
-  _updateWheelsTransform() {
+  _updateWheelsTransform(deltaTime) {
     if (!this.controller) return;
     
     this.wheelsInfo.forEach((wheel) => {
@@ -641,21 +648,99 @@ export class VehiclePhysicsRapier {
         // 如果有转向和旋转角度，应用到四元数
         let steeringAngle = 0;
         let rotationAngle = 0;
-        
+
         // 获取转向角 - 使用正确的API方法名
         if (typeof this.controller.wheelSteering === 'function') {
           steeringAngle = this.controller.wheelSteering(wheel.index);
         } else if (typeof this.controller.getWheelSteering === 'function') {
           steeringAngle = this.controller.getWheelSteering(wheel.index);
         }
-        
-        // 获取轮子自转角度 - 使用正确的API方法名
+
+        // 获取轮子自转角度 - 使用正确的API方法名，并手动计算轮子旋转角度
         if (typeof this.controller.wheelRotation === 'function') {
           rotationAngle = this.controller.wheelRotation(wheel.index);
         } else if (typeof this.controller.getWheelRotation === 'function') {
           rotationAngle = this.controller.getWheelRotation(wheel.index);
         }
-        
+
+        // 手动计算轮子旋转角度 - 更真实的车轮旋转动画
+        // 1. 判断车轮是否接触地面
+        const isGrounded = wheel.isInContact || false;
+
+        // 2. 获取车辆线性速度和角速度
+        const velocity = this.rigidBody.linvel();
+        const angVelocity = this.rigidBody.angvel();
+
+        // 3. 创建刚体到车轮的变换矩阵
+        const bodyToWheelMatrix = new THREE.Matrix4().makeRotationFromQuaternion(
+          new THREE.Quaternion().copy(chassisQuat).invert()
+        );
+        if (steeringAngle !== 0) {
+          bodyToWheelMatrix.multiply(
+            new THREE.Matrix4().makeRotationY(steeringAngle)
+          );
+        }
+
+        // 4. 将车辆速度转换到车轮局部坐标系
+        const localVel = new THREE.Vector3(velocity.x, velocity.y, velocity.z)
+          .applyMatrix4(bodyToWheelMatrix);
+
+        // 5. 计算车轮在其轴向上的角速度贡献
+        const angVelContribution = new THREE.Vector3(angVelocity.x, angVelocity.y, angVelocity.z)
+          .applyMatrix4(bodyToWheelMatrix);
+
+        // 6. 获取车轮参数
+        const wheelRadius = wheel.radius || this.params.wheelRadius;
+        const frictionSlip = this.params.frictionSlip || 1.8;
+
+        // 7. 计算真实的轮子旋转速度 (考虑接地状态和滑动)
+        let rotationSpeed = 0;
+
+        if (isGrounded) {
+          // 接地时：
+          // a. 计算基于车辆前进速度的理想旋转速度
+          // 注意符号：localVel.z 为正表示向后移动，为负表示向前移动
+          // 当向前移动时，轮子应该向前滚动(正旋转)
+          // 当向后移动时，轮子应该向后滚动(负旋转)
+          const idealRotationSpeed = localVel.z / wheelRadius; // 修正符号，确保方向正确
+          
+          // b. 计算基于角速度的附加旋转
+          const angularContribution = angVelContribution.x;
+          
+          // c. 计算打滑因子 (根据侧向速度和油门/刹车状态)
+          const slipRatio = Math.min(Math.abs(localVel.x) / (Math.abs(localVel.z) + 0.01), 1.0);
+          const brakeFactor = this.brake > 0.1 ? Math.min(this.brake * 2, 1.0) : 0;
+          const throttleFactor = Math.abs(this.throttle) > 0.8 ? 0.2 : 0;
+          
+          // d. 打滑时减少轮子转速 (模拟轮胎打滑)
+          const slipFactor = Math.max(slipRatio * 0.8, brakeFactor, throttleFactor);
+          
+          // e. 结合所有因素计算最终旋转速度
+          rotationSpeed = idealRotationSpeed * (1.0 - slipFactor) + angularContribution;
+
+        } else {
+          // 空中时：
+          // 如果车轮离地，仅考虑发动机力的影响，缓慢减速
+          if (wheel.rotationSpeed) {
+            // 模拟空气阻力，缓慢减速
+            rotationSpeed = wheel.rotationSpeed * 0.98;
+          } else if (this.throttle !== 0) {
+            // 油门踩下且车轮离地时，模拟发动机影响
+            // 修改：确保方向与油门保持一致
+            rotationSpeed = this.throttle * 5.0; // 修正符号
+          }
+        }
+
+        // 8. 存储当前旋转速度用于下次参考
+        wheel.rotationSpeed = rotationSpeed;
+
+        // 9. 累积角度增量 (添加平滑因子)
+        if (!wheel.rotationAngle) wheel.rotationAngle = 0;
+        wheel.rotationAngle += rotationSpeed * deltaTime;
+
+        // 10. 使用计算的旋转角度
+        rotationAngle = wheel.rotationAngle;
+
         // 应用转向
         if (steeringAngle !== 0) {
           const steeringQuat = new THREE.Quaternion().setFromAxisAngle(
@@ -664,7 +749,7 @@ export class VehiclePhysicsRapier {
           );
           wheel.worldRotation.multiply(steeringQuat);
         }
-        
+
         // 应用轮子自转
         if (rotationAngle !== 0) {
           const rotationQuat = new THREE.Quaternion().setFromAxisAngle(

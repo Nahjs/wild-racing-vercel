@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '@/utils/loaders/GLTFLoader';
 import { DRACOLoader } from '@/utils/loaders/DRACOLoader';
-import CollisionShapes from '@/core/collision/CollisionShapes';
+import RapierAdapter from '@/core/physics/rapier/RapierAdapter';
 import CollisionUtils from '@/core/utilities/CollisionUtils';
-import collisionManagerInstance from '@/core/collision/CollisionManager';
 import CollisionFeedback from '@/core/feedback/CollisionFeedback';
 
 class TrackManager {
@@ -22,12 +21,12 @@ class TrackManager {
   }
 
   // 加载赛道模型
-  async loadTrack(trackId, scene, physicsWorld) {
+  async loadTrack(trackId, scene) {
     try {
-      console.log(`[TrackManager] loadTrack called for trackId: ${trackId}. Physics world provided:`, !!physicsWorld);
+      console.log(`[TrackManager] loadTrack called for trackId: ${trackId}.`);
       this.isLoading = true;
       this.scene = scene;
-      this.physicsWorld = physicsWorld;
+      this.physicsWorld = RapierAdapter.world; // Directly access the world from the adapter
       
       // 1. 检查是否已经加载过该赛道
       if (this.tracks.has(trackId)) {
@@ -37,7 +36,7 @@ class TrackManager {
         this.currentTrack = cachedTrack;
         
         // 重新创建碰撞体
-        this._setupColliders(physicsWorld);
+        this._setupColliders();
         
         this.isLoading = false;
         return cachedTrack;
@@ -62,9 +61,7 @@ class TrackManager {
       this._setupTrack(trackModel, scene);
       
       // 6. 创建赛道的物理碰撞体
-      if (physicsWorld) {
-        this._setupColliders(physicsWorld);
-      }
+      this._setupColliders();
       
       // 7. 初始化碰撞反馈
       CollisionFeedback.init(scene);
@@ -135,99 +132,129 @@ class TrackManager {
   }
   
   /**
-   * 设置赛道碰撞体
-   * @param {CANNON.World} world - 物理世界
+   * 设置赛道碰撞体 (Rapier 版本)
    * @private
    */
-  _setupColliders(world) {
-    console.log(`[TrackManager] _setupColliders called. Current track loaded:`, !!this.currentTrack);
+  _setupColliders() {
+    console.log(`[TrackManager] _setupColliders called (Rapier). Current track loaded:`, !!this.currentTrack);
     // 1. 清除之前的碰撞体
-    this._clearColliders(world);
+    this._clearColliders();
     
-    // 2. 如果没有加载赛道模型，返回
-    if (!this.currentTrack) return;
+    // 2. 如果没有加载赛道模型或物理世界未初始化，返回
+    if (!this.currentTrack || !this.physicsWorld || !this.physicsWorld.isInitialized) {
+      console.warn("[TrackManager] 赛道模型未加载或物理世界未初始化，无法创建碰撞体。");
+      return;
+    }
     
-    // 3. 初始化碰撞管理器
-    const collisionManager = collisionManagerInstance.init(world);
+    // 3. 创建护栏碰撞体
+    console.log(`[TrackManager] Calling RapierAdapter.createRailsColliders...`);
+    this.railColliders = RapierAdapter.createRailsColliders(this.currentTrack);
+    console.log(`[TrackManager] 创建了 ${this.railColliders.length} 个护栏碰撞体 (Rapier)`);
+
+    // 4. 创建地形碰撞体
+    console.log(`[TrackManager] Calling RapierAdapter.createTerrainColliders...`);
+    this.terrainColliders = RapierAdapter.createTerrainColliders(this.currentTrack);
+    console.log(`[TrackManager] 创建了 ${this.terrainColliders.length} 个地形碰撞体 (Rapier)`);
     
-    // 4. 创建护栏碰撞体
-    console.log(`[TrackManager] Calling CollisionShapes.createRailsColliders with world:`, !!world, `and currentTrack:`, !!this.currentTrack);
-    this.railColliders = CollisionShapes.createRailsColliders(this.currentTrack, world);
+    // 5. 注册碰撞处理 (需要适配Rapier的事件系统)
+    this._registerCollisionHandlers();
     
-    // 5. 为所有护栏设置碰撞类型
-    this.railColliders.forEach(railBody => {
-      collisionManager.setAsRail(railBody);
-    });
-    
-    // 6. 注册护栏碰撞处理
-    this._registerCollisionHandlers(collisionManager);
-    
-    // 7. 创建碰撞体可视化 (调试用)
+    // 6. 创建碰撞体可视化 (调试用)
     if (this.showColliders) {
       this._createCollisionVisualizers();
     }
-    
-    console.log(`[TrackManager] 已创建 ${this.railColliders.length} 个护栏碰撞体`);
   }
   
   /**
-   * 注册碰撞处理器
-   * @param {Object} collisionManager - 碰撞管理器
+   * 注册碰撞处理器 (Rapier 版本)
    * @private
    */
-  _registerCollisionHandlers(collisionManager) {
-    // 注册车辆与护栏的碰撞处理
-    collisionManager.registerCollisionHandler(
-      collisionManager.collisionTypes.VEHICLE,
-      collisionManager.collisionTypes.RAIL,
-      (event) => {
-        // 处理车辆撞护栏
-        CollisionFeedback.handleRailCollision(event);
+  _registerCollisionHandlers() {
+    if (!this.physicsWorld) return;
+
+    // 定义碰撞处理回调
+    const collisionHandler = {
+      onContactStart: (collider1, collider2) => {
+        const data1 = collider1.userData;
+        const data2 = collider2.userData;
+
+        // 检查车辆与护栏的碰撞
+        if ((data1?.type === 'vehicle' && data2?.type === 'rail') || 
+            (data1?.type === 'rail' && data2?.type === 'vehicle')) {
+          const vehicleCollider = data1?.type === 'vehicle' ? collider1 : collider2;
+          const railCollider = data1?.type === 'rail' ? collider1 : collider2;
+          
+          // 模拟旧的 event 结构 (可能需要调整)
+          const event = {
+            body: vehicleCollider.parent(), // 获取刚体
+            target: railCollider.parent(), // 获取刚体
+            contact: { /* Rapier不直接提供详细接触点信息，需要的话需额外查询 */ }
+          };
+          CollisionFeedback.handleRailCollision(event);
+        }
+        
+        // 检查车辆与地形的碰撞 (可能不需要特别处理，除非有特殊逻辑)
+        // if ((data1?.type === 'vehicle' && data2?.type === 'terrain') || 
+        //     (data1?.type === 'terrain' && data2?.type === 'vehicle')) {
+        //   // ...
+        // }
+      },
+      onContactEnd: (collider1, collider2) => {
+        // 处理接触结束事件 (如果需要)
       }
-    );
+    };
+
+    // 注册到 RapierWorld
+    this.physicsWorld.addContactListener(collisionHandler);
+    console.log("[TrackManager] Rapier 碰撞监听器已注册");
+    
+    // 保存引用以便后续移除
+    this.currentCollisionHandler = collisionHandler;
   }
   
   /**
-   * 创建碰撞体可视化 (调试用)
+   * 创建碰撞体可视化 (Rapier 版本)
    * @private
    */
   _createCollisionVisualizers() {
+    if (!this.scene) return;
+    
     // 移除之前的可视化
     if (this.collisionVisualizerGroup) {
       this.scene.remove(this.collisionVisualizerGroup);
     }
     
-    // 创建新的可视化组
     this.collisionVisualizerGroup = new THREE.Group();
     this.collisionVisualizerGroup.name = 'collision_visualizers';
-    
-    // 为每个护栏碰撞体创建可视化
-    this.railColliders.forEach(railBody => {
-      const visualizer = CollisionUtils.createCollisionVisualizer(railBody, {
-        color: 0xff5500,
-        opacity: 0.3,
-        wireframe: true
+
+    const visualize = (colliders, color) => {
+      if (!colliders) return;
+      colliders.forEach(colliderInfo => {
+        if (!colliderInfo || !colliderInfo.rigidBody) return; 
+        const visualizer = CollisionUtils.createCollisionVisualizer(colliderInfo.rigidBody, {
+          color: color,
+          opacity: 0.3,
+          wireframe: true
+        });
+        this.collisionVisualizerGroup.add(visualizer);
       });
-      
-      this.collisionVisualizerGroup.add(visualizer);
-    });
+    };
+
+    // 可视化护栏
+    visualize(this.railColliders, 0xff5500); 
+    // 可视化地形
+    visualize(this.terrainColliders, 0x00ff55);
     
-    // 添加到场景
     this.scene.add(this.collisionVisualizerGroup);
   }
   
   /**
-   * 更新碰撞体可视化
-   * 在动画循环中调用
+   * 更新碰撞体可视化 (Rapier 版本)
    */
   updateCollisionVisualizers() {
-    if (!this.collisionVisualizerGroup) return;
-    
-    this.collisionVisualizerGroup.children.forEach(visualizer => {
-      if (visualizer.userData.update) {
-        visualizer.userData.update();
-      }
-    });
+    // Rapier的调试绘制由RapierWorld统一处理，这里不再需要单独更新每个可视化对象
+    // 如果需要自定义可视化，则需要在这里添加更新逻辑
+    // 目前，切换显示/隐藏即可
   }
   
   /**
@@ -247,23 +274,34 @@ class TrackManager {
   }
   
   /**
-   * 清除碰撞体
-   * @param {CANNON.World} world - 物理世界
+   * 清除碰撞体 (Rapier 版本)
    * @private
    */
-  _clearColliders(world) {
-    // 移除护栏碰撞体
-    this.railColliders.forEach(body => {
-      if (world.bodies.includes(body)) {
-        world.removeBody(body);
-      }
-    });
-    
+  _clearColliders() {
+    console.log("[TrackManager] 清除碰撞体...");
+    const removeColliders = (colliders) => {
+       if (!colliders || !this.physicsWorld) return;
+       colliders.forEach(colliderInfo => {
+         if (colliderInfo && colliderInfo.rigidBody) {
+           this.physicsWorld.removeRigidBody(colliderInfo.rigidBody);
+         }
+       });
+    };
+
+    removeColliders(this.railColliders);
     this.railColliders = [];
+    removeColliders(this.terrainColliders);
+    this.terrainColliders = [];
+
+    // 移除碰撞监听器
+    if (this.physicsWorld && this.currentCollisionHandler) {
+        this.physicsWorld.removeContactListener(this.currentCollisionHandler);
+        this.currentCollisionHandler = null;
+    }
     
-    // 移除碰撞体可视化
+    // 移除可视化
     if (this.collisionVisualizerGroup) {
-      this.scene.remove(this.collisionVisualizerGroup);
+      this.scene?.remove(this.collisionVisualizerGroup);
       this.collisionVisualizerGroup = null;
     }
   }
@@ -308,30 +346,21 @@ class TrackManager {
     
     // 清除碰撞体
     if (this.physicsWorld) {
-      this._clearColliders(this.physicsWorld);
+      this._clearColliders();
     }
   }
   
   // 销毁所有资源
   dispose(scene) {
+    console.log("[TrackManager] 销毁 TrackManager");
     this.unloadCurrentTrack(scene);
+    this._clearColliders(); // 确保清理碰撞体
     this.tracks.clear();
     this.checkpoints = [];
     this.trackObjects = [];
     
-    // 清除碰撞相关资源
-    if (this.physicsWorld) {
-      this._clearColliders(this.physicsWorld);
-    }
-    
     // 清理碰撞反馈
     CollisionFeedback.dispose();
-    
-    // 获取碰撞管理器并清理
-    const collisionManager = collisionManagerInstance.getInstance();
-    if (collisionManager) {
-      collisionManager.clearAllListeners();
-    }
   }
   
   /**
@@ -352,4 +381,4 @@ class TrackManager {
 }
 
 // 创建单例
-export const trackManager = new TrackManager(); 
+export default new TrackManager(); 

@@ -1,15 +1,5 @@
 <template>
   <div class="race-container" ref="rendererElement">
-    <PhysicsEngine
-      v-if="scene"
-      ref="physicsEngine"
-      :scene="scene"
-      :debug="true"
-      :showColliders="showPhysicsDebug"
-      @physics-ready="onPhysicsReady"
-      @physics-update="onPhysicsUpdate"
-    />
-    
     <VehicleRenderer
       v-if="currentVehicle"
       ref="track"
@@ -30,20 +20,17 @@
       :wheel-indices="tuningParams.wheelIndices"
     />
     
-    <VehicleController
-      v-if="world && scene"
-      :ref="setCarControllerRef"
-      :world="world"
-      :scene="scene"
-      :carModel="carModel"
-      :initialPosition="startPosition"
-      :selectedVehicle="currentVehicle"
-      :controlState="controls"
+    <VehicleController_Rapier
       @car-ready="onCarReady"
       @position-update="onPositionUpdate"
+      v-if="rapierPhysics.isInitialized.value && scene && carModel"
+      :ref="setCarControllerRef"
+      :vehicleModel="carModel"
+      :initialPosition="startPosition"
+      :initialRotation="startRotation"
+      :physicsParams="currentVehicle?.customSettings"
     />
     
-    <!-- 使用RaceHUD组件 -->
     <RaceHUD
       v-if="showInterface"
       :speed="speed"
@@ -60,37 +47,42 @@
       @exit="exitRace"
     />
     
-    <!-- 移动触摸控制 - 直接在Race.vue中添加 -->
-    <TouchControls 
-      v-if="controls" 
-      :controlState="controls" 
-      :currentCameraMode="currentCameraMode"
+    <TouchControls
+      v-if="controls && isMobile.value"
+      :controlState="controls"
+      :currentCameraMode="cameraControls.currentCameraMode.value"
       :switchCameraMode="cameraControls.nextMode"
     />
     
-    <!-- 添加比赛开始提示组件 -->
     <RaceStartPrompt
-      v-if="showStartPrompt && isCarControllerReady && !isLoadingTrack"
+      v-if="showStartPrompt && isCarControllerReady && !isLoadingTrack && rapierPhysics.isInitialized.value"
       :race-status="raceStatus"
       @race-start="onStartRaceFromPrompt"
     />
     
-    <!-- 添加临时调试模式按钮 -->
+    <VehicleDebugUI
+      v-if="debugMode"
+      :debug-data="debugData"
+    />
+    
     <div class="debug-controls">
-      <button 
-        @click="toggleDebugMode" 
+      <button
+        @click="toggleDebugMode"
         class="debug-mode-btn">
         {{ debugMode ? '关闭' : '调试' }}
       </button>
-      
-      <button 
+      <button
         v-if="debugMode"
-        @click="forceEnableTouchControls" 
-        class="force-touch-btn">
-        强制启用
+        @click="togglePhysicsDebug"
+        class="debug-mode-btn">
+        {{ showPhysicsDebug ? '隐藏物理' : '显示物理' }}
       </button>
-      
-      <!-- 设备信息显示区域 -->
+      <button
+        v-if="debugMode"
+        @click="forceEnableTouchControls"
+        class="force-touch-btn">
+        强制启用移动端控制
+      </button>
       <div v-if="debugMode" class="device-info">
         <p>设备类型: {{ isMobile.value ? '移动' : '桌面' }}</p>
         <ul>
@@ -106,19 +98,20 @@
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, watchEffect, provide, computed, nextTick, shallowRef } from 'vue';
+import { ref, onMounted, onUnmounted, watch, watchEffect, provide, computed, nextTick, shallowRef, reactive } from 'vue';
 import { useRouter } from 'vue-router'; 
-import PhysicsEngine from '@/core/physics/PhysicsEngine.vue';
-import VehicleController from '@/game/vehicle/VehicleController.vue';
+import VehicleController_Rapier from '@/game/rapier/vehicle/VehicleController_Rapier.vue';
 import VehicleRenderer from '@/game/vehicle/VehicleRenderer.vue';
+import VehicleDebugUI from '@/game/rapier/vehicle/VehicleDebugUI.vue';
 import { vehiclesList } from '@/config/vehicles';
 import { vehicleService } from '@/services/vehicleService';
 import * as THREE from 'three'; // 导入THREE用于创建相机
 import { useTuningStore } from '@/store/tuning'; 
 import { useCamera } from '@/composables/game/useCamera'; // Import the composable
 import { useRaceLogic } from '@/composables/game/useRaceLogic'; // 引入比赛逻辑
-import { trackManager } from '@/game/track/TrackManager'; // 引入赛道管理器
+import trackManager from '@/game/track/TrackManager'; // Import default export
 import { useInputControls } from '@/composables/useInputControls'; // 引入输入控制组合式函数
+import { useRapierPhysics } from '@/composables/useRapierPhysics'; // Import Rapier physics composable
 
 // 引入UI组件
 import RaceHUD from '@/components/race/RaceHUD.vue';
@@ -131,19 +124,56 @@ import { storeToRefs } from 'pinia';
 export default {
   name: 'Race',
   components: {
-    PhysicsEngine,
-    VehicleController,
+    VehicleController_Rapier,
     VehicleRenderer,
     RaceHUD,
     TouchControls,
-    RaceStartPrompt
+    RaceStartPrompt,
+    VehicleDebugUI
   },
   setup() {
     const router = useRouter();
     
-    // 储存动画帧ID
-    let renderFrameId = null;
+    // --- 确保 renderFrameId 在这里定义 ---
+    let renderFrameId = null; 
+    // ------------------------------------
+
+    const logTracker = reactive({ // Use reactive for easy logging object updates
+      onMountedStart: false,
+      rapierInitStart: false,
+      rapierInitEnd: false,
+      vehicleLoadStart: false,
+      vehicleLoadEnd: false,
+      onMountedEnd: false,
+      sceneReady: false,
+      modelReady: false,
+      cameraReady: false,
+      trackLoadWatchTriggered: false,
+      trackLoadStart: false,
+      trackLoadEnd: false,
+      controllerVifConditionMet: false,
+      controllerRefAssigned: false,
+      controllerCarReadyEvent: false,
+      controllerPhysicsInstanceReceived: false,
+      animationLoopStarted: false,
+      firstPhysicsUpdateCalled: false,
+      firstPhysicsUpdateCheckPassed: false,
+    });
+
+    console.log("[Race Init] Setup function start");
     
+    // Helper function to log with timestamp
+    const logInit = (step) => {
+      console.log(`[Race Init - ${Date.now()}] ${step}`);
+      const key = step.split(' ')[0].toLowerCase().replace(/[:.]/g, ''); // Create a simple key
+      if (key in logTracker) {
+        logTracker[key] = true;
+      } else {
+         // If you add new log steps, add corresponding keys to logTracker initial state
+         console.warn(`[Race Init] Log key "${key}" not found in logTracker for step: "${step}"`);
+      }
+    };
+
     // 获取输入控制
     const { controlState: controls, isMobile} = useInputControls();
     
@@ -153,7 +183,6 @@ export default {
     const { tuningParams } = storeToRefs(tuningStore);
 
     // 场景和物理引擎引用
-    const physicsEngine = ref(null);
     const track = ref(null);
     const carController = ref(null);
     const scene = ref(null);
@@ -181,7 +210,8 @@ export default {
     // 赛道信息
     const trackId = ref('karting_club_lider__karting_race_track_early'); // 赛道ID，可从配置或路由参数获取
     const isLoadingTrack = ref(false);
-    const startPosition = ref(new THREE.Vector3(0, 0.2, 30));
+    const startPosition = ref(new THREE.Vector3(0, 0.8, 30));
+    const startRotation = ref({ x: 0, y: 0, z: 0 }); // Added for controller initial rotation
     const isTrackLoaded = ref(false); // 新增：防止重复加载的标志
     
     // 在setup函数中添加currentVehicle引用，初始化为 null
@@ -216,6 +246,7 @@ export default {
         }
       },
       onRaceFinish: (results) => {
+        console.log("Race Finished:", results);
       }
     });
     
@@ -232,16 +263,71 @@ export default {
       update: updateCamera
     } = cameraControls;
    
+    // 使用 Rapier physics
+    const rapierPhysics = useRapierPhysics();
+    const vehiclePhysicsInstance = ref(null); // Ref for the actual VehiclePhysicsRapier instance
+    const debugData = ref(null); // Reactive data for the Debug UI
+    
+    const debugRayHelpers = ref([]); // Store helpers
+    
+    const updateRayVisualization = () => {
+      if (!debugMode.value || !vehiclePhysicsInstance.value) {
+         // Remove existing helpers if debug mode is off or physics instance is gone
+         debugRayHelpers.value.forEach(helper => scene.value?.remove(helper));
+         debugRayHelpers.value = [];
+         return;
+      }
+
+      const physics = vehiclePhysicsInstance.value;
+      if (!physics.rigidBody || !physics.wheelsInfo) return;
+
+      const bodyPosition = physics.rigidBody.translation();
+      const bodyRotation = physics.rigidBody.rotation();
+      const threeBodyQuat = new THREE.Quaternion(bodyRotation.x, bodyRotation.y, bodyRotation.z, bodyRotation.w);
+
+      physics.wheelsInfo.forEach((wheel, index) => {
+        // Recalculate start and direction (same logic as in _updateSuspension)
+        const rotatedWheelPos = new THREE.Vector3().copy(wheel.position).applyQuaternion(threeBodyQuat);
+        const suspensionStart = new THREE.Vector3(bodyPosition.x, bodyPosition.y, bodyPosition.z).add(rotatedWheelPos);
+        const suspensionDirection = new THREE.Vector3(0, -1, 0).applyQuaternion(threeBodyQuat);
+        const rayLength = 10.0; // Or the actual ray length used
+
+        // Determine color based on hit status
+        const color = wheel.isInContact ? 0x00ff00 : 0xff0000; // Green if hit, Red if not
+
+        // Reuse or create helper
+        let helper = debugRayHelpers.value[index];
+        if (!helper) {
+          helper = new THREE.ArrowHelper(suspensionDirection, suspensionStart, rayLength, color);
+          debugRayHelpers.value[index] = helper;
+          scene.value?.add(helper); // Add to the main scene
+        } else {
+          helper.position.copy(suspensionStart);
+          helper.setDirection(suspensionDirection);
+          helper.setLength(rayLength);
+          helper.setColor(color);
+        }
+      });
+
+      // Remove extra helpers if number of wheels changed (unlikely but good practice)
+      while (debugRayHelpers.value.length > physics.wheelsInfo.length) {
+         const helper = debugRayHelpers.value.pop();
+         scene.value?.remove(helper);
+      }
+    };
+    
     // 加载赛道模型
     const loadTrack = async () => {
-      if (!scene.value || !world.value) {
-        console.warn('[Race] loadTrack called, but scene or world is not ready yet.');
+      logInit("trackLoadStart");
+      if (!scene.value || !rapierPhysics.isInitialized.value) {
+        console.warn('[Race] loadTrack called, but scene or physics is not ready yet.');
+        logInit("trackLoadEnd (skipped - prereqs not met)");
         return;
       }
       console.log("[Race] loadTrack execution started.");
       try {
         isAutoCameraRotationComplete.value = false;
-        const trackModel = await trackManager.loadTrack(trackId.value, scene.value, world.value);
+        const trackModel = await trackManager.loadTrack(trackId.value, scene.value);
         const checkpointsData = trackManager.getCheckpoints();
         setCheckpoints(checkpointsData);
         if (trackModel) {
@@ -262,34 +348,52 @@ export default {
           }
         }
         console.log("[Race] loadTrack execution finished.");
+        logInit("trackLoadEnd (success)");
       } catch (error) {
         console.error('[Race] 加载赛道失败:', error);
+        logInit("trackLoadEnd (error)");
       } finally {
-        isLoadingTrack.value = false; // 保留 finally，以防万一
+        isLoadingTrack.value = false; // Keep this
       }
     };
 
     // Physics ready (remains the same)
     const onPhysicsReady = (data) => {
-      console.log("[Race] onPhysicsReady called.");
+      logInit("onPhysicsReady");
       world.value = data.world;
     };
 
     // Physics update - Call camera update here
     const onPhysicsUpdate = () => {
-      if (isCarControllerReady.value && carController.value) {
+      if (!logTracker.firstPhysicsUpdateCalled) {
+         logInit("firstPhysicsUpdateCalled");
+         logTracker.firstPhysicsUpdateCalled = true; // Log only once
+      }
+      const deltaTime = 1 / 60;
+      rapierPhysics.update(deltaTime);
 
-        carController.value.handlePhysicsUpdate();
-      } else if (isCarControllerReady.value && !carController.value) {
-        // 如果 isReady 但 ref 仍为 null，尝试 nextTick
-        console.warn("[Race] onPhysicsUpdate: carController is null even when ready. Checking in nextTick...");
-        nextTick(() => {
-          if (carController.value) {
-            carController.value.handlePhysicsUpdate();
-          } else {
-            console.error("[Race] FATAL: carController ref is still null in nextTick after onCarReady!");
-          }
-        });
+      if (isCarControllerReady.value && carController.value) {
+        if (!logTracker.firstPhysicsUpdateCheckPassed) {
+           logInit("firstPhysicsUpdateCheckPassed");
+           logTracker.firstPhysicsUpdateCheckPassed = true; // Log only once
+        }
+        carController.value.handlePhysicsUpdate(deltaTime);
+      }
+
+      // --- Update Debug Data ---
+      if (vehiclePhysicsInstance.value) {
+        const rb = vehiclePhysicsInstance.value.rigidBody;
+        const pos = rb?.translation();
+        const linvel = rb?.linvel();
+        // Add more data points as needed by VehicleDebugUI
+        debugData.value = {
+          position: pos ? {x: pos.x, y: pos.y, z: pos.z} : {x:0,y:0,z:0},
+          linearVelocity: linvel ? {x: linvel.x, y: linvel.y, z: linvel.z} : {x:0,y:0,z:0},
+          // Example: Add suspension info if needed by debug UI
+          // wheelsContact: vehiclePhysicsInstance.value.wheelsInfo?.map(w => w.isInContact) || [] 
+        };
+      } else {
+        debugData.value = null;
       }
 
       // --- Update camera using the composable's update function ---
@@ -308,16 +412,30 @@ export default {
           }
         }
       }
+
+      updateRayVisualization();
     };
     
     // 车辆控制器准备就绪 (从 VehicleController 发出的 car-ready 事件)
-    const onCarReady = () => {
+    const onCarReady = (physicsInstance) => {
+      logInit("controllerCarReadyEvent received");
       isLoading.value = false;
       isInitializingPhysics.value = false; 
-      
-      
       // 设置标志位，表示 VehicleController 已准备好
       isCarControllerReady.value = true; 
+      
+      // Directly assign the received instance
+      if (physicsInstance) {
+        vehiclePhysicsInstance.value = physicsInstance;
+        logInit("controllerPhysicsInstanceReceived: YES");
+        console.log("[Race] Physics instance received via event:", vehiclePhysicsInstance.value);
+      } else {
+        logInit("controllerPhysicsInstanceReceived: NO (Missing!)");
+        console.error("[Race] onCarReady event received, but physicsInstance payload was missing!");
+      }
+      
+      // Start the animation loop only when the car controller is fully ready
+      startAnimationLoop();
     };
     
     // 更新车辆位置
@@ -340,8 +458,30 @@ export default {
       router.push('/');
     };
     
+    // 组件卸载
+    onUnmounted(() => {
+      logInit("onUnmounted");
+      cleanupFunctions.forEach(cleanup => {
+        if (typeof cleanup === 'function') {
+          cleanup();
+        }
+      });
+      
+      stopAnimationLoop(); 
+      if (scene.value) {
+        trackManager.unloadCurrentTrack(scene.value);
+      }
+      rapierPhysics.dispose(); // Dispose Rapier physics
+    });
+
     // 组件挂载
     onMounted(async () => { 
+      logInit("onMountedStart");
+
+      logInit("rapierInitStart");
+      await rapierPhysics.initialize();
+      logInit("rapierInitEnd");
+
       nextTick(() => {
       });
       
@@ -366,7 +506,7 @@ export default {
       // 添加 P 键监听器切换物理调试
       const handleDebugToggleKey = (e) => {
         if (e.key === 'p' || e.key === 'P') {
-          showPhysicsDebug.value = !showPhysicsDebug.value; // 切换 ref 的值
+          togglePhysicsDebug(); // 切换 ref 的值
           console.log("Physics debug toggled:", showPhysicsDebug.value);
         }
       };
@@ -386,6 +526,7 @@ export default {
         document.removeEventListener('keydown', testKeyHandler);
       });
       
+      logInit("vehicleLoadStart");
       isLoadingVehicle.value = true;
       isLoading.value = true; // Start general loading
       let vehicleIdToLoad = vehiclesList[0].id; // Default to first vehicle ID
@@ -527,6 +668,8 @@ export default {
       } else {
         console.warn("[Race.vue] Could not find canvas element within rendererElement.");
       }
+
+      logInit("vehicleLoadEnd");
     });
     
     // 监听 isCarControllerReady 变化
@@ -660,28 +803,27 @@ export default {
     const cleanupFunctions = [];
     
     // 组件卸载
-    const startAnimationLoop = () => { /* ... */ }; 
+    const startAnimationLoop = () => { 
+      if (renderFrameId) return; // Avoid starting multiple loops
+      console.log("[Race] Starting animation loop...");
+
+      const animate = () => {
+        onPhysicsUpdate(); // Call the physics update function
+        renderFrameId = requestAnimationFrame(animate);
+      };
+      animate(); // Start the loop
+    }; 
     
     const stopAnimationLoop = () => {
       if (renderFrameId) {
         cancelAnimationFrame(renderFrameId);
         renderFrameId = null;
       }
+      
+      // Start the animation loop only when the car controller is fully ready
+      startAnimationLoop();
     };
 
-    onUnmounted(() => {
-      cleanupFunctions.forEach(cleanup => {
-        if (typeof cleanup === 'function') {
-          cleanup();
-        }
-      });
-      
-      stopAnimationLoop(); 
-      if (scene.value) {
-        trackManager.unloadCurrentTrack(scene.value);
-      }
-    });
-    
     // 当 Track 组件的场景准备好时调用
     const onSceneReady = (emittedScene) => {
       console.log("[Race] onSceneReady called.");
@@ -839,6 +981,11 @@ export default {
       debugMode.value = !debugMode.value;
     };
 
+    // --- Function to toggle physics debug view ---
+    const togglePhysicsDebug = () => {
+      showPhysicsDebug.value = !showPhysicsDebug.value;
+    };
+
     const forceEnableTouchControls = () => {
       
       // 1. 强制设置为移动设备模式
@@ -884,21 +1031,67 @@ export default {
 
     // 监听 showPhysicsDebug 的变化来切换碰撞体可视化
     watch(showPhysicsDebug, (newValue) => {
-      trackManager.toggleCollisionVisualizers(newValue);
+      // trackManager.toggleCollisionVisualizers(newValue); // TEMP: Disable custom visualizer for now
     });
 
-    // 新增 watch: 精确监听 scene 和 world
-    watch([scene, world], async ([newScene, newWorld]) => {
-      console.log(`[Race] watch triggered. scene: ${!!newScene}, world: ${!!newWorld}, isTrackLoaded: ${isTrackLoaded.value}`);
-      // 确保 scene 和 world 都有值，并且赛道尚未加载
-      if (newScene && newWorld && !isTrackLoaded.value) {
-        console.log("[Race] watch condition met. Calling loadTrack.");
-        isTrackLoaded.value = true; // ★★★ 设置标志，防止再次执行
-        isLoadingTrack.value = true; // ★★★ 设置加载状态
-        await loadTrack();
-        // isLoadingTrack.value = false; // ★★★ loadTrack 内部的 finally 会处理
+    // 新增 watch: 监听比赛状态变化
+    watch(raceStatus, (newStatus, oldStatus) => {
+      if (newStatus === 'racing' && oldStatus !== 'racing') {
+        if (isCameraComposableInitialized.value) {
+          nextTick(() => { cameraControls.setMode(3); }); // Switch to CHASE mode
+        }
       }
-    }, { immediate: true }); // immediate: true 可以在初始值满足时立即触发一次
+    });
+
+    // 新增 watch: 监听 conditions to start camera demo
+    watchEffect(() => {
+      if (
+        isCameraComposableInitialized.value &&
+        carModel.value &&
+        scene.value &&
+        !isLoadingTrack.value &&
+        isTrackLoaded.value && // Ensure track is fully loaded
+        raceStatus.value === 'waiting' &&
+        !isCameraDemoStarted.value
+      ) {
+        isCameraDemoStarted.value = true;
+        console.log("[Race] Starting camera demo...");
+        const cleanup = startAutoCameraRotation();
+        if (cleanup) cleanupFunctions.push(cleanup);
+      }
+    });
+
+    // 新增 watch: 监听 showPhysicsDebug 变化来切换 Rapier debug lines
+    watch(showPhysicsDebug, (newValue) => {
+      if (rapierPhysics.isInitialized.value) {
+        console.log(`[Race] Toggling Rapier debug draw: ${newValue}. Scene valid: ${!!scene.value}`); // Log scene validity
+        rapierPhysics.adapter.toggleDebugDraw(newValue, scene.value);
+      }
+      // trackManager.toggleCollisionVisualizers(newValue); // TEMP: Disable custom visualizer for now
+    });
+
+    // --- Use watchEffect to trigger track loading when conditions are met --- 
+    watchEffect(async () => {
+      // Check if physics is initialized AND scene is ready AND track is not already loaded/loading
+      if (rapierPhysics.isInitialized.value && scene.value && !isTrackLoaded.value && !isLoadingTrack.value) {
+        console.log("[Race] watchEffect: Conditions met to load track.");
+        isLoadingTrack.value = true; // Set loading flag
+        isTrackLoaded.value = true;  // Prevent re-triggering immediately
+        try {
+          await loadTrack();
+        } catch (error) {
+          console.error("[Race] Error during track loading triggered by watchEffect:", error);
+          // Reset flags if loading fails to allow retry?
+          // isTrackLoaded.value = false; 
+        } finally {
+          // isLoadingTrack is managed inside loadTrack's finally block
+          // isLoadingTrack.value = false; 
+        }
+      }
+    });
+
+    // Add logTracker to the return object for potential debugging in template/dev tools
+    provide('logTracker', logTracker); // Optional: provide for deeper components
 
     return {
       rendererElement,
@@ -917,6 +1110,7 @@ export default {
       currentVehicle, 
       isLoadingVehicle, 
       isLoading, 
+      startRotation,
       lapTimes,
       tuningStore,
       startPosition,
@@ -947,16 +1141,21 @@ export default {
       isMobile,
       cameraControls,
       setCarControllerRef,
-      showStartPrompt, // 添加开始提示控制
-      onStartRaceFromPrompt, // 添加开始游戏处理函数
-      isLoadingTrack, // 添加赛道加载状态
+      showStartPrompt,
+      onStartRaceFromPrompt,
+      isLoadingTrack,
+      vehiclePhysicsInstance,
       debugMode,
       toggleDebugMode,
       forceEnableTouchControls,
       touchPoints,
       isLandscape,
       controlDebugInfo,
-      showPhysicsDebug // 返回 ref
+      showPhysicsDebug,
+      rapierPhysics,
+      debugData,
+      togglePhysicsDebug,
+      logTracker
     };
   }
 };

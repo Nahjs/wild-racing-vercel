@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted, watch, shallowRef } from 'vue';
+import { ref, onMounted, onUnmounted, watch, shallowRef, computed } from 'vue';
 import { ControlState, KeyboardController } from '@/core/input/InputManager';
 import { useDeviceDetection } from '@/composables/useDeviceDetection';
 
@@ -11,6 +11,28 @@ function createInputControls() {
   let keyboardControllerInstance = null;
   let listenersInitialized = false;
   let cleanupGlobalListeners = null;
+
+  // --- 使用 computed 计算轴值 --- 
+  const horizontalAxis = computed(() => {
+    if (controlState.value.turnLeft && !controlState.value.turnRight) {
+      return -1;
+    } else if (controlState.value.turnRight && !controlState.value.turnLeft) {
+      return 1;
+    } else {
+      return 0;
+    }
+  });
+  
+  const verticalAxis = computed(() => {
+    if (controlState.value.accelerate && !controlState.value.brake) {
+      return 1;
+    } else if (controlState.value.brake && !controlState.value.accelerate) {
+      return -1;
+    } else {
+      return 0;
+    }
+  });
+  // --- 结束 computed 计算 --- 
 
   function setupInputListenersInternal() {
     if (listenersInitialized) {
@@ -30,6 +52,7 @@ function createInputControls() {
         keyboardControllerInstance = new KeyboardController();
         // Assign the shared controlState ref to the keyboard controller
         if (keyboardControllerInstance) {
+            // 传递 controlState 的 .value 给 KeyboardController
             keyboardControllerInstance.controlState = controlState.value;
         } else {
              console.error("[useInputControls] Failed to create KeyboardController instance.");
@@ -94,7 +117,11 @@ function createInputControls() {
   };
 
   return {
-    controlState,
+    // 返回原始的 controlState 用于直接修改布尔值
+    controlState, 
+    // 返回计算好的轴值
+    horizontalAxis, 
+    verticalAxis, 
     isMobile,
     reinitializeInputControls, // 暴露 reinitialize 方法
     cleanup: () => {

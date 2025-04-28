@@ -1,7 +1,7 @@
 {
-  "name": "wild-racing",
+  "name": "drift-pulse-zero",
   "version": "1.0.0",
-  "description": "3D Wild Racing Car Showcase - An immersive 3D car exhibition project",
+  "description": "xianke's drift car game",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
@@ -9,6 +9,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.16.0",
     "cannon-es": "^0.20.0",
     "lamina": "^1.1.15",
     "pinia": "^3.0.2",
